@@ -1,0 +1,35 @@
+# Node
+node_modules/
+dist/
+*.log
+*.tgz
+
+# Vite / build
+.vite/
+.vite-temp/
+.vue-global-types/
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Project specific / internal docs (not for GitHub)
+.sisyphus/
+AGENTS.md
+TECH_SPEC.md
+
+# Environment (if any)
+.env
+.env.local
+.env.*.local

@@ -1,0 +1,33 @@
+import type { Settings } from '../types/settings'
+import { invoke, isTauri } from './tauri'
+
+export async function getSettings(): Promise<Settings> {
+  if (isTauri()) {
+    return invoke<Settings>('get_settings')
+  }
+  const res = await fetch('/api/settings')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function saveSettings(settings: Settings): Promise<boolean> {
+  if (isTauri()) {
+    return invoke<boolean>('save_settings', { settings })
+  }
+  const res = await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
+
+export async function testConnection(): Promise<boolean> {
+  if (isTauri()) {
+    return invoke<boolean>('test_connection')
+  }
+  const res = await fetch('/api/test-connection', { method: 'POST' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
