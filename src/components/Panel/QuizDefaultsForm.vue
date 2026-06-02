@@ -62,9 +62,9 @@
       <label class="block">
         <span class="text-xs text-[#a6adc8] mb-1 block">Difficulty</span>
         <select
-          :value="difficulty"
+          :value="modelValue.default_difficulty"
           class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
-          @change="difficulty = ($event.target as HTMLSelectElement).value"
+          @change="update('default_difficulty', ($event.target as HTMLSelectElement).value as QuizDifficulty)"
         >
           <option value="easy">Easy</option>
           <option value="medium">Medium</option>
@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import type { SettingsQuiz } from '@/types/settings'
 import { ref, computed, onMounted } from 'vue'
-import type { QuestionType } from '@/types/quiz'
+import type { QuestionType, QuizDifficulty } from '@/types/quiz'
 import { listPromptTemplates } from '@/services/mistake'
 
 const props = defineProps<{
@@ -101,7 +101,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: SettingsQuiz]
 }>()
 
-const difficulty = ref('medium')
+
 const templates = ref<Array<{ name: string; label: string; description: string }>>([])
 
 const selectedTemplate = computed(() => {
@@ -110,7 +110,6 @@ const selectedTemplate = computed(() => {
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'single', label: 'Single Choice' },
-  { value: 'multiple', label: 'Multiple Choice' },
   { value: 'short', label: 'Short Answer' },
 ]
 

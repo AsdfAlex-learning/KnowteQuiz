@@ -45,6 +45,35 @@
           @input="update('model', ($event.target as HTMLInputElement).value)"
         />
       </label>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-xs text-[#a6adc8] mb-1 block">Temperature</span>
+          <input
+            :value="llm.temperature"
+            type="number"
+            step="0.1"
+            min="0"
+            max="2"
+            class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] placeholder-[#585b70] focus:outline-none focus:border-[#cba6f7] transition-colors"
+            placeholder="0.7"
+            @input="update('temperature', Number(($event.target as HTMLInputElement).value))"
+          />
+        </label>
+
+        <label class="block">
+          <span class="text-xs text-[#a6adc8] mb-1 block">Max Tokens</span>
+          <input
+            :value="llm.max_tokens"
+            type="number"
+            min="1"
+            max="128000"
+            class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] placeholder-[#585b70] focus:outline-none focus:border-[#cba6f7] transition-colors"
+            placeholder="4096"
+            @input="update('max_tokens', Number(($event.target as HTMLInputElement).value))"
+          />
+        </label>
+      </div>
     </div>
   </div>
 </template>
@@ -60,7 +89,7 @@ const emit = defineEmits<{
   'update:llm': [value: SettingsLLM]
 }>()
 
-function update(key: keyof SettingsLLM, value: string) {
+function update(key: keyof SettingsLLM, value: string | number) {
   emit('update:llm', { ...props.llm, [key]: value })
 }
 </script>
