@@ -101,12 +101,12 @@ const displayName = computed(() => {
 }
 
 .tree-item--active {
-  background: var(--accent-purple) / 12;
+  background: rgba(189, 147, 249, 0.12);
   color: var(--accent-purple);
 }
 
 .tree-item--active:hover {
-  background: var(--accent-purple) / 20;
+  background: rgba(189, 147, 249, 0.2);
   color: var(--accent-purple);
 }
 </style>

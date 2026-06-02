@@ -26,12 +26,26 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useReaderStore } from '@/stores/reader'
+import { useSettingsStore } from '@/stores/settings'
 
 const readerStore = useReaderStore()
+const settingsStore = useSettingsStore()
 
 const wordCount = computed(() => readerStore.wordCount)
 
-// TODO: Wire up to actual LLM connection status from settings store
-const statusDotClass = computed(() => 'bg-[var(--text-faint)]')
-const statusLabel = computed(() => 'LLM not configured')
+const statusDotClass = computed(() => {
+  if (settingsStore.llmConnected) return 'bg-[var(--color-success)]'
+  if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
+    return 'bg-[var(--color-warning)]'
+  }
+  return 'bg-[var(--text-faint)]'
+})
+
+const statusLabel = computed(() => {
+  if (settingsStore.llmConnected) return 'LLM connected'
+  if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
+    return 'LLM ready'
+  }
+  return 'LLM not configured'
+})
 </script>

@@ -91,14 +91,14 @@ async function setManualPath() {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--accent-purple);
-  background: var(--accent-purple) / 10;
-  border: 1px dashed var(--accent-purple) / 30;
+  background: rgba(189, 147, 249, 0.1);
+  border: 1px dashed rgba(189, 147, 249, 0.3);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 
 .open-folder-btn:hover {
-  background: var(--accent-purple) / 20;
-  border-color: var(--accent-purple) / 50;
+  background: rgba(189, 147, 249, 0.2);
+  border-color: rgba(189, 147, 249, 0.5);
 }
 </style>

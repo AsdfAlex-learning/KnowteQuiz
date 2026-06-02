@@ -1,6 +1,10 @@
 <template>
   <div class="h-screen w-screen flex flex-col bg-[#1e1e2e] text-[#f8f8f2] overflow-hidden">
-    <TitleBar />
+    <TitleBar>
+      <template #center>
+        {{ readerStore.currentNote?.title || '' }}
+      </template>
+    </TitleBar>
     <div class="flex flex-1 overflow-hidden">
       <!-- Left panel -->
       <aside
@@ -42,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useLayoutStore } from './stores/layout'
 import { useReaderStore } from './stores/reader'
 import { useExplorerStore } from './stores/explorer'
@@ -104,6 +108,12 @@ function onKeyDown(e: KeyboardEvent) {
     }
   }
 }
+
+watch(() => explorerStore.selectedPath, (path) => {
+  if (path) {
+    readerStore.loadNote(path)
+  }
+})
 
 onMounted(() => {
   layoutStore.loadLayout()

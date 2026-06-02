@@ -4,7 +4,7 @@
     <div class="flex-1 overflow-y-auto">
       <div v-if="activeTab === 'quiz'" class="h-full flex flex-col">
         <QuizGenerator v-if="!quizStore.hasSession && !quizStore.isGenerating" />
-        <QuizSession v-else :mode="quizMode" />
+        <QuizSession v-else :mode="quizStore.mode" />
       </div>
       <ErrorBook v-else-if="activeTab === 'mistakes'" />
       <SettingsPanel v-else-if="activeTab === 'settings'" />
@@ -21,9 +21,8 @@ import QuizSession from '@/components/Quiz/QuizSession.vue'
 import ErrorBook from './ErrorBook.vue'
 import SettingsPanel from './SettingsPanel.vue'
 import { useQuizStore } from '@/stores/quiz'
-import type { QuizMode } from '@/components/Quiz/ModeToggle.vue'
+
 
 const activeTab = ref<PanelTab>('quiz')
 const quizStore = useQuizStore()
-const quizMode = ref<QuizMode>('basic')
 </script>
