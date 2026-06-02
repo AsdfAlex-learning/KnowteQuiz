@@ -21,10 +21,11 @@ export function defaultSettings(): Settings {
       },
     },
     quiz: {
-      default_types: ['single', 'multiple', 'short'],
+      default_types: ['single', 'short'],
       default_language: 'zh',
       default_count: 5,
       default_mode: 'basic',
+      default_difficulty: 'medium',
       prompt_template: 'default',
       advanced: {
         max_diagnosis_rounds: 3,

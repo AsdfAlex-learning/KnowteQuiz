@@ -25,10 +25,11 @@ fn default_settings() -> Settings {
             },
         },
         quiz: QuizDefaults {
-            default_types: vec![QuestionType::Single, QuestionType::Multiple, QuestionType::Short],
+            default_types: vec![QuestionType::Single, QuestionType::Short],
             default_language: "zh".to_string(),
             default_count: 5,
             default_mode: "basic".to_string(),
+            default_difficulty: "medium".to_string(),
             prompt_template: "default".to_string(),
             advanced: AdvancedConfig {
                 max_diagnosis_rounds: 3,

@@ -1,4 +1,4 @@
-import type { QuestionType } from './quiz'
+import type { QuestionType, QuizDifficulty } from './quiz'
 
 export interface LlmConfig {
   provider: string
@@ -29,6 +29,7 @@ export interface QuizDefaults {
   default_language: string
   default_count: number
   default_mode: string
+  default_difficulty: QuizDifficulty
   prompt_template: string
   advanced: AdvancedConfig
 }

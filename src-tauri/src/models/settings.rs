@@ -32,7 +32,7 @@ pub struct QuizDefaults {
     pub default_language: String,
     pub default_count: u32,
     pub default_mode: String,
-    #[serde(default = "default_prompt_template")]
+    pub default_difficulty: String,
     pub prompt_template: String,
     pub advanced: AdvancedConfig,
 }

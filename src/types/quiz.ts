@@ -1,4 +1,4 @@
-export type QuestionType = 'single' | 'multiple' | 'short'
+export type QuestionType = 'single' | 'short'
 export type QuizDifficulty = 'easy' | 'medium' | 'hard'
 export type QuizLanguage = 'zh' | 'en'
 
@@ -15,8 +15,8 @@ export interface QuizStreamParams {
   path: string
   types: QuestionType[]
   count: number
-  difficulty: string
-  lang: string
+  difficulty: QuizDifficulty
+  lang: QuizLanguage
 }
 
 export type QuizEvent =
