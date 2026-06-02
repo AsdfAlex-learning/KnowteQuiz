@@ -75,6 +75,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
+import { useExplorerStore } from '@/stores/explorer'
+import { useReaderStore } from '@/stores/reader'
 import { saveMistake } from '@/services/mistake'
 import type { QuizQuestion } from '@/types/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
@@ -92,6 +94,8 @@ const emit = defineEmits<{
 }>()
 
 const quizStore = useQuizStore()
+const explorerStore = useExplorerStore()
+const readerStore = useReaderStore()
 const savedIds = ref(new Set<string>())
 
 const questions = computed(() => quizStore.questions)
@@ -125,11 +129,13 @@ function formatUserAnswer(answer: string | undefined): string {
 
 async function handleSaveMistake(q: QuizQuestion) {
   const userAnswer = answers.value.get(q.id) || ''
+  const notePath = explorerStore.selectedPath || ''
+  const noteTitle = readerStore.currentNote?.title || ''
 
   const entry: MistakeEntry = {
     id: crypto.randomUUID(),
-    note_path: '',
-    note_title: '',
+    note_path: notePath,
+    note_title: noteTitle,
     question: q.question,
     user_answer: userAnswer,
     correct_answer: q.answer,

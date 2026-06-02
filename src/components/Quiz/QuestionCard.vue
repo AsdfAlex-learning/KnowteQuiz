@@ -67,8 +67,6 @@ const typeBadgeClass = computed(() => {
   switch (props.question.question_type) {
     case 'single':
       return 'bg-[#89b4fa]/20 text-[#89b4fa]'
-    case 'multiple':
-      return 'bg-[#f9e2af]/20 text-[#f9e2af]'
     case 'short':
       return 'bg-[#a6e3a1]/20 text-[#a6e3a1]'
     default:

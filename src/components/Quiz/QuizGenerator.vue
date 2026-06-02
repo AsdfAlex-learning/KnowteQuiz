@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { useExplorerStore } from '@/stores/explorer'
@@ -111,7 +111,6 @@ const notePath = ref<string | null>(null)
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'single', label: 'Single Choice' },
-  { value: 'multiple', label: 'Multiple Choice' },
   { value: 'short', label: 'Short Answer' },
 ]
 
@@ -139,11 +138,16 @@ async function handleGenerate() {
   })
 }
 
+watch(() => explorerStore.selectedPath, (path) => {
+  notePath.value = path
+})
+
 onMounted(() => {
   const defaults = settingsStore.settings.quiz
   selectedTypes.value = defaults.default_types as QuestionType[]
   count.value = defaults.default_count
   lang.value = defaults.default_language as QuizLanguage
+  difficulty.value = defaults.default_difficulty as QuizDifficulty
   notePath.value = explorerStore.selectedPath
 })
 </script>

@@ -135,6 +135,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
+import { useExplorerStore } from '@/stores/explorer'
+import { useReaderStore } from '@/stores/reader'
 import { submitAnswerAdvanced, diagnoseFollowUp, generateDiagnosisReport } from '@/services/quiz'
 import { saveMistake } from '@/services/mistake'
 import QuestionCard from './QuestionCard.vue'
@@ -152,6 +154,8 @@ const props = defineProps<{
 }>()
 
 const quizStore = useQuizStore()
+const explorerStore = useExplorerStore()
+const readerStore = useReaderStore()
 
 type Phase = 'answering' | 'diagnosing' | 'report'
 const phase = ref<Phase>('answering')
@@ -201,11 +205,12 @@ async function startDiagnosis(answer: string) {
   diagnosisMessages.value = []
 
   try {
+    const notePath = explorerStore.selectedPath || ''
     const sid = await submitAnswerAdvanced(
       currentQuestion.value.question,
       answer,
       reasoning.value,
-      '',
+      notePath,
       (data) => diagnosisMessages.value.push(data),
       (data) => {
         diagnosisMessages.value.push({ role: 'user', content: '', blind_spots: [] })
@@ -297,11 +302,13 @@ async function handleSaveMistakeFromDiagnosis() {
   if (!currentQuestion.value) return
   const answer = quizStore.userAnswers.get(currentQuestion.value.id)
   const answerStr = answer ? answer : ''
+  const notePath = explorerStore.selectedPath || ''
+  const noteTitle = readerStore.currentNote?.title || ''
 
   const entry: MistakeEntry = {
     id: crypto.randomUUID(),
-    note_path: '',
-    note_title: '',
+    note_path: notePath,
+    note_title: noteTitle,
     question: currentQuestion.value.question,
     user_answer: answerStr,
     correct_answer: currentQuestion.value.answer,
