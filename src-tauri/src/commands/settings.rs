@@ -1,6 +1,7 @@
 use crate::models::settings::Settings;
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
-use crate::services::{config, mistake_service, storage};
+use crate::services::{config, llm_service, mistake_service, storage};
+use crate::services::llm_service::ConnectionTestResult;
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -20,30 +21,10 @@ pub async fn list_prompt_templates() -> Result<Vec<(String, String, String)>, St
 }
 
 #[tauri::command]
-pub async fn test_connection(app: AppHandle) -> Result<bool, String> {
+pub async fn test_connection(app: AppHandle) -> Result<ConnectionTestResult, String> {
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;
-    let llm = &settings.llm;
-
-    let client = reqwest::Client::new();
-    let request_body = serde_json::json!({
-        "model": llm.model,
-        "messages": [
-            { "role": "user", "content": "hi" }
-        ],
-        "max_tokens": 5,
-    });
-
-    let response = client
-        .post(format!("{}/chat/completions", llm.base_url.trim_end_matches('/')))
-        .header("Authorization", format!("Bearer {}", llm.api_key))
-        .header("Content-Type", "application/json")
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
-
-    Ok(response.status().is_success())
+    Ok(llm_service::test_connection(&settings.llm).await)
 }
 
 #[tauri::command]

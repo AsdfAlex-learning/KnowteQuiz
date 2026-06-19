@@ -20,7 +20,8 @@ use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::Settings;
-use crate::services::{config, fs_service, mistake_service, note_service, quiz_engine};
+use crate::services::{config, fs_service, llm_service, mistake_service, note_service, quiz_engine};
+use crate::services::llm_service::ConnectionTestResult;
 
 pub struct AppState {
     pub data_dir: PathBuf,
@@ -143,29 +144,9 @@ async fn save_settings_handler(
 
 async fn test_connection_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<bool>, String> {
+) -> Result<Json<ConnectionTestResult>, String> {
     let settings = config::get_settings_path(&state.data_dir)?;
-    let llm = &settings.llm;
-
-    let client = reqwest::Client::new();
-    let request_body = serde_json::json!({
-        "model": llm.model,
-        "messages": [
-            { "role": "user", "content": "hi" }
-        ],
-        "max_tokens": 5,
-    });
-
-    let response = client
-        .post(format!("{}/chat/completions", llm.base_url.trim_end_matches('/')))
-        .header("Authorization", format!("Bearer {}", llm.api_key))
-        .header("Content-Type", "application/json")
-        .json(&request_body)
-        .send()
-        .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
-
-    Ok(Json(response.status().is_success()))
+    Ok(Json(llm_service::test_connection(&settings.llm).await))
 }
 
 async fn list_prompt_templates_handler(
