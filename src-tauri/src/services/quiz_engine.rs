@@ -146,22 +146,75 @@ fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, String> {
 
     let mut result = Vec::new();
     for (i, q) in questions.iter().enumerate() {
-        result.push(QuizQuestion {
-            id: q["id"].as_str().unwrap_or(&format!("q_{}", i)).to_string(),
-            question_type: match q["question_type"].as_str().unwrap_or("single") {
-                "single" => QuestionType::Single,
-                "multiple" => QuestionType::Multiple,
-                _ => QuestionType::Short,
-            },
-            question: q["question"].as_str().unwrap_or("").to_string(),
-            options: q["options"].as_array()
-                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-                .unwrap_or_default(),
-            answer: q["answer"].as_str().unwrap_or("").to_string(),
-            explanation: q["explanation"].as_str().unwrap_or("").to_string(),
-        });
+        let question = parse_quiz_question(q, i)?;
+        result.push(question);
     }
     Ok(result)
+}
+
+fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> {
+    let id = q["id"]
+        .as_str()
+        .filter(|value| !value.trim().is_empty())
+        .map(String::from)
+        .unwrap_or_else(|| format!("q_{}", index));
+    let question_type = parse_question_type(
+        q["question_type"]
+            .as_str()
+            .or_else(|| q["type"].as_str())
+            .unwrap_or("single"),
+        index,
+    )?;
+    let question = required_string(q, "question", index, "question text")?;
+    let answer = required_string(q, "answer", index, "answer")?;
+    let explanation = required_string(q, "explanation", index, "explanation")?;
+    let options = q["options"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .map(String::from)
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    if matches!(question_type, QuestionType::Single | QuestionType::Multiple) && options.is_empty() {
+        return Err(format!("Question {} options are required for choice questions", index + 1));
+    }
+
+    Ok(QuizQuestion {
+        id,
+        question_type,
+        question,
+        options,
+        answer,
+        explanation,
+    })
+}
+
+fn parse_question_type(raw: &str, index: usize) -> Result<QuestionType, String> {
+    match raw.trim().to_ascii_lowercase().as_str() {
+        "single" => Ok(QuestionType::Single),
+        "multiple" => Ok(QuestionType::Multiple),
+        "short" => Ok(QuestionType::Short),
+        other => Err(format!("Question {} has unsupported question type: {}", index + 1, other)),
+    }
+}
+
+fn required_string(
+    value: &Value,
+    field: &str,
+    index: usize,
+    label: &str,
+) -> Result<String, String> {
+    value[field]
+        .as_str()
+        .map(str::trim)
+        .filter(|raw| !raw.is_empty())
+        .map(String::from)
+        .ok_or_else(|| format!("Question {} missing {}", index + 1, label))
 }
 
 fn extract_json_block(raw: &str) -> String {
@@ -422,4 +475,70 @@ fn parse_blind_spots_array(value: &Value) -> Vec<BlindSpot> {
             suggestion: v["suggestion"].as_str().unwrap_or("").to_string(),
         }).collect())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_quiz_response_accepts_type_alias_from_spec() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "type": "multiple",
+                    "question": "Which claims are true?",
+                    "options": ["A. Alpha", "B. Beta", "C. Gamma"],
+                    "answer": "A,C",
+                    "explanation": "Alpha and Gamma are true."
+                }
+            ]
+        }"#;
+
+        let questions = parse_quiz_response(raw).expect("quiz response should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert!(matches!(questions[0].question_type, QuestionType::Multiple));
+    }
+
+    #[test]
+    fn parse_quiz_response_rejects_empty_question_text() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "",
+                    "options": ["A. Alpha", "B. Beta"],
+                    "answer": "A",
+                    "explanation": "Alpha is true."
+                }
+            ]
+        }"#;
+
+        let error = parse_quiz_response(raw).expect_err("empty question should be rejected");
+
+        assert!(error.contains("question text"));
+    }
+
+    #[test]
+    fn parse_quiz_response_rejects_choice_question_without_options() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "Which claim is true?",
+                    "options": [],
+                    "answer": "A",
+                    "explanation": "Alpha is true."
+                }
+            ]
+        }"#;
+
+        let error = parse_quiz_response(raw).expect_err("choice question options are required");
+
+        assert!(error.contains("options"));
+    }
 }
