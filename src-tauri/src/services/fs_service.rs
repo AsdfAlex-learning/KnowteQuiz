@@ -29,7 +29,7 @@ fn scan_recursive(dir: &Path, root: &Path) -> Result<Vec<NoteTreeNode>, String> 
             .to_string_lossy()
             .to_string();
 
-        if name.starts_with('.') {
+        if should_ignore_entry(&name) {
             continue;
         }
 
@@ -60,6 +60,21 @@ fn scan_recursive(dir: &Path, root: &Path) -> Result<Vec<NoteTreeNode>, String> 
     Ok(entries)
 }
 
+fn should_ignore_entry(name: &str) -> bool {
+    matches!(
+        name,
+        ".git"
+            | ".hg"
+            | ".svn"
+            | ".obsidian"
+            | "node_modules"
+            | "target"
+            | "dist"
+            | "build"
+            | ".sisyphus"
+    ) || name.starts_with('.')
+}
+
 pub fn read_file_content(path: &str) -> Result<String, String> {
     let file_path = Path::new(path);
     if !file_path.exists() {
@@ -67,4 +82,35 @@ pub fn read_file_content(path: &str) -> Result<String, String> {
     }
     fs::read_to_string(file_path)
         .map_err(|e| format!("Failed to read file {}: {}", path, e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_notes_dir(test_name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir()
+            .join("knowtequiz-fs-tests")
+            .join(test_name)
+            .join(uuid::Uuid::new_v4().to_string());
+        fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
+
+    #[test]
+    fn scan_directory_ignores_dependency_and_build_directories() {
+        let root = temp_notes_dir("scan_directory_ignores_dependency_and_build_directories");
+        fs::write(root.join("real.md"), "# Real").expect("real note should be written");
+        fs::create_dir_all(root.join("node_modules/pkg")).expect("node_modules should be created");
+        fs::write(root.join("node_modules/pkg/ignored.md"), "# Ignored")
+            .expect("ignored note should be written");
+        fs::create_dir_all(root.join("target/debug")).expect("target should be created");
+        fs::write(root.join("target/debug/ignored.md"), "# Ignored")
+            .expect("ignored note should be written");
+
+        let tree = scan_directory(root.to_string_lossy().as_ref()).expect("scan should succeed");
+
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].name, "real.md");
+    }
 }
