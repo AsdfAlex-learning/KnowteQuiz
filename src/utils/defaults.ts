@@ -37,6 +37,7 @@ export function defaultSettings(): Settings {
       root_path: null,
       expanded_dirs: [],
       selected_path: null,
+      scroll_positions: {},
     },
   }
 }

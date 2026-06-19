@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use crate::models::quiz::QuestionType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,6 +46,8 @@ pub struct WorkspaceState {
     pub expanded_dirs: Vec<String>,
     #[serde(default)]
     pub selected_path: Option<String>,
+    #[serde(default)]
+    pub scroll_positions: HashMap<String, u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

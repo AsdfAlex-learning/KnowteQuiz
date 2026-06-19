@@ -2,11 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { NoteContent } from '../types/note'
 import { readNote } from '../services/note'
+import { getSettings, saveSettings } from '../services/settings'
 
 export const useReaderStore = defineStore('reader', () => {
   const currentNote = ref<NoteContent | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const scrollTop = ref(0)
 
   const isLoading = computed(() => loading.value)
   const wordCount = computed(() => {
@@ -19,17 +21,45 @@ export const useReaderStore = defineStore('reader', () => {
     error.value = null
     try {
       currentNote.value = await readNote(path)
+      const settings = await getSettings()
+      scrollTop.value = settings.workspace.scroll_positions?.[path] ?? 0
     } catch (e) {
       error.value = String(e)
       currentNote.value = null
+      scrollTop.value = 0
     } finally {
       loading.value = false
     }
   }
 
-  function clearNote() {
-    currentNote.value = null
+  async function saveScrollPosition(path: string, top: number) {
+    const settings = await getSettings()
+    await saveSettings({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        scroll_positions: {
+          ...(settings.workspace.scroll_positions ?? {}),
+          [path]: Math.max(0, Math.round(top)),
+        },
+      },
+    })
   }
 
-  return { currentNote, loading, isLoading, error, wordCount, loadNote, clearNote }
+  function clearNote() {
+    currentNote.value = null
+    scrollTop.value = 0
+  }
+
+  return {
+    currentNote,
+    loading,
+    isLoading,
+    error,
+    wordCount,
+    scrollTop,
+    loadNote,
+    saveScrollPosition,
+    clearNote,
+  }
 })

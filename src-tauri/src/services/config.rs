@@ -128,5 +128,6 @@ mod tests {
         assert_eq!(settings.workspace.root_path, None);
         assert!(settings.workspace.expanded_dirs.is_empty());
         assert_eq!(settings.workspace.selected_path, None);
+        assert!(settings.workspace.scroll_positions.is_empty());
     }
 }

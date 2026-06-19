@@ -40,6 +40,7 @@ export interface WorkspaceState {
   root_path?: string | null
   expanded_dirs: string[]
   selected_path?: string | null
+  scroll_positions: Record<string, number>
 }
 
 export interface ConnectionTestResult {
