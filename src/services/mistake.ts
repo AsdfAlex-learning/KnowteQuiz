@@ -1,4 +1,4 @@
-import type { MistakeEntry } from '../types/mistake'
+import type { MistakeEntry, MistakeFilter } from '../types/mistake'
 import { invoke, isTauri } from './tauri'
 
 export async function saveMistake(entry: MistakeEntry): Promise<boolean> {
@@ -14,13 +14,25 @@ export async function saveMistake(entry: MistakeEntry): Promise<boolean> {
   return res.json()
 }
 
-export async function loadMistakes(): Promise<MistakeEntry[]> {
+export async function loadMistakes(filter?: MistakeFilter): Promise<MistakeEntry[]> {
   if (isTauri()) {
-    return invoke<MistakeEntry[]>('load_mistakes')
+    return invoke<MistakeEntry[]>('load_mistakes', { filter: filter ?? null })
   }
-  const res = await fetch('/api/mistakes')
+  const query = mistakeFilterQuery(filter)
+  const res = await fetch(`/api/mistakes${query}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+function mistakeFilterQuery(filter?: MistakeFilter): string {
+  if (!filter) return ''
+  const params = new URLSearchParams()
+  if (filter.mode) params.set('mode', filter.mode)
+  if (filter.note_path) params.set('note_path', filter.note_path)
+  if (filter.offset !== undefined) params.set('offset', String(filter.offset))
+  if (filter.limit !== undefined) params.set('limit', String(filter.limit))
+  const query = params.toString()
+  return query ? `?${query}` : ''
 }
 
 export async function listPromptTemplates(): Promise<Array<{ name: string; label: string; description: string }>> {

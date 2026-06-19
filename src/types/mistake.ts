@@ -22,3 +22,10 @@ export interface MistakeEntry {
   created_at: string
   review_count: number
 }
+
+export interface MistakeFilter {
+  mode?: MistakeMode
+  note_path?: string
+  offset?: number
+  limit?: number
+}
