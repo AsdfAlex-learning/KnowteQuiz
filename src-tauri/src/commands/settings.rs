@@ -1,6 +1,6 @@
 use crate::models::settings::Settings;
-use crate::models::mistake::MistakeEntry;
-use crate::services::{config, storage};
+use crate::models::mistake::{MistakeEntry, MistakeFilter};
+use crate::services::{config, mistake_service, storage};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -48,16 +48,14 @@ pub async fn test_connection(app: AppHandle) -> Result<bool, String> {
 
 #[tauri::command]
 pub async fn save_mistake(app: AppHandle, entry: MistakeEntry) -> Result<bool, String> {
-    let mut mistakes: Vec<MistakeEntry> = storage::read_json(&app, "mistakes.json")
-        .unwrap_or_default();
-    mistakes.insert(0, entry);
-    storage::write_json(&app, "mistakes.json", &mistakes)?;
+    let data_dir = storage::get_data_dir(&app)?;
+    mistake_service::save_mistake(&data_dir, entry)?;
     Ok(true)
 }
 
 #[tauri::command]
-pub async fn load_mistakes(app: AppHandle) -> Result<Vec<MistakeEntry>, String> {
-    let mistakes: Vec<MistakeEntry> = storage::read_json(&app, "mistakes.json")
-        .unwrap_or_default();
-    Ok(mistakes)
+pub async fn load_mistakes(app: AppHandle, filter: Option<MistakeFilter>) -> Result<Vec<MistakeEntry>, String> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let filter = filter.unwrap_or_default();
+    mistake_service::load_mistakes(&data_dir, &filter)
 }

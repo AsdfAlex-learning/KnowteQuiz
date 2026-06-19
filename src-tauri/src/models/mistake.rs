@@ -34,9 +34,11 @@ pub struct MistakeEntry {
     pub review_count: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MistakeFilter {
     pub mode: Option<MistakeMode>,
     pub note_path: Option<String>,
+    #[serde(default)]
+    pub offset: Option<u32>,
     pub limit: Option<u32>,
 }

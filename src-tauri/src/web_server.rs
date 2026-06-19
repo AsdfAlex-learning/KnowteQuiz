@@ -16,11 +16,11 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
-use crate::models::mistake::MistakeEntry;
+use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::Settings;
-use crate::services::{config, fs_service, note_service, quiz_engine, storage};
+use crate::services::{config, fs_service, mistake_service, note_service, quiz_engine};
 
 pub struct AppState {
     pub data_dir: PathBuf,
@@ -175,9 +175,9 @@ async fn list_prompt_templates_handler(
 
 async fn load_mistakes_handler(
     State(state): State<Arc<AppState>>,
+    Query(filter): Query<MistakeFilter>,
 ) -> Result<Json<Vec<MistakeEntry>>, String> {
-    let mistakes: Vec<MistakeEntry> = storage::read_json_path(&state.data_dir, "mistakes.json")
-        .unwrap_or_default();
+    let mistakes = mistake_service::load_mistakes(&state.data_dir, &filter)?;
     Ok(Json(mistakes))
 }
 
@@ -185,10 +185,7 @@ async fn save_mistake_handler(
     State(state): State<Arc<AppState>>,
     Json(entry): Json<MistakeEntry>,
 ) -> Result<Json<bool>, String> {
-    let mut mistakes: Vec<MistakeEntry> = storage::read_json_path(&state.data_dir, "mistakes.json")
-        .unwrap_or_default();
-    mistakes.insert(0, entry);
-    storage::write_json_path(&state.data_dir, "mistakes.json", &mistakes)?;
+    mistake_service::save_mistake(&state.data_dir, entry)?;
     Ok(Json(true))
 }
 
