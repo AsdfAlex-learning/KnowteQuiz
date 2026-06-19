@@ -1,29 +1,29 @@
 <template>
   <button
-    class="w-full text-left px-3 py-2.5 rounded-lg transition-colors group"
+    class="w-full text-left px-3 py-2.5 rounded-lg transition-colors card-hover group"
     :class="
       active
-        ? 'bg-[#45475a]/60'
-        : 'hover:bg-[#313244]'
+        ? 'bg-[var(--bg-active)]/60'
+        : 'hover:bg-[var(--bg-elevated)]'
     "
     @click="$emit('select', mistake.id)"
   >
     <div class="flex items-start justify-between gap-2">
-      <p class="text-sm text-[#f8f8f2] leading-snug line-clamp-2 flex-1">
+      <p class="text-sm text-[var(--text-primary)] leading-snug line-clamp-2 flex-1">
         {{ mistake.question }}
       </p>
       <span
         class="shrink-0 mt-0.5 px-1.5 py-0.5 text-[10px] font-semibold uppercase rounded"
         :class="
           mistake.mode === 'advanced'
-            ? 'bg-[#cba6f7]/20 text-[#cba6f7]'
-            : 'bg-[#89b4fa]/20 text-[#89b4fa]'
+            ? 'bg-[var(--accent-purple)]/20 text-[var(--accent-purple)]'
+            : 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]'
         "
       >
         {{ mistake.mode }}
       </span>
     </div>
-    <p class="text-[11px] text-[#585b70] mt-1">
+    <p class="text-[11px] text-[var(--text-faint)] mt-1">
       {{ formattedDate }}
     </p>
   </button>

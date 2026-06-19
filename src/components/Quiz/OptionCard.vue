@@ -1,6 +1,6 @@
 <template>
   <button
-    class="w-full text-left px-3 py-2.5 rounded-lg border transition-all"
+    class="w-full text-left px-3 py-2.5 rounded-lg border transition-all btn-press"
     :class="optionClasses"
     :disabled="disabled"
     @click="!disabled && $emit('select')"
@@ -39,41 +39,41 @@ const optionClasses = computed(() => {
   const base = 'border-'
   switch (props.state) {
     case 'correct':
-      return 'border-[#a6e3a1] bg-[#a6e3a1]/10'
+      return 'border-[var(--accent-green)] bg-[var(--accent-green)]/10'
     case 'incorrect':
-      return 'border-[#f38ba8] bg-[#f38ba8]/10'
+      return 'border-[var(--color-error)] bg-[var(--color-error)]/10'
     case 'selected':
-      return 'border-[#cba6f7] bg-[#cba6f7]/10'
+      return 'border-[var(--border-focus)] bg-[var(--accent-purple)]/10'
     default:
       return props.disabled
-        ? 'border-[#313244] opacity-60'
-        : 'border-[#45475a] hover:border-[#585b70] hover:bg-[#313244]/50'
+        ? 'border-[var(--border-subtle)] opacity-60'
+        : 'border-[var(--border-default)] hover:border-[var(--text-faint)] hover:bg-[var(--bg-elevated)]/50'
   }
 })
 
 const letterClasses = computed(() => {
   switch (props.state) {
     case 'correct':
-      return 'bg-[#a6e3a1] text-[#1e1e2e]'
+      return 'bg-[var(--accent-green)] text-[var(--bg-base)]'
     case 'incorrect':
-      return 'bg-[#f38ba8] text-[#1e1e2e]'
+      return 'bg-[var(--color-error)] text-[var(--bg-base)]'
     case 'selected':
-      return 'bg-[#cba6f7] text-[#1e1e2e]'
+      return 'bg-[var(--accent-purple)] text-[var(--bg-base)]'
     default:
-      return 'bg-[#313244] text-[#a6adc8]'
+      return 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
   }
 })
 
 const textClasses = computed(() => {
   switch (props.state) {
     case 'correct':
-      return 'text-[#a6e3a1]'
+      return 'text-[var(--accent-green)]'
     case 'incorrect':
-      return 'text-[#f38ba8]'
+      return 'text-[var(--color-error)]'
     case 'selected':
-      return 'text-[#cba6f7]'
+      return 'text-[var(--accent-purple)]'
     default:
-      return 'text-[#cdd6f4]'
+      return 'text-[var(--text-secondary)]'
   }
 })
 </script>

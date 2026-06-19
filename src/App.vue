@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen w-screen flex flex-col bg-[#1e1e2e] text-[#f8f8f2] overflow-hidden">
+  <div class="h-screen w-screen flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] overflow-hidden">
     <TitleBar>
       <template #center>
         {{ readerStore.currentNote?.title || '' }}
@@ -9,7 +9,7 @@
       <!-- Left panel -->
       <aside
         v-show="layoutStore.leftPanelOpen"
-        class="flex-shrink-0 overflow-auto bg-[#282a36] border-r border-[#44475a]"
+        class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-r border-[var(--border-default)]"
         :style="{ width: layoutStore.explorerWidth + 'px' }"
       >
         <FolderSelector />
@@ -17,12 +17,12 @@
       </aside>
       <div
         v-show="layoutStore.leftPanelOpen"
-        class="w-1 cursor-col-resize bg-[#44475a] hover:bg-[#bd93f9] flex-shrink-0"
+        class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
         @mousedown="startDragLeft"
       />
 
       <!-- Center panel -->
-      <main class="flex-1 min-w-[300px] overflow-auto bg-[#1e1e2e]">
+      <main class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]">
         <MarkdownRenderer v-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
         <EmptyState v-else />
       </main>
@@ -30,12 +30,12 @@
       <!-- Right panel -->
       <div
         v-show="layoutStore.rightPanelOpen"
-        class="w-1 cursor-col-resize bg-[#44475a] hover:bg-[#bd93f9] flex-shrink-0"
+        class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
         @mousedown="startDragRight"
       />
       <aside
         v-show="layoutStore.rightPanelOpen"
-        class="flex-shrink-0 overflow-auto bg-[#282a36] border-l border-[#44475a]"
+        class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-l border-[var(--border-default)]"
         :style="{ width: layoutStore.readerWidth + 'px' }"
       >
         <PanelContainer />

@@ -5,22 +5,22 @@
       @update:llm="updateLLM"
     />
 
-    <div class="border-t border-[#45475a]" />
+    <div class="border-t border-[var(--border-default)]" />
 
     <QuizDefaultsForm
       :model-value="settings.quiz"
       @update:model-value="updateQuiz"
     />
 
-    <div class="border-t border-[#45475a]" />
+    <div class="border-t border-[var(--border-default)]" />
 
     <div class="space-y-3">
       <button
-        class="w-full py-2 rounded-md text-sm font-medium transition-colors"
+        class="w-full py-2 rounded-md text-sm font-medium transition-colors btn-press"
         :class="
           testing
-            ? 'bg-[#45475a] text-[#a6adc8] cursor-wait'
-            : 'bg-[#cba6f7] text-[#1e1e2e] hover:bg-[#b4befe]'
+            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+            : 'bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)]'
         "
         :disabled="testing"
         @click="handleTestConnection"
@@ -33,15 +33,15 @@
         class="flex items-center gap-2 text-xs px-3 py-2 rounded-md"
         :class="
           connectionResult
-            ? 'bg-[#a6e3a1]/10 text-[#a6e3a1]'
-            : 'bg-[#f38ba8]/10 text-[#f38ba8]'
+            ? 'bg-[var(--accent-green)]/10 text-[var(--accent-green)]'
+            : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'
         "
       >
-        <span>{{ connectionResult ? '✓ Connected' : '✗ Connection failed' }}</span>
+        <span>{{ connectionResult ? '\u2713 Connected' : '\u2717 Connection failed' }}</span>
       </div>
 
       <button
-        class="w-full py-2 rounded-md text-sm font-medium bg-[#313244] text-[#f8f8f2] hover:bg-[#45475a] transition-colors"
+        class="w-full py-2 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
         @click="handleSave"
       >
         Save Settings

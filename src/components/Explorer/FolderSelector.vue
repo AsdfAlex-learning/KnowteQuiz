@@ -5,7 +5,7 @@
         v-model="manualPath"
         type="text"
         placeholder="Enter notes folder path..."
-        class="w-full px-2 py-1.5 text-xs bg-[#1e1e2e] text-[#f8f8f2] border border-[#44475a] rounded focus:border-[#bd93f9] focus:outline-none"
+        class="w-full px-2 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
         @keydown.enter="setManualPath"
       />
     </div>
@@ -91,14 +91,14 @@ async function setManualPath() {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--accent-purple);
-  background: rgba(189, 147, 249, 0.1);
-  border: 1px dashed rgba(189, 147, 249, 0.3);
+  background: color-mix(in srgb, var(--accent-purple) 10%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--accent-purple) 30%, transparent);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 
 .open-folder-btn:hover {
-  background: rgba(189, 147, 249, 0.2);
-  border-color: rgba(189, 147, 249, 0.5);
+  background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent-purple) 50%, transparent);
 }
 </style>

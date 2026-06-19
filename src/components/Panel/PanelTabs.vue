@@ -1,20 +1,20 @@
 <template>
-  <div class="flex border-b border-[#45475a]">
+  <div class="flex border-b border-[var(--border-default)]">
     <button
       v-for="tab in tabs"
       :key="tab.key"
-      class="flex-1 px-3 py-2.5 text-sm font-medium transition-colors relative"
+      class="flex-1 px-3 py-2.5 text-sm font-medium transition-all duration-[var(--transition-base)] relative"
       :class="
         modelValue === tab.key
-          ? 'text-[#cba6f7]'
-          : 'text-[#a6adc8] hover:text-[#f8f8f2]'
+          ? 'text-[var(--accent-purple)]'
+          : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
       "
       @click="$emit('update:modelValue', tab.key)"
     >
       {{ tab.label }}
       <span
         v-if="modelValue === tab.key"
-        class="absolute bottom-0 left-2 right-2 h-0.5 bg-[#cba6f7] rounded-full"
+        class="absolute bottom-0 left-2 right-2 h-0.5 bg-[var(--accent-purple)] rounded-full"
       />
     </button>
   </div>

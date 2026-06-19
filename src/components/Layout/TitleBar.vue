@@ -1,30 +1,30 @@
 <template>
   <div
-    class="h-9 flex items-center justify-between px-3 bg-[#282a36] border-b border-[#44475a] select-none"
+    class="h-9 flex items-center justify-between px-3 bg-[var(--bg-sidebar)] border-b border-[var(--border-default)] select-none"
     data-tauri-drag-region
   >
     <!-- Left: App identity -->
     <div class="flex items-center gap-2 min-w-0" data-tauri-drag-region>
-      <div class="w-5 h-5 rounded bg-[#bd93f9] flex items-center justify-center flex-shrink-0">
+      <div class="w-5 h-5 rounded bg-[var(--accent-purple)] flex items-center justify-center flex-shrink-0">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M2 3h3v3H2V3zm5 0h3v3H7V3zM2 8h3v3H2V8zm5 1.5A1.5 1.5 0 017 11a1.5 1.5 0 01-1.5-1.5A1.5 1.5 0 017 8a1.5 1.5 0 011.5 1.5z" fill="#1e1e2e" />
         </svg>
       </div>
-      <span class="text-xs font-semibold text-[#f8f8f2] truncate" data-tauri-drag-region>
+      <span class="text-xs font-semibold text-[var(--text-primary)] truncate" data-tauri-drag-region>
         KnowteQuiz
       </span>
     </div>
 
     <!-- Center: Current note title -->
-    <div class="flex-1 text-center text-[11px] text-[#a6adc8] truncate px-4" data-tauri-drag-region>
+    <div class="flex-1 text-center text-[11px] text-[var(--text-muted)] truncate px-4" data-tauri-drag-region>
       <slot name="center" />
     </div>
 
     <!-- Right: Panel toggles + Window controls -->
     <div class="flex items-center gap-1">
       <button
-        class="w-7 h-7 flex items-center justify-center rounded text-[#a6adc8] hover:bg-[#313244] hover:text-[#f8f8f2] transition-colors"
-        :class="{ 'text-[#bd93f9]': layoutStore.leftPanelOpen }"
+        class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
+        :class="{ 'text-[var(--accent-purple)]': layoutStore.leftPanelOpen }"
         title="Toggle Explorer (Ctrl+B)"
         @click="layoutStore.toggleLeftPanel()"
       >
@@ -34,8 +34,8 @@
         </svg>
       </button>
       <button
-        class="w-7 h-7 flex items-center justify-center rounded text-[#a6adc8] hover:bg-[#313244] hover:text-[#f8f8f2] transition-colors"
-        :class="{ 'text-[#bd93f9]': layoutStore.rightPanelOpen }"
+        class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
+        :class="{ 'text-[var(--accent-purple)]': layoutStore.rightPanelOpen }"
         title="Toggle Panel (Ctrl+Shift+B)"
         @click="layoutStore.toggleRightPanel()"
       >
@@ -47,10 +47,10 @@
 
       <!-- Window controls (Tauri only) -->
       <template v-if="isTauri()">
-        <div class="w-px h-4 bg-[#44475a] mx-1" />
+        <div class="w-px h-4 bg-[var(--bg-active)] mx-1" />
 
         <button
-          class="w-7 h-7 flex items-center justify-center rounded text-[#a6adc8] hover:bg-[#313244] hover:text-[#f8f8f2] transition-colors"
+          class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
           title="Minimize"
           @click="minimize"
         >
@@ -59,7 +59,7 @@
           </svg>
         </button>
         <button
-          class="w-7 h-7 flex items-center justify-center rounded text-[#a6adc8] hover:bg-[#313244] hover:text-[#f8f8f2] transition-colors"
+          class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
           title="Maximize"
           @click="toggleMaximize"
         >
@@ -68,7 +68,7 @@
           </svg>
         </button>
         <button
-          class="w-7 h-7 flex items-center justify-center rounded text-[#a6adc8] hover:bg-[#f38ba8] hover:text-[#1e1e2e] transition-colors"
+          class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--color-error)] hover:text-[var(--bg-base)] transition-colors"
           title="Close"
           @click="closeWindow"
         >

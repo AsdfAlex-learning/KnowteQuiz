@@ -1,13 +1,13 @@
 <template>
   <div class="p-4 space-y-5">
     <div class="flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-[#f8f8f2]">Generate Quiz</h2>
+      <h2 class="text-sm font-semibold text-[var(--text-primary)]">Generate Quiz</h2>
       <ModeToggle v-model="mode" />
     </div>
 
     <!-- Question types -->
     <div>
-      <span class="text-xs text-[#a6adc8] mb-1.5 block">Question Types</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1.5 block">Question Types</span>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="qt in questionTypes"
@@ -15,8 +15,8 @@
           class="px-2.5 py-1 text-xs rounded-md border transition-colors"
           :class="
             selectedTypes.includes(qt.value)
-              ? 'bg-[#cba6f7]/20 border-[#cba6f7] text-[#cba6f7]'
-              : 'bg-[#1e1e2e] border-[#45475a] text-[#a6adc8] hover:border-[#585b70]'
+              ? 'bg-[var(--accent-purple)]/20 border-[var(--border-focus)] text-[var(--accent-purple)]'
+              : 'bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--text-faint)]'
           "
           @click="toggleType(qt.value)"
         >
@@ -27,9 +27,9 @@
 
     <!-- Count slider -->
     <label class="block">
-      <span class="text-xs text-[#a6adc8] mb-1 flex justify-between">
+      <span class="text-xs text-[var(--text-muted)] mb-1 flex justify-between">
         Number of Questions
-        <span class="text-[#f8f8f2]">{{ count }}</span>
+        <span class="text-[var(--text-primary)]">{{ count }}</span>
       </span>
       <input
         v-model.number="count"
@@ -37,16 +37,16 @@
         min="1"
         max="20"
         step="1"
-        class="w-full accent-[#cba6f7]"
+        class="w-full accent-[var(--accent-purple)]"
       />
     </label>
 
     <!-- Difficulty -->
     <label class="block">
-      <span class="text-xs text-[#a6adc8] mb-1 block">Difficulty</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1 block">Difficulty</span>
       <select
         v-model="difficulty"
-        class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
+        class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
       >
         <option value="easy">Easy</option>
         <option value="medium">Medium</option>
@@ -56,10 +56,10 @@
 
     <!-- Language -->
     <label class="block">
-      <span class="text-xs text-[#a6adc8] mb-1 block">Language</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1 block">Language</span>
       <select
         v-model="lang"
-        class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
+        class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
       >
         <option value="en">English</option>
         <option value="zh">中文</option>
@@ -70,11 +70,11 @@
 
     <!-- Generate button -->
     <button
-      class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors"
+      class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors btn-press"
       :class="
         quizStore.isGenerating
-          ? 'bg-[#45475a] text-[#a6adc8] cursor-wait'
-          : 'bg-[#cba6f7] text-[#1e1e2e] hover:bg-[#b4befe]'
+          ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+          : 'bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)]'
       "
       :disabled="quizStore.isGenerating || !notePath"
       @click="handleGenerate"
@@ -82,7 +82,7 @@
       {{ quizStore.isGenerating ? 'Generating...' : 'Start Quiz' }}
     </button>
 
-    <p v-if="!notePath" class="text-[11px] text-[#585b70] text-center">
+    <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">
       Select a note to generate a quiz
     </p>
   </div>

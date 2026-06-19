@@ -1,13 +1,13 @@
 <template>
-  <div class="flex bg-[#1e1e2e] rounded-lg p-0.5 border border-[#45475a]">
+  <div class="flex bg-[var(--bg-base)] rounded-lg p-0.5 border border-[var(--border-default)]">
     <button
       v-for="opt in options"
       :key="opt.value"
-      class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all"
+      class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all btn-press"
       :class="
         modelValue === opt.value
-          ? 'bg-[#cba6f7] text-[#1e1e2e] shadow-sm'
-          : 'text-[#a6adc8] hover:text-[#f8f8f2]'
+          ? 'bg-[var(--accent-purple)] text-[var(--bg-base)] shadow-sm'
+          : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
       "
       @click="$emit('update:modelValue', opt.value)"
     >

@@ -2,13 +2,13 @@
   <div class="space-y-4">
     <!-- Progress bar -->
     <div class="flex items-center gap-3">
-      <div class="flex-1 h-1 bg-[#313244] rounded-full overflow-hidden">
+      <div class="flex-1 h-1.5 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
         <div
-          class="h-full bg-[#cba6f7] rounded-full transition-all duration-300"
+          class="h-full bg-gradient-to-r from-[var(--accent-purple)] to-[var(--accent-lavender)] rounded-full transition-all duration-500 ease-out"
           :style="{ width: progressPercent + '%' }"
         />
       </div>
-      <span class="text-[11px] text-[#585b70] tabular-nums shrink-0">
+      <span class="text-[11px] text-[var(--text-faint)] tabular-nums shrink-0">
         {{ currentIndex + 1 }} / {{ total }}
       </span>
     </div>
@@ -22,7 +22,7 @@
     </span>
 
     <!-- Question text -->
-    <h2 class="text-sm font-medium text-[#f8f8f2] leading-relaxed">
+    <h2 class="text-sm font-medium text-[var(--text-primary)] leading-relaxed">
       {{ question.question }}
     </h2>
 
@@ -66,11 +66,11 @@ const progressPercent = computed(() =>
 const typeBadgeClass = computed(() => {
   switch (props.question.question_type) {
     case 'single':
-      return 'bg-[#89b4fa]/20 text-[#89b4fa]'
+      return 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]'
     case 'short':
-      return 'bg-[#a6e3a1]/20 text-[#a6e3a1]'
+      return 'bg-[var(--accent-green)]/20 text-[var(--accent-green)]'
     default:
-      return 'bg-[#45475a] text-[#a6adc8]'
+      return 'bg-[var(--bg-active)] text-[var(--text-muted)]'
   }
 })
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-[#1e1e2e]">
+  <div class="h-full flex flex-col bg-[var(--bg-base)]">
     <PanelTabs v-model="activeTab" />
     <div class="flex-1 overflow-y-auto">
       <div v-if="activeTab === 'quiz'" class="h-full flex flex-col">

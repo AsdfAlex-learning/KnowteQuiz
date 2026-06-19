@@ -1,43 +1,43 @@
-<template>
+﻿<template>
   <div class="space-y-5">
     <!-- Score display -->
     <div class="text-center py-4">
       <div class="text-4xl font-bold" :class="scoreColor">
         {{ correctCount }} / {{ total }}
       </div>
-      <p class="text-xs text-[#a6adc8] mt-1">
+      <p class="text-xs text-[var(--text-muted)] mt-1">
         {{ Math.round(scorePercent) }}% correct
       </p>
     </div>
 
     <!-- Question review -->
     <div class="space-y-3">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[#a6adc8]">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         Review
       </h3>
       <div
         v-for="(q, i) in questions"
         :key="q.id"
-        class="bg-[#313244] rounded-lg p-3 space-y-2"
+        class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2 card-hover"
       >
         <div class="flex items-start gap-2">
           <span
             class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
-            :class="isCorrect(q) ? 'bg-[#a6e3a1] text-[#1e1e2e]' : 'bg-[#f38ba8] text-[#1e1e2e]'"
+            :class="isCorrect(q) ? 'bg-[var(--accent-green)] text-[var(--bg-base)]' : 'bg-[var(--color-error)] text-[var(--bg-base)]'"
           >
-            {{ isCorrect(q) ? '✓' : '✗' }}
+            {{ isCorrect(q) ? '\u2713' : '\u2717' }}
           </span>
           <div class="flex-1 min-w-0">
-            <p class="text-sm text-[#f8f8f2] leading-snug">{{ q.question }}</p>
+            <p class="text-sm text-[var(--text-primary)] leading-snug">{{ q.question }}</p>
             <div class="mt-1.5 flex items-center gap-3 text-xs">
-              <span class="text-[#f38ba8]">
+              <span class="text-[var(--color-error)]">
                 Yours: {{ formatUserAnswer(answers.get(q.id)) }}
               </span>
-              <span class="text-[#a6e3a1]">
+              <span class="text-[var(--accent-green)]">
                 Correct: {{ q.answer }}
               </span>
             </div>
-            <p v-if="!isCorrect(q) && q.explanation" class="text-xs text-[#a6adc8] mt-1 leading-relaxed">
+            <p v-if="!isCorrect(q) && q.explanation" class="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
               {{ q.explanation }}
             </p>
           </div>
@@ -46,16 +46,16 @@
         <!-- Save mistake button for wrong answers -->
         <button
           v-if="!isCorrect(q) && !savedIds.has(q.id)"
-          class="text-[11px] text-[#cba6f7] hover:text-[#b4befe] transition-colors"
+          class="text-[11px] text-[var(--accent-purple)] hover:text-[var(--accent-lavender)] transition-colors"
           @click="handleSaveMistake(q)"
         >
           Save to Mistake Book
         </button>
         <span
           v-else-if="!isCorrect(q) && savedIds.has(q.id)"
-          class="text-[11px] text-[#a6e3a1]"
+          class="text-[11px] text-[var(--accent-green)]"
         >
-          Saved ✓
+          Saved &#10003;
         </span>
       </div>
     </div>
@@ -63,7 +63,7 @@
     <!-- Actions -->
     <div class="space-y-2">
       <button
-        class="w-full py-2.5 rounded-md text-sm font-semibold bg-[#cba6f7] text-[#1e1e2e] hover:bg-[#b4befe] transition-colors"
+        class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors btn-press"
         @click="$emit('newQuiz')"
       >
         Start New Quiz
@@ -111,9 +111,9 @@ const scorePercent = computed(() =>
 )
 
 const scoreColor = computed(() => {
-  if (scorePercent.value >= 80) return 'text-[#a6e3a1]'
-  if (scorePercent.value >= 50) return 'text-[#f9e2af]'
-  return 'text-[#f38ba8]'
+  if (scorePercent.value >= 80) return 'text-[var(--accent-green)]'
+  if (scorePercent.value >= 50) return 'text-[var(--color-warning)]'
+  return 'text-[var(--color-error)]'
 })
 
 function isCorrect(q: QuizQuestion): boolean {
@@ -123,7 +123,7 @@ function isCorrect(q: QuizQuestion): boolean {
 }
 
 function formatUserAnswer(answer: string | undefined): string {
-  if (!answer) return '—'
+  if (!answer) return '\u2014'
   return answer
 }
 

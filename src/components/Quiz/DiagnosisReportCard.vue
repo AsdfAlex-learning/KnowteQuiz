@@ -1,5 +1,5 @@
 <template>
-  <div class="border border-[#45475a] rounded-lg p-3 space-y-2.5">
+  <div class="border border-[var(--border-default)] rounded-lg p-3 space-y-2.5 card-hover">
     <div class="flex items-center gap-2">
       <span
         class="px-2 py-0.5 text-[10px] font-semibold rounded"
@@ -7,22 +7,22 @@
       >
         {{ spot.severity }}
       </span>
-      <span class="text-xs font-medium text-[#cba6f7]">{{ spot.tag }}</span>
+      <span class="text-xs font-medium text-[var(--accent-purple)]">{{ spot.tag }}</span>
     </div>
 
-    <p class="text-xs text-[#cdd6f4] leading-relaxed">
+    <p class="text-xs text-[var(--text-secondary)] leading-relaxed">
       {{ spot.description }}
     </p>
 
-    <div v-if="spot.note_reference" class="bg-[#1e1e2e] rounded-md px-2.5 py-1.5">
-      <p class="text-[11px] text-[#585b70] italic">
+    <div v-if="spot.note_reference" class="bg-[var(--bg-base)] rounded-md px-2.5 py-1.5">
+      <p class="text-[11px] text-[var(--text-faint)] italic">
         {{ spot.note_reference }}
       </p>
     </div>
 
     <div v-if="spot.suggestion" class="flex items-start gap-1.5">
-      <span class="text-[#a6e3a1] text-xs mt-0.5">→</span>
-      <p class="text-xs text-[#a6e3a1] leading-relaxed">
+      <span class="text-[var(--accent-green)] text-xs mt-0.5">&rarr;</span>
+      <p class="text-xs text-[var(--accent-green)] leading-relaxed">
         {{ spot.suggestion }}
       </p>
     </div>
@@ -40,13 +40,13 @@ const props = defineProps<{
 const severityClass = computed(() => {
   switch (props.spot.severity) {
     case 'high':
-      return 'bg-[#f38ba8]/20 text-[#f38ba8]'
+      return 'bg-[var(--color-error)]/20 text-[var(--color-error)]'
     case 'medium':
-      return 'bg-[#fab387]/20 text-[#fab387]'
+      return 'bg-[var(--accent-peach)]/20 text-[var(--accent-peach)]'
     case 'low':
-      return 'bg-[#f9e2af]/20 text-[#f9e2af]'
+      return 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]'
     default:
-      return 'bg-[#45475a] text-[#a6adc8]'
+      return 'bg-[var(--bg-active)] text-[var(--text-muted)]'
   }
 })
 </script>

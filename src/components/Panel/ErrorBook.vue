@@ -1,21 +1,21 @@
 <template>
   <div class="h-full flex flex-col">
     <!-- Filter bar -->
-    <div class="px-3 py-2 border-b border-[#45475a] flex items-center gap-2">
+    <div class="px-3 py-2 border-b border-[var(--border-default)] flex items-center gap-2">
       <button
         v-for="f in filters"
         :key="f.value"
         class="px-2.5 py-1 text-xs rounded-md transition-colors"
         :class="
           filter === f.value
-            ? 'bg-[#cba6f7]/20 text-[#cba6f7]'
-            : 'text-[#a6adc8] hover:bg-[#313244]'
+            ? 'bg-[var(--accent-purple)]/20 text-[var(--accent-purple)]'
+            : 'text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]'
         "
         @click="filter = f.value"
       >
         {{ f.label }}
       </button>
-      <span class="ml-auto text-[11px] text-[#585b70]">
+      <span class="ml-auto text-[11px] text-[var(--text-faint)]">
         {{ filteredMistakes.length }} items
       </span>
     </div>
@@ -33,13 +33,13 @@
     <div v-else class="flex-1 overflow-y-auto p-2 space-y-1">
       <div
         v-if="loading"
-        class="flex items-center justify-center py-8 text-sm text-[#585b70]"
+        class="flex items-center justify-center py-8 text-sm text-[var(--text-faint)]"
       >
         Loading...
       </div>
       <div
         v-else-if="filteredMistakes.length === 0"
-        class="flex flex-col items-center justify-center py-12 text-[#585b70]"
+        class="flex flex-col items-center justify-center py-12 text-[var(--text-faint)]"
       >
         <p class="text-sm">No mistakes recorded</p>
         <p class="text-xs mt-1">Wrong answers will appear here</p>

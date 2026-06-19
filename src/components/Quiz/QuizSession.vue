@@ -5,9 +5,9 @@
       v-if="quizStore.isGenerating"
       class="flex-1 flex flex-col items-center justify-center gap-3 p-4"
     >
-      <div class="w-8 h-8 border-2 border-[#cba6f7] border-t-transparent rounded-full animate-spin" />
-      <p class="text-sm text-[#a6adc8]">Generating questions...</p>
-      <p class="text-xs text-[#585b70]">{{ quizStore.questions.length }} loaded</p>
+      <div class="w-8 h-8 border-2 border-[var(--border-focus)] border-t-transparent rounded-full animate-spin" />
+      <p class="text-sm text-[var(--text-muted)]">Generating questions...</p>
+      <p class="text-xs text-[var(--text-faint)]">{{ quizStore.questions.length }} loaded</p>
     </div>
 
     <!-- Answering state -->
@@ -40,13 +40,13 @@
 
       <!-- Submit / Next buttons -->
       <div class="pt-2 space-y-2">
-        <button
-          v-if="!submitted"
-          class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors"
+          <button
+            v-if="!submitted"
+            class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors btn-press"
           :class="
             canSubmit
-              ? 'bg-[#cba6f7] text-[#1e1e2e] hover:bg-[#b4befe]'
-              : 'bg-[#45475a] text-[#a6adc8] cursor-not-allowed'
+              ? 'bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)]'
+              : 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-not-allowed'
           "
           :disabled="!canSubmit"
           @click="handleSubmit"
@@ -56,15 +56,15 @@
 
         <template v-else>
           <!-- Explanation after submit -->
-          <div v-if="currentQuestion.explanation" class="bg-[#1e1e2e] rounded-lg p-3">
-            <p class="text-xs text-[#a6adc8] mb-1">Explanation</p>
-            <p class="text-sm text-[#cdd6f4] leading-relaxed">
+          <div v-if="currentQuestion.explanation" class="bg-[var(--bg-base)] rounded-lg p-3">
+            <p class="text-xs text-[var(--text-muted)] mb-1">Explanation</p>
+            <p class="text-sm text-[var(--text-secondary)] leading-relaxed">
               {{ currentQuestion.explanation }}
             </p>
           </div>
 
           <button
-            class="w-full py-2.5 rounded-md text-sm font-semibold bg-[#313244] text-[#f8f8f2] hover:bg-[#45475a] transition-colors"
+            class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
             @click="handleNext"
           >
             {{ quizStore.isLastQuestion ? 'View Results' : 'Next Question' }}
@@ -78,7 +78,7 @@
       v-else-if="phase === 'diagnosing'"
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[#cba6f7]">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">
         Diagnosis
       </h3>
       <DiagnosisChat
@@ -100,13 +100,13 @@
 
       <div class="space-y-2 pt-2">
         <button
-          class="w-full py-2.5 rounded-md text-sm font-semibold bg-[#cba6f7] text-[#1e1e2e] hover:bg-[#b4befe] transition-colors"
+          class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors"
           @click="handleSaveMistakeFromDiagnosis"
         >
           Save to Mistake Book
         </button>
         <button
-          class="w-full py-2.5 rounded-md text-sm font-medium bg-[#313244] text-[#f8f8f2] hover:bg-[#45475a] transition-colors"
+          class="w-full py-2.5 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
           @click="handleNextAfterReport"
         >
           {{ quizStore.isLastQuestion ? 'View Results' : 'Next Question' }}
@@ -127,7 +127,7 @@
       v-else
       class="flex-1 flex items-center justify-center p-4"
     >
-      <p class="text-sm text-[#585b70]">Configure and start a quiz above</p>
+      <p class="text-sm text-[var(--text-faint)]">Configure and start a quiz above</p>
     </div>
   </div>
 </template>

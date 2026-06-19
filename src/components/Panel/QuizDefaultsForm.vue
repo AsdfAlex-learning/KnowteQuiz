@@ -1,15 +1,15 @@
 <template>
   <div class="space-y-4">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-[#a6adc8]">
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
       Quiz Defaults
     </h3>
 
     <div class="space-y-3">
       <label class="block">
-        <span class="text-xs text-[#a6adc8] mb-1 block">Prompt Template</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">Prompt Template</span>
         <select
           :value="modelValue.prompt_template"
-          class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           @change="update('prompt_template', ($event.target as HTMLSelectElement).value)"
         >
           <option
@@ -21,11 +21,11 @@
             {{ tmpl.label }}
           </option>
         </select>
-        <span v-if="selectedTemplate" class="text-[10px] text-[#a6adc8] mt-1 block">{{ selectedTemplate.description }}</span>
+        <span v-if="selectedTemplate" class="text-[10px] text-[var(--text-muted)] mt-1 block">{{ selectedTemplate.description }}</span>
       </label>
 
       <div>
-        <span class="text-xs text-[#a6adc8] mb-1.5 block">Question Types</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1.5 block">Question Types</span>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="qt in questionTypes"
@@ -33,8 +33,8 @@
             class="px-2.5 py-1 text-xs rounded-md border transition-colors"
             :class="
               modelValue.default_types.includes(qt.value)
-                ? 'bg-[#cba6f7]/20 border-[#cba6f7] text-[#cba6f7]'
-                : 'bg-[#1e1e2e] border-[#45475a] text-[#a6adc8] hover:border-[#585b70]'
+                ? 'bg-[var(--accent-purple)]/20 border-[var(--border-focus)] text-[var(--accent-purple)]'
+                : 'bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--text-faint)]'
             "
             @click="toggleType(qt.value)"
           >
@@ -44,9 +44,9 @@
       </div>
 
       <label class="block">
-        <span class="text-xs text-[#a6adc8] mb-1 flex justify-between">
+        <span class="text-xs text-[var(--text-muted)] mb-1 flex justify-between">
           Count
-          <span class="text-[#f8f8f2]">{{ modelValue.default_count }}</span>
+          <span class="text-[var(--text-primary)]">{{ modelValue.default_count }}</span>
         </span>
         <input
           :value="modelValue.default_count"
@@ -54,16 +54,16 @@
           min="1"
           max="20"
           step="1"
-          class="w-full accent-[#cba6f7]"
+          class="w-full accent-[var(--accent-purple)]"
           @input="update('default_count', Number(($event.target as HTMLInputElement).value))"
         />
       </label>
 
       <label class="block">
-        <span class="text-xs text-[#a6adc8] mb-1 block">Difficulty</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">Difficulty</span>
         <select
           :value="modelValue.default_difficulty"
-          class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           @change="update('default_difficulty', ($event.target as HTMLSelectElement).value as QuizDifficulty)"
         >
           <option value="easy">Easy</option>
@@ -73,10 +73,10 @@
       </label>
 
       <label class="block">
-        <span class="text-xs text-[#a6adc8] mb-1 block">Language</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">Language</span>
         <select
           :value="modelValue.default_language"
-          class="w-full bg-[#1e1e2e] border border-[#45475a] rounded-md px-3 py-1.5 text-sm text-[#f8f8f2] focus:outline-none focus:border-[#cba6f7] transition-colors"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           @change="update('default_language', ($event.target as HTMLSelectElement).value)"
         >
           <option value="zh">中文</option>

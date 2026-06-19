@@ -10,30 +10,30 @@
         class="max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed"
         :class="
           msg.role === 'ai'
-            ? 'bg-[#313244] text-[#cdd6f4]'
-            : 'bg-[#cba6f7] text-[#1e1e2e]'
+            ? 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]'
+            : 'bg-[var(--accent-purple)] text-[var(--bg-base)]'
         "
       >
         <p class="whitespace-pre-wrap">{{ msg.content }}</p>
 
         <!-- Blind spots from AI -->
-        <div v-if="msg.blind_spots?.length" class="mt-2 pt-2 border-t border-[#45475a]/50">
+        <div v-if="msg.blind_spots?.length" class="mt-2 pt-2 border-t border-[var(--border-default)]/50">
           <div
             v-for="(spot, j) in msg.blind_spots"
             :key="j"
             class="flex items-center gap-1.5 mb-1"
           >
-            <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-[#f38ba8]/20 text-[#f38ba8]">
+            <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-[var(--color-error)]/20 text-[var(--color-error)]">
               {{ spot.severity }}
             </span>
-            <span class="text-[11px] text-[#cba6f7]">{{ spot.tag }}</span>
+            <span class="text-[11px] text-[var(--accent-purple)]">{{ spot.tag }}</span>
           </div>
         </div>
 
         <!-- Follow-up question -->
         <p
           v-if="msg.follow_up"
-          class="mt-2 text-xs text-[#a6adc8] italic border-t border-[#45475a]/50 pt-2"
+          class="mt-2 text-xs text-[var(--text-muted)] italic border-t border-[var(--border-default)]/50 pt-2"
         >
           {{ msg.follow_up }}
         </p>
@@ -44,12 +44,12 @@
     <div v-if="active && !completed" class="flex gap-2">
       <input
         v-model="reply"
-        class="flex-1 bg-[#1e1e2e] border border-[#45475a] rounded-lg px-3 py-2 text-sm text-[#f8f8f2] placeholder-[#585b70] focus:outline-none focus:border-[#cba6f7] transition-colors"
+        class="flex-1 bg-[var(--bg-base)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
         placeholder="Type your reply..."
         @keydown.enter="handleSubmit"
       />
       <button
-        class="px-3 py-2 rounded-lg bg-[#cba6f7] text-[#1e1e2e] text-sm font-medium hover:bg-[#b4befe] transition-colors disabled:opacity-50"
+        class="px-3 py-2 rounded-lg bg-[var(--accent-purple)] text-[var(--bg-base)] text-sm font-medium hover:bg-[var(--accent-lavender)] transition-colors disabled:opacity-50"
         :disabled="!reply.trim() || submitting"
         @click="handleSubmit"
       >
@@ -60,7 +60,7 @@
     <!-- End diagnosis button -->
     <button
       v-if="active && !completed && messages.length > 0"
-      class="w-full py-1.5 rounded-md text-xs text-[#a6adc8] hover:text-[#f8f8f2] hover:bg-[#313244] transition-colors"
+      class="w-full py-1.5 rounded-md text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
       @click="$emit('endDiagnosis')"
     >
       End Diagnosis & View Report
