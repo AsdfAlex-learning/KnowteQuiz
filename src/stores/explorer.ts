@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { NoteTreeNode } from '../types/note'
 import { selectFolder, scanNotes } from '../services/note'
+import { getSettings, saveSettings } from '../services/settings'
 
 export const useExplorerStore = defineStore('explorer', () => {
   const rootPath = ref<string | null>(null)
@@ -17,6 +18,7 @@ export const useExplorerStore = defineStore('explorer', () => {
       const path = await selectFolder()
       if (path) {
         rootPath.value = path
+        await persistWorkspace()
         await loadTree()
       }
     } catch (e) {
@@ -37,20 +39,56 @@ export const useExplorerStore = defineStore('explorer', () => {
     }
   }
 
-  function toggleDir(path: string) {
+  async function toggleDir(path: string) {
     if (expandedDirs.value.has(path)) {
       expandedDirs.value.delete(path)
     } else {
       expandedDirs.value.add(path)
     }
+    await persistWorkspace()
   }
 
-  function selectPath(path: string) {
+  async function selectPath(path: string) {
     selectedPath.value = path
+    await persistWorkspace()
+  }
+
+  async function restoreWorkspace() {
+    loading.value = true
+    error.value = null
+    try {
+      const settings = await getSettings()
+      rootPath.value = settings.workspace.root_path ?? null
+      expandedDirs.value = new Set(settings.workspace.expanded_dirs ?? [])
+      selectedPath.value = settings.workspace.selected_path ?? null
+      if (rootPath.value) {
+        tree.value = await scanNotes(rootPath.value)
+      }
+    } catch (e) {
+      error.value = String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function persistWorkspace() {
+    try {
+      const settings = await getSettings()
+      await saveSettings({
+        ...settings,
+        workspace: {
+          root_path: rootPath.value,
+          expanded_dirs: Array.from(expandedDirs.value),
+          selected_path: selectedPath.value,
+        },
+      })
+    } catch (e) {
+      error.value = String(e)
+    }
   }
 
   return {
     rootPath, tree, expandedDirs, selectedPath, loading, isLoading, error,
-    chooseFolder, loadTree, toggleDir, selectPath,
+    chooseFolder, loadTree, toggleDir, selectPath, restoreWorkspace, persistWorkspace,
   }
 })

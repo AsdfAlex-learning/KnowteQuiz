@@ -115,9 +115,10 @@ watch(() => explorerStore.selectedPath, (path) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   layoutStore.loadLayout()
-  settingsStore.loadSettings()
+  await settingsStore.loadSettings()
+  await explorerStore.restoreWorkspace()
   document.addEventListener('keydown', onKeyDown)
 })
 
