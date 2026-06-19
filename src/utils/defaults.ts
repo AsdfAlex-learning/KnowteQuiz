@@ -33,5 +33,10 @@ export function defaultSettings(): Settings {
         show_diagnosis_report: true,
       },
     },
+    workspace: {
+      root_path: null,
+      expanded_dirs: [],
+      selected_path: null,
+    },
   }
 }

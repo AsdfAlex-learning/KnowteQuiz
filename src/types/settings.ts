@@ -36,10 +36,17 @@ export interface QuizDefaults {
 
 export type SettingsQuiz = QuizDefaults
 
+export interface WorkspaceState {
+  root_path?: string | null
+  expanded_dirs: string[]
+  selected_path?: string | null
+}
+
 export interface Settings {
   version: string
   theme: string
   llm: LlmConfig
   ui: { layout: UiLayout }
   quiz: QuizDefaults
+  workspace: WorkspaceState
 }

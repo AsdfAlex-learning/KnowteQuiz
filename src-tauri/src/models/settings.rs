@@ -37,8 +37,14 @@ pub struct QuizDefaults {
     pub advanced: AdvancedConfig,
 }
 
-fn default_prompt_template() -> String {
-    "default".to_string()
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WorkspaceState {
+    #[serde(default)]
+    pub root_path: Option<String>,
+    #[serde(default)]
+    pub expanded_dirs: Vec<String>,
+    #[serde(default)]
+    pub selected_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +54,8 @@ pub struct Settings {
     pub llm: LlmConfig,
     pub ui: UiLayoutContainer,
     pub quiz: QuizDefaults,
+    #[serde(default)]
+    pub workspace: WorkspaceState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
