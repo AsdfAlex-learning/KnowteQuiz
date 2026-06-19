@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
+    "test:unit": "vitest run --passWithNoTests",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -17,26 +18,27 @@
     "web:both": "npm run build && cd src-tauri && cargo run -- --mode=both"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "pinia": "^2.3.0",
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
-    "markdown-it": "^14.1.0",
+    "@tauri-apps/plugin-fs": "^2.0.0",
     "@traptitech/markdown-it-katex": "^3.6.0",
     "highlight.js": "^11.11.0",
+    "katex": "^0.16.21",
+    "markdown-it": "^14.1.0",
+    "pinia": "^2.3.0",
     "uuid": "^10.0.0",
-    "katex": "^0.16.21"
+    "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.3",
-    "vue-tsc": "^2.2.0",
-    "tailwindcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@tauri-apps/cli": "^2.0.0",
+    "@types/markdown-it": "^14.1.2",
     "@types/uuid": "^10.0.0",
-    "@types/markdown-it": "^14.1.2"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vitest": "^4.1.9",
+    "vue-tsc": "^2.2.0"
   }
 }
