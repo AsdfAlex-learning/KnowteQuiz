@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import type { Settings } from '../types/settings'
-import { getSettings, saveSettings } from '../services/settings'
+import { getSettings, saveSettings, testConnection as testSettingsConnection } from '../services/settings'
 import { defaultSettings } from '../utils/defaults'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -37,10 +37,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   async function testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${settings.value.llm.base_url}/models`, {
-        headers: { 'Authorization': `Bearer ${settings.value.llm.api_key}` },
-      })
-      llmConnected.value = response.ok
+      llmConnected.value = await testSettingsConnection()
       return llmConnected.value
     } catch {
       llmConnected.value = false
