@@ -20,9 +20,9 @@ export const useReaderStore = defineStore('reader', () => {
     loading.value = true
     error.value = null
     try {
-      currentNote.value = await readNote(path)
-      const settings = await getSettings()
+      const [note, settings] = await Promise.all([readNote(path), getSettings()])
       scrollTop.value = settings.workspace.scroll_positions?.[path] ?? 0
+      currentNote.value = note
     } catch (e) {
       error.value = String(e)
       currentNote.value = null

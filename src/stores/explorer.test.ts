@@ -27,6 +27,7 @@ describe('explorer store workspace persistence', () => {
       root_path: '/notes',
       expanded_dirs: ['/notes/rust'],
       selected_path: '/notes/rust/ownership.md',
+      scroll_positions: {},
     }
     vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
     vi.mocked(noteService.scanNotes).mockResolvedValue([

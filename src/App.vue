@@ -22,7 +22,11 @@
       />
 
       <!-- Center panel -->
-      <main class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]">
+      <main
+        ref="readerMain"
+        class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]"
+        @scroll="onReaderScroll"
+      >
         <MarkdownRenderer v-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
         <EmptyState v-else />
       </main>
@@ -46,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useLayoutStore } from './stores/layout'
 import { useReaderStore } from './stores/reader'
 import { useExplorerStore } from './stores/explorer'
@@ -63,6 +67,10 @@ const layoutStore = useLayoutStore()
 const readerStore = useReaderStore()
 const explorerStore = useExplorerStore()
 const settingsStore = useSettingsStore()
+const readerMain = ref<HTMLElement | null>(null)
+
+let pendingScrollSave: { path: string; top: number } | null = null
+let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 function startDragLeft(e: MouseEvent) {
   e.preventDefault()
@@ -109,9 +117,50 @@ function onKeyDown(e: KeyboardEvent) {
   }
 }
 
-watch(() => explorerStore.selectedPath, (path) => {
+function onReaderScroll() {
+  const path = readerStore.currentNote?.path
+  const top = readerMain.value?.scrollTop ?? 0
+  if (!path) return
+
+  readerStore.scrollTop = top
+  pendingScrollSave = { path, top }
+  if (scrollSaveTimer) clearTimeout(scrollSaveTimer)
+  scrollSaveTimer = setTimeout(() => {
+    void flushReaderScrollSave()
+  }, 500)
+}
+
+async function flushReaderScrollSave() {
+  if (scrollSaveTimer) {
+    clearTimeout(scrollSaveTimer)
+    scrollSaveTimer = null
+  }
+  const pending = pendingScrollSave
+  pendingScrollSave = null
+  if (!pending) return
+
+  await readerStore.saveScrollPosition(pending.path, pending.top)
+}
+
+async function restoreReaderScroll() {
+  await nextTick()
+  requestAnimationFrame(() => {
+    if (readerMain.value) {
+      readerMain.value.scrollTop = readerStore.scrollTop
+    }
+  })
+}
+
+watch(() => explorerStore.selectedPath, async (path) => {
+  await flushReaderScrollSave()
   if (path) {
-    readerStore.loadNote(path)
+    await readerStore.loadNote(path)
+  }
+})
+
+watch(() => readerStore.currentNote?.path, (path) => {
+  if (path) {
+    void restoreReaderScroll()
   }
 })
 
@@ -124,5 +173,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeyDown)
+  void flushReaderScrollSave()
 })
 </script>

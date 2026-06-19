@@ -77,6 +77,7 @@ export const useExplorerStore = defineStore('explorer', () => {
       await saveSettings({
         ...settings,
         workspace: {
+          ...settings.workspace,
           root_path: rootPath.value,
           expanded_dirs: Array.from(expandedDirs.value),
           selected_path: selectedPath.value,
