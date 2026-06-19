@@ -11,6 +11,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
+use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -41,6 +42,19 @@ fn get_dist_dir() -> PathBuf {
         }
     }
     PathBuf::from("../dist")
+}
+
+fn listener_addr(port: u16) -> String {
+    format!("127.0.0.1:{}", port)
+}
+
+fn send_missing_session_error(
+    tx: &UnboundedSender<quiz_engine::DiagnosisStreamEvent>,
+    session_id: &str,
+) {
+    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+        message: format!("Session {} not found", session_id),
+    });
 }
 
 pub async fn start(port: u16) {
@@ -74,7 +88,7 @@ pub async fn start(port: u16) {
         .layer(CorsLayer::permissive())
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port))
+    let listener = tokio::net::TcpListener::bind(listener_addr(port))
         .await
         .expect("Failed to bind TCP listener");
 
@@ -259,7 +273,10 @@ async fn diagnose_follow_up_handler(
             let mut sessions_lock = app_state.diagnosis_sessions.lock().unwrap();
             match sessions_lock.remove(&session_id) {
                 Some(s) => s,
-                None => return,
+                None => {
+                    send_missing_session_error(&tx, &session_id);
+                    return;
+                }
             }
         };
 
@@ -294,5 +311,38 @@ async fn generate_report_handler(
     } else {
         let report = quiz_engine::generate_diagnosis_report(&state.data_dir, &session).await?;
         Ok(Json(report))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_listener_addr_uses_loopback_only() {
+        assert_eq!(listener_addr(14200), "127.0.0.1:14200");
+    }
+
+    #[test]
+    fn missing_diagnosis_session_sends_error_event() {
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+
+        send_missing_session_error(&tx, "missing-session");
+
+        match rx.try_recv().expect("an error event should be sent") {
+            quiz_engine::DiagnosisStreamEvent::Error { message } => {
+                assert!(message.contains("missing-session"));
+            }
+            other => panic!("expected error event, got {:?}", event_name(&other)),
+        }
+    }
+
+    fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {
+        match event {
+            quiz_engine::DiagnosisStreamEvent::Initial { .. } => "initial",
+            quiz_engine::DiagnosisStreamEvent::FollowUp { .. } => "follow_up",
+            quiz_engine::DiagnosisStreamEvent::Report { .. } => "report",
+            quiz_engine::DiagnosisStreamEvent::Error { .. } => "error",
+        }
     }
 }
