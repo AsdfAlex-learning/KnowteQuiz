@@ -245,9 +245,15 @@ async fn submit_diagnosis_handler(
     }
 
     tokio::spawn(async move {
-        let _ = quiz_engine::submit_diagnosis_initial(
+        if let Ok(initial_round) = quiz_engine::submit_diagnosis_initial(
             &app_state.data_dir, &question, &user_answer, &user_reasoning, &note_path, tx,
-        ).await;
+        ).await {
+            if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
+                if let Some(session) = sessions_lock.get_mut(&session_id) {
+                    session.conversation.push(initial_round);
+                }
+            }
+        }
     });
 
     let stream = UnboundedReceiverStream::new(rx).map(|event| {

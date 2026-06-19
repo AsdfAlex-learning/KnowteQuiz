@@ -247,7 +247,7 @@ pub async fn submit_diagnosis_initial(
     user_reasoning: &str,
     note_path: &str,
     tx: UnboundedSender<DiagnosisStreamEvent>,
-) -> Result<(), String> {
+) -> Result<DiagnosisRound, String> {
     let note_content = crate::services::fs_service::read_file_content(note_path)?;
     let truncated_content: String = note_content.chars().take(8000).collect();
 
@@ -266,6 +266,7 @@ pub async fn submit_diagnosis_initial(
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
     let diagnosis = parse_diagnosis_initial(&response_text)?;
+    let round = initial_diagnosis_round(&diagnosis);
 
     let _ = tx.send(DiagnosisStreamEvent::Initial {
         role: "ai".to_string(),
@@ -274,7 +275,7 @@ pub async fn submit_diagnosis_initial(
         follow_up: diagnosis.follow_up_question.clone(),
     });
 
-    Ok(())
+    Ok(round)
 }
 
 pub async fn diagnose_follow_up(
@@ -420,6 +421,15 @@ fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, String> {
     })
 }
 
+fn initial_diagnosis_round(diagnosis: &InitialDiagnosis) -> DiagnosisRound {
+    DiagnosisRound {
+        role: "ai".to_string(),
+        content: diagnosis.answer_analysis.clone(),
+        blind_spots: diagnosis.blind_spots.clone(),
+        follow_up: diagnosis.follow_up_question.clone(),
+    }
+}
+
 struct FollowUpResponse {
     progress_assessment: String,
     new_blind_spots: Vec<BlindSpot>,
@@ -540,5 +550,27 @@ mod tests {
         let error = parse_quiz_response(raw).expect_err("choice question options are required");
 
         assert!(error.contains("options"));
+    }
+
+    #[test]
+    fn initial_diagnosis_round_keeps_content_blind_spots_and_follow_up() {
+        let diagnosis = InitialDiagnosis {
+            answer_analysis: "The first reasoning step confuses two concepts.".to_string(),
+            blind_spots: vec![BlindSpot {
+                tag: "concept confusion".to_string(),
+                severity: "medium".to_string(),
+                description: "A and B were treated as equivalent.".to_string(),
+                note_reference: String::new(),
+                suggestion: String::new(),
+            }],
+            follow_up_question: Some("How would you distinguish A from B?".to_string()),
+        };
+
+        let round = initial_diagnosis_round(&diagnosis);
+
+        assert_eq!(round.role, "ai");
+        assert_eq!(round.content, diagnosis.answer_analysis);
+        assert_eq!(round.blind_spots.len(), 1);
+        assert_eq!(round.follow_up, diagnosis.follow_up_question);
     }
 }

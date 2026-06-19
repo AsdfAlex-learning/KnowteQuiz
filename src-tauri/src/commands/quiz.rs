@@ -42,7 +42,7 @@ pub async fn submit_answer_advanced(
     });
 
     let session_id = uuid::Uuid::new_v4().to_string();
-    quiz_engine::submit_diagnosis_initial(
+    let initial_round = quiz_engine::submit_diagnosis_initial(
         &data_dir, &question, &user_answer, &user_reasoning, &note_path, tx
     ).await?;
 
@@ -55,7 +55,7 @@ pub async fn submit_answer_advanced(
         user_reasoning,
         note_path,
         note_content: note_content.chars().take(8000).collect(),
-        conversation: vec![],
+        conversation: vec![initial_round],
         current_round: 0,
         max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
         final_report: None,
