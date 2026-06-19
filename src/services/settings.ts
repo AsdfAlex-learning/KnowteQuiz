@@ -1,4 +1,4 @@
-import type { Settings } from '../types/settings'
+import type { ConnectionTestResult, Settings } from '../types/settings'
 import { invoke, isTauri } from './tauri'
 
 export async function getSettings(): Promise<Settings> {
@@ -23,9 +23,9 @@ export async function saveSettings(settings: Settings): Promise<boolean> {
   return res.json()
 }
 
-export async function testConnection(): Promise<boolean> {
+export async function testConnection(): Promise<ConnectionTestResult> {
   if (isTauri()) {
-    return invoke<boolean>('test_connection')
+    return invoke<ConnectionTestResult>('test_connection')
   }
   const res = await fetch('/api/test-connection', { method: 'POST' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)

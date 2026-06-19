@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { Settings } from '../types/settings'
+import type { ConnectionTestResult, Settings } from '../types/settings'
 import { getSettings, saveSettings, testConnection as testSettingsConnection } from '../services/settings'
 import { defaultSettings } from '../utils/defaults'
 
@@ -9,6 +9,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const llmConnected = ref(false)
+  const llmConnectionResult = ref<ConnectionTestResult | null>(null)
 
   async function loadSettings() {
     loading.value = true
@@ -35,15 +36,24 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function testConnection(): Promise<boolean> {
+  async function testConnection(): Promise<ConnectionTestResult> {
     try {
-      llmConnected.value = await testSettingsConnection()
-      return llmConnected.value
-    } catch {
+      const result = await testSettingsConnection()
+      llmConnectionResult.value = result
+      llmConnected.value = result.ok
+      return result
+    } catch (e) {
+      const result: ConnectionTestResult = {
+        ok: false,
+        kind: 'network',
+        message: String(e),
+        status: null,
+      }
+      llmConnectionResult.value = result
       llmConnected.value = false
-      return false
+      return result
     }
   }
 
-  return { settings, loading, error, llmConnected, loadSettings, persistSettings, testConnection }
+  return { settings, loading, error, llmConnected, llmConnectionResult, loadSettings, persistSettings, testConnection }
 })

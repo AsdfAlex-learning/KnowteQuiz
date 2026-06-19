@@ -17,13 +17,19 @@ describe('settings store', () => {
   })
 
   it('delegates LLM connection testing to the settings service', async () => {
-    vi.mocked(settingsService.testConnection).mockResolvedValue(true)
+    vi.mocked(settingsService.testConnection).mockResolvedValue({
+      ok: true,
+      kind: 'ok',
+      message: 'Connection successful',
+      status: 200,
+    })
     const store = useSettingsStore()
 
-    const connected = await store.testConnection()
+    const result = await store.testConnection()
 
     expect(settingsService.testConnection).toHaveBeenCalledOnce()
-    expect(connected).toBe(true)
+    expect(result.ok).toBe(true)
     expect(store.llmConnected).toBe(true)
+    expect(store.llmConnectionResult?.message).toBe('Connection successful')
   })
 })

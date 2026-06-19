@@ -42,6 +42,13 @@ export interface WorkspaceState {
   selected_path?: string | null
 }
 
+export interface ConnectionTestResult {
+  ok: boolean
+  kind: 'ok' | 'auth' | 'model' | 'server' | 'network' | 'unknown' | string
+  message: string
+  status?: number | null
+}
+
 export interface Settings {
   version: string
   theme: string

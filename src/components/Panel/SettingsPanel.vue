@@ -37,7 +37,7 @@
             : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'
         "
       >
-        <span>{{ connectionResult ? '\u2713 Connected' : '\u2717 Connection failed' }}</span>
+        <span>{{ connectionResult.ok ? '\u2713 Connected' : '\u2717 ' + connectionResult.message }}</span>
       </div>
 
       <button
@@ -56,12 +56,12 @@ import { useSettingsStore } from '@/stores/settings'
 import { testConnection } from '@/services/settings'
 import LLMConfigForm from './LLMConfigForm.vue'
 import QuizDefaultsForm from './QuizDefaultsForm.vue'
-import type { SettingsLLM, SettingsQuiz } from '@/types/settings'
+import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/settings'
 
 const settingsStore = useSettingsStore()
 const settings = settingsStore.settings
 const testing = ref(false)
-const connectionResult = ref<boolean | null>(null)
+const connectionResult = ref<ConnectionTestResult | null>(null)
 
 function updateLLM(llm: SettingsLLM) {
   settingsStore.settings.llm = llm
@@ -75,10 +75,14 @@ async function handleTestConnection() {
   testing.value = true
   connectionResult.value = null
   try {
-    const ok = await testConnection()
-    connectionResult.value = ok
+    connectionResult.value = await testConnection()
   } catch {
-    connectionResult.value = false
+    connectionResult.value = {
+      ok: false,
+      kind: 'network',
+      message: 'Connection failed',
+      status: null,
+    }
   } finally {
     testing.value = false
   }
