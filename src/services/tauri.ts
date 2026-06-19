@@ -34,22 +34,30 @@ export async function webStream<T>(
     buffer = chunks.pop() || ''
 
     for (const chunk of chunks) {
-      const lines = chunk.split('\n')
-      let data = ''
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          data = line.slice(6)
-          break
-        }
-      }
-      if (data) {
-        try {
-          const msg = JSON.parse(data) as T
-          onMessage(msg)
-        } catch (e) {
-          console.error('SSE parse error:', e)
-        }
-      }
+      emitSseChunk(chunk, onMessage)
+    }
+  }
+
+  if (buffer.trim()) {
+    emitSseChunk(buffer, onMessage)
+  }
+}
+
+function emitSseChunk<T>(chunk: string, onMessage: (msg: T) => void): void {
+  const lines = chunk.split('\n')
+  let data = ''
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      data = line.slice(6)
+      break
+    }
+  }
+  if (data) {
+    try {
+      const msg = JSON.parse(data) as T
+      onMessage(msg)
+    } catch (e) {
+      console.error('SSE parse error:', e)
     }
   }
 }

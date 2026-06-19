@@ -1,0 +1,29 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { webStream } from './tauri'
+
+function streamFromText(text: string): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text))
+      controller.close()
+    },
+  })
+}
+
+describe('webStream', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('emits final SSE data even when the stream ends without a blank delimiter', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      body: streamFromText('data: {"event":"done","data":{"total":1}}'),
+    })))
+    const messages: unknown[] = []
+
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg))
+
+    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
+  })
+})
