@@ -316,21 +316,39 @@ fn required_string(
 
 fn extract_json_block(raw: &str) -> String {
     if let Some(start) = raw.find("```json") {
-        if let Some(end) = raw[start..].find("```") {
-            let json_start = start + 7;
-            let json_end = start + end;
+        let json_start = start + "```json".len();
+        if let Some(end) = raw[json_start..].find("```") {
+            let json_end = json_start + end;
             return raw[json_start..json_end].trim().to_string();
         }
     }
     if let Some(start) = raw.find('{') {
         let mut depth = 0;
-        for (i, c) in raw[start..].chars().enumerate() {
-            if c == '{' { depth += 1; }
-            else if c == '}' {
-                depth -= 1;
-                if depth == 0 {
-                    return raw[start..start + i + 1].to_string();
+        let mut in_string = false;
+        let mut escaped = false;
+        let json_candidate = &raw[start..];
+        for (i, c) in json_candidate.char_indices() {
+            if in_string {
+                if escaped {
+                    escaped = false;
+                } else if c == '\\' {
+                    escaped = true;
+                } else if c == '"' {
+                    in_string = false;
                 }
+                continue;
+            }
+
+            match c {
+                '"' => in_string = true,
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return json_candidate[..i + 1].to_string();
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -673,6 +691,53 @@ mod tests {
 
         assert_eq!(questions.len(), 1);
         assert!(matches!(questions[0].question_type, QuestionType::Multiple));
+    }
+
+    #[test]
+    fn parse_quiz_response_accepts_fenced_json() {
+        let raw = r#"```json
+{
+  "questions": [
+    {
+      "id": "q1",
+      "question_type": "single",
+      "question": "Which claim is true?",
+      "options": ["A. Alpha", "B. Beta"],
+      "answer": "A",
+      "explanation": "Alpha is true."
+    }
+  ]
+}
+```"#;
+
+        let questions = parse_quiz_response(raw).expect("fenced JSON should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].id, "q1");
+    }
+
+    #[test]
+    fn parse_quiz_response_accepts_braces_inside_question_text() {
+        let raw = r#"The quiz is:
+{
+  "questions": [
+    {
+      "id": "q1",
+      "question_type": "short",
+      "question": "What does `fn main() {` start in Rust?",
+      "options": [],
+      "answer": "A function body.",
+      "explanation": "The opening brace starts the function body."
+    }
+  ]
+}
+Good luck."#;
+
+        let questions = parse_quiz_response(raw)
+            .expect("JSON extraction should ignore braces inside strings");
+
+        assert_eq!(questions.len(), 1);
+        assert!(questions[0].question.contains("fn main()"));
     }
 
     #[test]
