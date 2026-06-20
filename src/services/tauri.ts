@@ -16,7 +16,8 @@ export async function webStream<T>(
   })
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`)
+    const message = await response.text().catch(() => '')
+    throw new Error(message ? `HTTP ${response.status}: ${message}` : `HTTP ${response.status}`)
   }
 
   const reader = response.body?.getReader()

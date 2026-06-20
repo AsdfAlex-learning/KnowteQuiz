@@ -36,4 +36,15 @@ describe('webStream', () => {
     await expect(webStream('/api/quiz/generate', {}, vi.fn()))
       .rejects.toThrow('SSE parse error')
   })
+
+  it('includes response text when an HTTP request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      text: async () => 'LLM API error: model not found',
+    })))
+
+    await expect(webStream('/api/quiz/generate', {}, vi.fn()))
+      .rejects.toThrow('LLM API error: model not found')
+  })
 })
