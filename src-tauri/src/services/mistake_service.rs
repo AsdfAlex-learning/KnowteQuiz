@@ -4,16 +4,22 @@ use std::path::Path;
 const MISTAKES_FILE: &str = "mistakes.json";
 
 pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, String> {
-    let mistakes: Vec<MistakeEntry> = crate::services::storage::read_json_path(data_dir, MISTAKES_FILE)
-        .unwrap_or_default();
+    let mistakes = read_mistakes_or_empty(data_dir)?;
     Ok(filter_mistakes(&mistakes, filter))
 }
 
 pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), String> {
-    let mistakes: Vec<MistakeEntry> = crate::services::storage::read_json_path(data_dir, MISTAKES_FILE)
-        .unwrap_or_default();
+    let mistakes = read_mistakes_or_empty(data_dir)?;
     let updated = upsert_mistake(mistakes, entry);
     crate::services::storage::write_json_path(data_dir, MISTAKES_FILE, &updated)
+}
+
+fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, String> {
+    match crate::services::storage::read_json_path(data_dir, MISTAKES_FILE) {
+        Ok(mistakes) => Ok(mistakes),
+        Err(error) if error.starts_with("File not found:") => Ok(vec![]),
+        Err(error) => Err(error),
+    }
 }
 
 pub fn upsert_mistake(existing: Vec<MistakeEntry>, incoming: MistakeEntry) -> Vec<MistakeEntry> {
@@ -74,6 +80,16 @@ fn normalize_question(question: &str) -> String {
 mod tests {
     use super::*;
     use crate::models::mistake::{MistakeEntry, MistakeFilter, MistakeMode};
+    use std::path::PathBuf;
+
+    fn temp_data_dir(test_name: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join("knowtequiz-mistake-service-tests")
+            .join(test_name)
+            .join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
 
     fn mistake(
         id: &str,
@@ -132,5 +148,27 @@ mod tests {
 
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].id, "c");
+    }
+
+    #[test]
+    fn load_mistakes_returns_empty_list_when_file_is_missing() {
+        let dir = temp_data_dir("load_mistakes_returns_empty_list_when_file_is_missing");
+
+        let mistakes = load_mistakes(&dir, &MistakeFilter::default())
+            .expect("missing mistakes file should start empty");
+
+        assert!(mistakes.is_empty());
+    }
+
+    #[test]
+    fn load_mistakes_reports_corrupt_file_without_overwriting_it() {
+        let dir = temp_data_dir("load_mistakes_reports_corrupt_file_without_overwriting_it");
+        std::fs::write(dir.join(MISTAKES_FILE), "{ not valid json")
+            .expect("corrupt mistakes file should be written");
+
+        let error = load_mistakes(&dir, &MistakeFilter::default())
+            .expect_err("corrupt mistakes file should not be treated as empty");
+
+        assert!(error.contains("Failed to parse"));
     }
 }
