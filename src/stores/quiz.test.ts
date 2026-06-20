@@ -94,6 +94,25 @@ describe('quiz store answer evaluation', () => {
     expect(store.generatingError).toContain('answer outside options')
   })
 
+  it('returns to a retryable state when generation completes without questions', async () => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onChunk, onDone) => {
+      onDone(0)
+    })
+    const store = useQuizStore()
+
+    await store.startQuiz({
+      path: '/notes/alphabet.md',
+      types: ['single'],
+      count: 1,
+      difficulty: 'easy',
+      lang: 'en',
+    })
+
+    expect(store.quizState).toBe('idle')
+    expect(store.hasQuestions).toBe(false)
+    expect(store.generatingError).toContain('No questions generated')
+  })
+
   it('stores advanced diagnosis messages, session id, and generated report', async () => {
     vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _correctAnswer, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
       onInitial({

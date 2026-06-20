@@ -118,6 +118,10 @@ export const useQuizStore = defineStore('quiz', () => {
         params,
         (q) => addQuestion(q),
         (total) => {
+          if (total <= 0 || questions.value.length === 0) {
+            failGeneration('No questions generated')
+            return
+          }
           quizState.value = 'answering'
         },
         (err) => {
