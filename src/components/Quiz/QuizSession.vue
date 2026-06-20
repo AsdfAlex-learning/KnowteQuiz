@@ -100,11 +100,24 @@
 
       <div class="space-y-2 pt-2">
         <button
-          class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors"
+          class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors disabled:cursor-wait disabled:bg-[var(--bg-active)] disabled:text-[var(--text-muted)]"
+          :disabled="currentQuestion ? mistakeStore.isSaving(currentQuestion.id) || mistakeStore.isSaved(currentQuestion.id) : true"
           @click="handleSaveMistakeFromDiagnosis"
         >
-          Save to Mistake Book
+          {{
+            currentQuestion && mistakeStore.isSaved(currentQuestion.id)
+              ? 'Saved'
+              : currentQuestion && mistakeStore.isSaving(currentQuestion.id)
+                ? 'Saving...'
+                : 'Save to Mistake Book'
+          }}
         </button>
+        <p
+          v-if="currentQuestion && mistakeStore.errorFor(currentQuestion.id)"
+          class="text-xs text-[var(--color-error)]"
+        >
+          {{ mistakeStore.errorFor(currentQuestion.id) }}
+        </p>
         <button
           class="w-full py-2.5 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
           @click="handleNextAfterReport"
@@ -137,7 +150,7 @@ import { ref, computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useExplorerStore } from '@/stores/explorer'
 import { useReaderStore } from '@/stores/reader'
-import { saveMistake } from '@/services/mistake'
+import { useMistakeStore } from '@/stores/mistakes'
 import QuestionCard from './QuestionCard.vue'
 import AnswerInput from './AnswerInput.vue'
 import ReasoningInput from './ReasoningInput.vue'
@@ -154,6 +167,7 @@ const props = defineProps<{
 const quizStore = useQuizStore()
 const explorerStore = useExplorerStore()
 const readerStore = useReaderStore()
+const mistakeStore = useMistakeStore()
 
 const selectedOption = ref<number | null>(null)
 const shortAnswer = ref('')
@@ -264,7 +278,7 @@ async function handleSaveMistakeFromDiagnosis() {
     review_count: 0,
   }
 
-  await saveMistake(entry)
+  await mistakeStore.saveEntry(currentQuestion.value.id, entry)
 }
 
 function handleNewQuiz() {

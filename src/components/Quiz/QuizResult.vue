@@ -45,18 +45,22 @@
 
         <!-- Save mistake button for wrong answers -->
         <button
-          v-if="!isCorrect(q) && !savedIds.has(q.id)"
-          class="text-[11px] text-[var(--accent-purple)] hover:text-[var(--accent-lavender)] transition-colors"
+          v-if="!isCorrect(q) && !mistakeStore.isSaved(q.id)"
+          class="text-[11px] text-[var(--accent-purple)] hover:text-[var(--accent-lavender)] transition-colors disabled:cursor-wait disabled:text-[var(--text-muted)]"
+          :disabled="mistakeStore.isSaving(q.id)"
           @click="handleSaveMistake(q)"
         >
-          Save to Mistake Book
+          {{ mistakeStore.isSaving(q.id) ? 'Saving...' : 'Save to Mistake Book' }}
         </button>
         <span
-          v-else-if="!isCorrect(q) && savedIds.has(q.id)"
+          v-else-if="!isCorrect(q) && mistakeStore.isSaved(q.id)"
           class="text-[11px] text-[var(--accent-green)]"
         >
           Saved &#10003;
         </span>
+        <p v-if="mistakeStore.errorFor(q.id)" class="text-[11px] text-[var(--color-error)]">
+          {{ mistakeStore.errorFor(q.id) }}
+        </p>
       </div>
     </div>
 
@@ -73,11 +77,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useExplorerStore } from '@/stores/explorer'
 import { useReaderStore } from '@/stores/reader'
-import { saveMistake } from '@/services/mistake'
+import { useMistakeStore } from '@/stores/mistakes'
 import { isQuizAnswerCorrect } from '@/utils/answer'
 import type { QuizQuestion } from '@/types/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
@@ -97,7 +101,7 @@ const emit = defineEmits<{
 const quizStore = useQuizStore()
 const explorerStore = useExplorerStore()
 const readerStore = useReaderStore()
-const savedIds = ref(new Set<string>())
+const mistakeStore = useMistakeStore()
 
 const questions = computed(() => quizStore.questions)
 const answers = computed(() => quizStore.userAnswers)
@@ -150,7 +154,6 @@ async function handleSaveMistake(q: QuizQuestion) {
     review_count: 0,
   }
 
-  await saveMistake(entry)
-  savedIds.value.add(q.id)
+  await mistakeStore.saveEntry(q.id, entry)
 }
 </script>
