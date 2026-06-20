@@ -62,6 +62,18 @@ describe('mistake store save state', () => {
     expect(store.errorFor('q1')).toContain('disk full')
   })
 
+  it('can clear per-quiz save state so reused question ids can be saved again', async () => {
+    vi.mocked(saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+
+    await store.saveEntry('q1', mistake('m1'))
+    store.clearSaveState()
+    const result = await store.saveEntry('q1', mistake('m2'))
+
+    expect(result).toBe(true)
+    expect(saveMistake).toHaveBeenCalledTimes(2)
+  })
+
   it('loads the first page with server-side mode filters', async () => {
     vi.mocked(loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
     const store = useMistakeStore()

@@ -27,6 +27,12 @@ export const useMistakeStore = defineStore('mistakes', () => {
     return errors.value.get(key) ?? null
   }
 
+  function clearSaveState(): void {
+    savingIds.value = new Set()
+    savedIds.value = new Set()
+    errors.value = new Map()
+  }
+
   async function saveEntry(key: string, entry: MistakeEntry): Promise<boolean> {
     if (isSaving(key) || isSaved(key)) return false
 
@@ -88,6 +94,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
     isSaving,
     isSaved,
     errorFor,
+    clearSaveState,
     saveEntry,
     loadPage,
     loadNextPage,

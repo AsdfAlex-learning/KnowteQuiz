@@ -103,6 +103,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { useExplorerStore } from '@/stores/explorer'
+import { useMistakeStore } from '@/stores/mistakes'
 import ModeToggle from './ModeToggle.vue'
 import type { QuizMode } from '@/stores/quiz'
 import type { QuestionType, QuizDifficulty, QuizLanguage } from '@/types/quiz'
@@ -110,6 +111,7 @@ import type { QuestionType, QuizDifficulty, QuizLanguage } from '@/types/quiz'
 const quizStore = useQuizStore()
 const settingsStore = useSettingsStore()
 const explorerStore = useExplorerStore()
+const mistakeStore = useMistakeStore()
 
 const mode = ref<QuizMode>('basic')
 const selectedTypes = ref<QuestionType[]>([])
@@ -140,6 +142,7 @@ async function handleGenerate() {
   if (!notePath.value || quizStore.isGenerating) return
   quizStore.resetQuiz()
   quizStore.setMode(mode.value)
+  mistakeStore.clearSaveState()
 
   await quizStore.startQuiz({
     path: notePath.value,
