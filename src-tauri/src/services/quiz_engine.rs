@@ -183,6 +183,7 @@ fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> 
     if matches!(question_type, QuestionType::Single | QuestionType::Multiple) && options.is_empty() {
         return Err(format!("Question {} options are required for choice questions", index + 1));
     }
+    validate_choice_answer(&question_type, &options, &answer, index)?;
 
     Ok(QuizQuestion {
         id,
@@ -192,6 +193,99 @@ fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> 
         answer,
         explanation,
     })
+}
+
+fn validate_choice_answer(
+    question_type: &QuestionType,
+    options: &[String],
+    answer: &str,
+    index: usize,
+) -> Result<(), String> {
+    if !matches!(question_type, QuestionType::Single | QuestionType::Multiple) {
+        return Ok(());
+    }
+
+    let letters = choice_letters_from_answer(answer);
+    if !letters.is_empty() {
+        if matches!(question_type, QuestionType::Single) && letters.len() != 1 {
+            return Err(format!("Question {} single choice answer must contain exactly one option", index + 1));
+        }
+
+        for letter in letters {
+            let option_index = (letter as u8).saturating_sub(b'A') as usize;
+            if option_index >= options.len() {
+                return Err(format!(
+                    "Question {} answer '{}' is outside the available options",
+                    index + 1,
+                    answer
+                ));
+            }
+        }
+        return Ok(());
+    }
+
+    let normalized_answer = normalize_answer_text(answer);
+    if options.iter().any(|option| {
+        normalize_answer_text(option) == normalized_answer
+            || normalize_answer_text(&strip_option_label(option)) == normalized_answer
+    }) {
+        return Ok(());
+    }
+
+    Err(format!(
+        "Question {} answer '{}' does not match any available options",
+        index + 1,
+        answer
+    ))
+}
+
+fn choice_letters_from_answer(answer: &str) -> Vec<char> {
+    let chars: Vec<char> = answer.to_ascii_uppercase().chars().collect();
+    let mut letters = Vec::new();
+
+    for (i, c) in chars.iter().enumerate() {
+        if !c.is_ascii_uppercase() {
+            continue;
+        }
+        let prev_is_letter = i > 0 && chars[i - 1].is_ascii_uppercase();
+        let next_is_letter = i + 1 < chars.len() && chars[i + 1].is_ascii_uppercase();
+        if !prev_is_letter && !next_is_letter && !letters.contains(c) {
+            letters.push(*c);
+        }
+    }
+
+    letters
+}
+
+fn normalize_answer_text(value: &str) -> String {
+    value
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_ascii_lowercase()
+}
+
+fn strip_option_label(option: &str) -> String {
+    let trimmed = option.trim();
+    let mut chars = trimmed.char_indices();
+    let Some((_, first)) = chars.next() else {
+        return String::new();
+    };
+    if !first.is_ascii_alphabetic() {
+        return trimmed.to_string();
+    }
+
+    let after_first = &trimmed[first.len_utf8()..];
+    let after_spaces = after_first.trim_start();
+    let Some(separator) = after_spaces.chars().next() else {
+        return trimmed.to_string();
+    };
+    if matches!(separator, '.' | '．' | '、' | ')' | ':' | '：') {
+        after_spaces[separator.len_utf8()..].trim().to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 fn parse_question_type(raw: &str, index: usize) -> Result<QuestionType, String> {
@@ -549,6 +643,27 @@ mod tests {
 
         let error = parse_quiz_response(raw).expect_err("choice question options are required");
 
+        assert!(error.contains("options"));
+    }
+
+    #[test]
+    fn parse_quiz_response_rejects_single_choice_answer_outside_options() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "Which claim is true?",
+                    "options": ["A. Alpha", "B. Beta"],
+                    "answer": "D",
+                    "explanation": "Alpha is true."
+                }
+            ]
+        }"#;
+
+        let error = parse_quiz_response(raw).expect_err("answer outside options should be rejected");
+
+        assert!(error.contains("answer"));
         assert!(error.contains("options"));
     }
 
