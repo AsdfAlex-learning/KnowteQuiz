@@ -63,4 +63,42 @@ describe('explorer store workspace persistence', () => {
       },
     })
   })
+
+  it('scans and persists a manually entered root path', async () => {
+    const settings = defaultSettings()
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    vi.mocked(noteService.scanNotes).mockResolvedValue([
+      { name: 'rust.md', path: '/notes/rust.md', is_dir: false, children: [] },
+    ])
+    const store = useExplorerStore()
+
+    await store.openRootPath('/notes')
+
+    expect(noteService.scanNotes).toHaveBeenCalledWith('/notes')
+    expect(store.rootPath).toBe('/notes')
+    expect(store.tree).toEqual([
+      { name: 'rust.md', path: '/notes/rust.md', is_dir: false, children: [] },
+    ])
+    expect(settingsService.saveSettings).toHaveBeenCalledWith({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        root_path: '/notes',
+        expanded_dirs: [],
+        selected_path: null,
+      },
+    })
+  })
+
+  it('does not persist a manually entered root path when scanning fails', async () => {
+    vi.mocked(noteService.scanNotes).mockRejectedValue(new Error('Directory does not exist'))
+    const store = useExplorerStore()
+
+    await store.openRootPath('/missing')
+
+    expect(store.rootPath).toBeNull()
+    expect(store.error).toContain('Directory does not exist')
+    expect(settingsService.saveSettings).not.toHaveBeenCalled()
+  })
 })

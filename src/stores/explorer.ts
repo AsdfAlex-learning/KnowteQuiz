@@ -17,12 +17,25 @@ export const useExplorerStore = defineStore('explorer', () => {
     try {
       const path = await selectFolder()
       if (path) {
-        rootPath.value = path
-        await persistWorkspace()
-        await loadTree()
+        await openRootPath(path)
       }
     } catch (e) {
       error.value = String(e)
+    }
+  }
+
+  async function openRootPath(path: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const nextTree = await scanNotes(path)
+      rootPath.value = path
+      tree.value = nextTree
+      await persistWorkspace()
+    } catch (e) {
+      error.value = String(e)
+    } finally {
+      loading.value = false
     }
   }
 
@@ -90,6 +103,6 @@ export const useExplorerStore = defineStore('explorer', () => {
 
   return {
     rootPath, tree, expandedDirs, selectedPath, loading, isLoading, error,
-    chooseFolder, loadTree, toggleDir, selectPath, restoreWorkspace, persistWorkspace,
+    chooseFolder, openRootPath, loadTree, toggleDir, selectPath, restoreWorkspace, persistWorkspace,
   }
 })

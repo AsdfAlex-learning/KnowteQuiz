@@ -56,8 +56,7 @@ const shortPath = computed(() => {
 async function setManualPath() {
   const path = manualPath.value.trim()
   if (path) {
-    explorerStore.rootPath = path
-    await explorerStore.loadTree()
+    await explorerStore.openRootPath(path)
     manualPath.value = ''
   }
 }
