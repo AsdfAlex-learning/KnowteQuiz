@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { QuizQuestion, DiagnosisRound, DiagnosisReport } from '../types'
-import { generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz'
+import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz'
 import type { QuizStreamParams } from '../types/quiz'
 import { isQuizAnswerCorrect } from '../utils/answer'
 
@@ -86,6 +86,15 @@ export const useQuizStore = defineStore('quiz', () => {
     quizState.value = 'report'
   }
 
+  function clearDiagnosis() {
+    sessionId.value = null
+    diagnosisMessages.value = []
+    diagnosisReport.value = null
+    if (quizState.value === 'diagnosing' || quizState.value === 'report') {
+      quizState.value = 'answering'
+    }
+  }
+
   async function startQuiz(params: QuizStreamParams) {
     reset()
     quizState.value = 'generating'
@@ -148,6 +157,16 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
+  async function finishDiagnosis() {
+    if (!sessionId.value) return
+    try {
+      const report = await generateDiagnosisReport(sessionId.value)
+      setDiagnosisReport(report)
+    } catch (e) {
+      generatingError.value = String(e)
+    }
+  }
+
   const resetQuiz = reset
 
   return {
@@ -156,7 +175,7 @@ export const useQuizStore = defineStore('quiz', () => {
     currentQuestion, totalQuestions, isGenerating, hasSession, hasQuestions,
     showResults, isLastQuestion, userAnswers, progress, score,
     setMode, reset, resetQuiz, addQuestion, setAnswer, submitAnswer, nextQuestion,
-    finishQuiz, addDiagnosisMessage, setDiagnosisReport,
-    startQuiz, startDiagnosis, continueDiagnosis,
+    finishQuiz, addDiagnosisMessage, setDiagnosisReport, clearDiagnosis,
+    startQuiz, startDiagnosis, continueDiagnosis, finishDiagnosis,
   }
 })

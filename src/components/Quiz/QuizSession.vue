@@ -12,7 +12,7 @@
 
     <!-- Answering state -->
     <div
-      v-else-if="quizStore.hasQuestions && !quizStore.showResults && phase === 'answering' && currentQuestion"
+      v-else-if="quizStore.hasQuestions && !quizStore.showResults && quizStore.quizState === 'answering' && currentQuestion"
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
       <QuestionCard
@@ -75,14 +75,14 @@
 
     <!-- Diagnosing state (advanced mode) -->
     <div
-      v-else-if="phase === 'diagnosing'"
+      v-else-if="quizStore.quizState === 'diagnosing'"
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
       <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">
         Diagnosis
       </h3>
       <DiagnosisChat
-        :messages="diagnosisMessages"
+        :messages="quizStore.diagnosisMessages"
         :active="true"
         :completed="false"
         :submitting="diagnosisSubmitting"
@@ -93,10 +93,10 @@
 
     <!-- Report state (advanced mode) -->
     <div
-      v-else-if="phase === 'report' && diagnosisReport"
+      v-else-if="quizStore.quizState === 'report' && quizStore.diagnosisReport"
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
-      <DiagnosisReportComponent :report="diagnosisReport" />
+      <DiagnosisReportComponent :report="quizStore.diagnosisReport" />
 
       <div class="space-y-2 pt-2">
         <button
@@ -119,7 +119,7 @@
       v-else-if="quizStore.showResults"
       class="flex-1 overflow-y-auto p-4"
     >
-      <QuizResult :mode="mode" :reasoning="reasoning" :diagnosis-report="diagnosisReport" @new-quiz="handleNewQuiz" />
+      <QuizResult :mode="mode" :reasoning="reasoning" :diagnosis-report="quizStore.diagnosisReport" @new-quiz="handleNewQuiz" />
     </div>
 
     <!-- Idle state -->
@@ -137,7 +137,6 @@ import { ref, computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useExplorerStore } from '@/stores/explorer'
 import { useReaderStore } from '@/stores/reader'
-import { submitAnswerAdvanced, diagnoseFollowUp, generateDiagnosisReport } from '@/services/quiz'
 import { saveMistake } from '@/services/mistake'
 import QuestionCard from './QuestionCard.vue'
 import AnswerInput from './AnswerInput.vue'
@@ -145,7 +144,6 @@ import ReasoningInput from './ReasoningInput.vue'
 import DiagnosisChat from './DiagnosisChat.vue'
 import DiagnosisReportComponent from './DiagnosisReport.vue'
 import QuizResult from './QuizResult.vue'
-import type { DiagnosisRound, DiagnosisReport as DiagnosisReportType } from '@/types/diagnosis'
 import type { QuizMode } from '@/stores/quiz'
 import type { MistakeEntry } from '@/types/mistake'
 
@@ -157,16 +155,11 @@ const quizStore = useQuizStore()
 const explorerStore = useExplorerStore()
 const readerStore = useReaderStore()
 
-type Phase = 'answering' | 'diagnosing' | 'report'
-const phase = ref<Phase>('answering')
 const selectedOption = ref<number | null>(null)
 const shortAnswer = ref('')
 const reasoning = ref('')
 const submitted = ref(false)
 const diagnosisSubmitting = ref(false)
-const diagnosisMessages = ref<DiagnosisRound[]>([])
-const diagnosisReport = ref<DiagnosisReportType | null>(null)
-const diagSessionId = ref<string | null>(null)
 
 const currentQuestion = computed(() => quizStore.currentQuestion)
 
@@ -201,71 +194,21 @@ function handleSubmit() {
 
 async function startDiagnosis(answer: string) {
   if (!currentQuestion.value) return
-  phase.value = 'diagnosing'
-  diagnosisMessages.value = []
-
-  try {
-    const notePath = explorerStore.selectedPath || ''
-    const sid = await submitAnswerAdvanced(
-      currentQuestion.value.question,
-      answer,
-      reasoning.value,
-      notePath,
-      (data) => diagnosisMessages.value.push(data),
-      (data) => {
-        diagnosisMessages.value.push({ role: 'user', content: '', blind_spots: [] })
-        diagnosisMessages.value.push({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })
-      },
-      (report) => {
-        diagnosisReport.value = report
-        phase.value = 'report'
-      },
-      (err) => console.error('Diagnosis error:', err)
-    )
-    diagSessionId.value = sid
-  } catch (err) {
-    console.error('Failed to start diagnosis:', err)
-    phase.value = 'answering'
-  }
+  const notePath = explorerStore.selectedPath || ''
+  await quizStore.startDiagnosis(currentQuestion.value.question, answer, reasoning.value, notePath)
 }
 
 async function handleDiagnosisReply(text: string) {
-  if (!diagSessionId.value) return
   diagnosisSubmitting.value = true
-
   try {
-    await diagnoseFollowUp(
-      diagSessionId.value,
-      text,
-      (data) => {
-        diagnosisMessages.value.push({ role: 'user', content: text, blind_spots: [] })
-        diagnosisMessages.value.push({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })
-      },
-      (report) => {
-        diagnosisReport.value = report
-        phase.value = 'report'
-        diagnosisSubmitting.value = false
-      },
-      (err) => {
-        console.error('Follow-up error:', err)
-        diagnosisSubmitting.value = false
-      }
-    )
-  } catch {
+    await quizStore.continueDiagnosis(text)
+  } finally {
     diagnosisSubmitting.value = false
   }
 }
 
 async function handleEndDiagnosis() {
-  if (!diagSessionId.value) return
-
-  try {
-    const report = await generateDiagnosisReport(diagSessionId.value)
-    diagnosisReport.value = report
-    phase.value = 'report'
-  } catch (err) {
-    console.error('Failed to generate report:', err)
-  }
+  await quizStore.finishDiagnosis()
 }
 
 function handleNext() {
@@ -286,10 +229,7 @@ function handleNextAfterReport() {
   selectedOption.value = null
   shortAnswer.value = ''
   reasoning.value = ''
-  diagnosisMessages.value = []
-  diagnosisReport.value = null
-  diagSessionId.value = null
-  phase.value = 'answering'
+  quizStore.clearDiagnosis()
 
   if (quizStore.isLastQuestion) {
     quizStore.finishQuiz()
@@ -315,10 +255,10 @@ async function handleSaveMistakeFromDiagnosis() {
     explanation: currentQuestion.value.explanation,
     mode: 'advanced',
     user_reasoning: reasoning.value || undefined,
-    diagnosis: diagnosisReport.value ? {
-      rounds: diagnosisMessages.value.length,
-      conversation: diagnosisMessages.value,
-      final_report: diagnosisReport.value,
+    diagnosis: quizStore.diagnosisReport ? {
+      rounds: quizStore.diagnosisMessages.length,
+      conversation: quizStore.diagnosisMessages,
+      final_report: quizStore.diagnosisReport,
     } : undefined,
     created_at: new Date().toISOString(),
     review_count: 0,
@@ -333,9 +273,6 @@ function handleNewQuiz() {
   selectedOption.value = null
   shortAnswer.value = ''
   reasoning.value = ''
-  phase.value = 'answering'
-  diagnosisMessages.value = []
-  diagnosisReport.value = null
-  diagSessionId.value = null
+  quizStore.clearDiagnosis()
 }
 </script>

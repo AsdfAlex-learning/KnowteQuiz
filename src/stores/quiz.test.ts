@@ -1,13 +1,22 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useQuizStore } from './quiz'
-import { generateQuiz } from '../services/quiz'
+import { diagnoseFollowUp, generateDiagnosisReport, generateQuiz, submitAnswerAdvanced } from '../services/quiz'
+import type { DiagnosisReport } from '../types/diagnosis'
 
 vi.mock('../services/quiz', () => ({
   generateQuiz: vi.fn(),
   submitAnswerAdvanced: vi.fn(),
   diagnoseFollowUp: vi.fn(),
+  generateDiagnosisReport: vi.fn(),
 }))
+
+const report: DiagnosisReport = {
+  summary: 'Review concept boundaries.',
+  blind_spots: [],
+  overall_level: 'Needs review',
+  next_steps: ['Re-read the note'],
+}
 
 describe('quiz store answer evaluation', () => {
   beforeEach(() => {
@@ -83,5 +92,92 @@ describe('quiz store answer evaluation', () => {
     expect(store.quizState).toBe('idle')
     expect(store.hasQuestions).toBe(false)
     expect(store.generatingError).toContain('answer outside options')
+  })
+
+  it('stores advanced diagnosis messages, session id, and generated report', async () => {
+    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
+      onInitial({
+        role: 'ai',
+        content: 'Your reasoning skipped the definition.',
+        blind_spots: [],
+        follow_up: 'Which definition applies here?',
+      })
+      onReport(report)
+      return 'session-1'
+    })
+    const store = useQuizStore()
+
+    await store.startDiagnosis('Question?', 'A', 'Because A', '/notes/rust.md')
+
+    expect(store.sessionId).toBe('session-1')
+    expect(store.diagnosisMessages).toEqual([
+      {
+        role: 'ai',
+        content: 'Your reasoning skipped the definition.',
+        blind_spots: [],
+        follow_up: 'Which definition applies here?',
+      },
+    ])
+    expect(store.diagnosisReport).toEqual(report)
+    expect(store.quizState).toBe('report')
+  })
+
+  it('generates a diagnosis report from the current session', async () => {
+    vi.mocked(generateDiagnosisReport).mockResolvedValue(report)
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.quizState = 'diagnosing'
+
+    await store.finishDiagnosis()
+
+    expect(generateDiagnosisReport).toHaveBeenCalledWith('session-1')
+    expect(store.diagnosisReport).toEqual(report)
+    expect(store.quizState).toBe('report')
+  })
+
+  it('stores user replies and follow-up questions during diagnosis', async () => {
+    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, onFollowUp) => {
+      onFollowUp({
+        question: 'How does the definition change your answer?',
+        blind_spots: [],
+      })
+    })
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.quizState = 'diagnosing'
+
+    await store.continueDiagnosis('I confused two definitions.')
+
+    expect(diagnoseFollowUp).toHaveBeenCalledWith(
+      'session-1',
+      'I confused two definitions.',
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+    )
+    expect(store.diagnosisMessages).toEqual([
+      { role: 'user', content: 'I confused two definitions.', blind_spots: [] },
+      {
+        role: 'ai',
+        content: 'How does the definition change your answer?',
+        blind_spots: [],
+        follow_up: 'How does the definition change your answer?',
+      },
+    ])
+  })
+
+  it('clears diagnosis state before moving to another question', () => {
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.diagnosisMessages = [{ role: 'ai', content: 'Old diagnosis', blind_spots: [] }]
+    store.diagnosisReport = report
+    store.quizState = 'report'
+
+    store.clearDiagnosis()
+
+    expect(store.sessionId).toBeNull()
+    expect(store.diagnosisMessages).toEqual([])
+    expect(store.diagnosisReport).toBeNull()
+    expect(store.quizState).toBe('answering')
   })
 })
