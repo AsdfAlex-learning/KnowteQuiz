@@ -227,10 +227,12 @@ fn validate_choice_answer(
         return Ok(());
     }
 
-    let normalized_answer = normalize_answer_text(answer);
-    if options.iter().any(|option| {
-        normalize_answer_text(option) == normalized_answer
-            || normalize_answer_text(&strip_option_label(option)) == normalized_answer
+    let normalized_answers = split_answer_text(answer);
+    if normalized_answers.iter().all(|normalized_answer| {
+        options.iter().any(|option| {
+            normalize_answer_text(option) == *normalized_answer
+                || normalize_answer_text(&strip_option_label(option)) == *normalized_answer
+        })
     }) {
         return Ok(());
     }
@@ -267,6 +269,20 @@ fn normalize_answer_text(value: &str) -> String {
         .join(" ")
         .trim()
         .to_ascii_lowercase()
+}
+
+fn split_answer_text(answer: &str) -> Vec<String> {
+    let parts = answer
+        .split(|c| matches!(c, ',' | ';' | '，' | '；' | '、'))
+        .map(normalize_answer_text)
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+
+    if parts.is_empty() {
+        vec![normalize_answer_text(answer)]
+    } else {
+        parts
+    }
 }
 
 fn strip_option_label(option: &str) -> String {
@@ -829,6 +845,28 @@ Good luck."#;
 
         assert!(error.contains("answer"));
         assert!(error.contains("options"));
+    }
+
+    #[test]
+    fn parse_quiz_response_accepts_multiple_choice_answer_text_list() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "multiple",
+                    "question": "Which claims are true?",
+                    "options": ["A. Alpha", "B. Beta", "C. Gamma"],
+                    "answer": "Alpha, Gamma",
+                    "explanation": "Alpha and Gamma are true."
+                }
+            ]
+        }"#;
+
+        let questions = parse_quiz_response(raw)
+            .expect("multiple choice answer text list should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].answer, "Alpha, Gamma");
     }
 
     #[test]
