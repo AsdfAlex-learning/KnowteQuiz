@@ -143,6 +143,9 @@ fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, String> {
     let questions = parsed["questions"]
         .as_array()
         .ok_or("Missing 'questions' array in response")?;
+    if questions.is_empty() {
+        return Err("Missing non-empty 'questions' array in response".to_string());
+    }
 
     let mut result = Vec::new();
     for (i, q) in questions.iter().enumerate() {
@@ -690,6 +693,16 @@ mod tests {
         let error = parse_quiz_response(raw).expect_err("empty question should be rejected");
 
         assert!(error.contains("question text"));
+    }
+
+    #[test]
+    fn parse_quiz_response_rejects_empty_question_list() {
+        let raw = r#"{ "questions": [] }"#;
+
+        let error = parse_quiz_response(raw)
+            .expect_err("empty question list should be rejected");
+
+        assert!(error.contains("questions"));
     }
 
     #[test]
