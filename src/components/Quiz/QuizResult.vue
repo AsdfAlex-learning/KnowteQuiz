@@ -78,6 +78,7 @@ import { useQuizStore } from '@/stores/quiz'
 import { useExplorerStore } from '@/stores/explorer'
 import { useReaderStore } from '@/stores/reader'
 import { saveMistake } from '@/services/mistake'
+import { isQuizAnswerCorrect } from '@/utils/answer'
 import type { QuizQuestion } from '@/types/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
 import type { QuizMode } from '@/stores/quiz'
@@ -117,9 +118,7 @@ const scoreColor = computed(() => {
 })
 
 function isCorrect(q: QuizQuestion): boolean {
-  const userAnswer = answers.value.get(q.id)
-  if (!userAnswer) return false
-  return userAnswer.toLowerCase().trim() === q.answer.toLowerCase().trim()
+  return isQuizAnswerCorrect(q, answers.value.get(q.id))
 }
 
 function formatUserAnswer(answer: string | undefined): string {

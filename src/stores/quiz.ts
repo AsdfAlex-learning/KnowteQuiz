@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { QuizQuestion, DiagnosisRound, DiagnosisReport } from '../types'
 import { generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz'
 import type { QuizStreamParams } from '../types/quiz'
+import { isQuizAnswerCorrect } from '../utils/answer'
 
 export type QuizMode = 'basic' | 'advanced'
 export type QuizState = 'idle' | 'generating' | 'answering' | 'diagnosing' | 'report' | 'result'
@@ -33,7 +34,7 @@ export const useQuizStore = defineStore('quiz', () => {
     let correct = 0
     for (const q of questions.value) {
       const userAns = answers.value.get(q.id)
-      if (userAns && userAns.toLowerCase().trim() === q.answer.toLowerCase().trim()) {
+      if (isQuizAnswerCorrect(q, userAns)) {
         correct++
       }
     }

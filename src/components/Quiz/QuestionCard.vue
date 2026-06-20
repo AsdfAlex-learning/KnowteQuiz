@@ -46,6 +46,7 @@ import { computed } from 'vue'
 import type { QuizQuestion } from '@/types/quiz'
 import OptionCard from './OptionCard.vue'
 import type { OptionState } from './OptionCard.vue'
+import { isChoiceLetterCorrect } from '@/utils/answer'
 
 const props = defineProps<{
   question: QuizQuestion
@@ -79,10 +80,7 @@ function getOptionState(index: number): OptionState {
     return props.selectedOption === index ? 'selected' : 'default'
   }
   const letter = String.fromCharCode(65 + index)
-  const correctAnswer = props.question.answer
-  const isCorrect = Array.isArray(correctAnswer)
-    ? correctAnswer.includes(letter)
-    : correctAnswer === letter
+  const isCorrect = isChoiceLetterCorrect(props.question.answer, letter)
 
   if (isCorrect) return 'correct'
   if (props.selectedOption === index) return 'incorrect'
