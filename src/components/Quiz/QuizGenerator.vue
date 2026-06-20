@@ -139,6 +139,7 @@ function toggleType(type: QuestionType) {
 async function handleGenerate() {
   if (!notePath.value || quizStore.isGenerating) return
   quizStore.resetQuiz()
+  quizStore.setMode(mode.value)
 
   await quizStore.startQuiz({
     path: notePath.value,
