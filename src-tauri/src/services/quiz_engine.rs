@@ -547,8 +547,7 @@ fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, String> {
 
     Ok(InitialDiagnosis {
         answer_analysis: required_diagnosis_string(&parsed, "answer_analysis")?,
-        blind_spots: parse_blind_spot(&parsed["blind_spot"], "blind_spot")
-            .map(|blind_spot| vec![blind_spot])?,
+        blind_spots: parse_initial_blind_spots(&parsed)?,
         follow_up_question: parsed["follow_up_question"].as_str().map(String::from),
     })
 }
@@ -619,6 +618,27 @@ fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, String> {
         note_reference: string_field(value, "note_reference").unwrap_or_default(),
         suggestion: string_field(value, "suggestion").unwrap_or_default(),
     })
+}
+
+fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
+    if let Some(values) = parsed["blind_spots"].as_array() {
+        let spots = values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                parse_blind_spot(value, &format!("blind_spots[{}]", index + 1))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if spots.is_empty() {
+            Err("Diagnosis response missing blind_spots".to_string())
+        } else {
+            Ok(spots)
+        }
+    } else {
+        parse_blind_spot(&parsed["blind_spot"], "blind_spot")
+            .map(|blind_spot| vec![blind_spot])
+    }
 }
 
 fn parse_blind_spots_array(value: &Value) -> Vec<BlindSpot> {
@@ -881,6 +901,30 @@ Good luck."#;
         };
 
         assert!(error.contains("blind_spot"));
+    }
+
+    #[test]
+    fn parse_diagnosis_initial_accepts_blind_spots_array() {
+        let raw = r#"{
+            "answer_analysis": "You confused move and copy.",
+            "blind_spots": [
+                {
+                    "tag": "move semantics",
+                    "severity": "high",
+                    "description": "Move and clone were treated as equivalent.",
+                    "note_reference": "Ownership section",
+                    "suggestion": "Review move examples."
+                }
+            ],
+            "follow_up_question": "When does Rust clone?"
+        }"#;
+
+        let diagnosis = parse_diagnosis_initial(raw)
+            .expect("blind_spots array should be accepted");
+
+        assert_eq!(diagnosis.blind_spots.len(), 1);
+        assert_eq!(diagnosis.blind_spots[0].tag, "move semantics");
+        assert_eq!(diagnosis.blind_spots[0].severity, "high");
     }
 
     #[test]
