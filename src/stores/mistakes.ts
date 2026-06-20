@@ -45,6 +45,12 @@ export const useMistakeStore = defineStore('mistakes', () => {
         return false
       }
       savedIds.value.add(key)
+      if (!modeFilter.value || entry.mode === modeFilter.value) {
+        items.value = [
+          entry,
+          ...items.value.filter((item) => item.id !== entry.id),
+        ]
+      }
       return true
     } catch (e) {
       errors.value.set(key, e instanceof Error ? e.message : String(e))

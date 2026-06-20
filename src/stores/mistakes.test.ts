@@ -74,6 +74,33 @@ describe('mistake store save state', () => {
     expect(saveMistake).toHaveBeenCalledTimes(2)
   })
 
+  it('prepends a successfully saved mistake to the current list', async () => {
+    vi.mocked(saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+    store.items = [mistake('old')]
+    const entry = mistake('new')
+
+    const result = await store.saveEntry('q1', entry)
+
+    expect(result).toBe(true)
+    expect(store.items.map((item) => item.id)).toEqual(['new', 'old'])
+  })
+
+  it('replaces an existing listed mistake when saving the same mistake id again', async () => {
+    vi.mocked(saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+    const older = mistake('same')
+    older.user_answer = 'A'
+    const newer = mistake('same')
+    newer.user_answer = 'C'
+    store.items = [older, mistake('other')]
+
+    await store.saveEntry('q1', newer)
+
+    expect(store.items.map((item) => item.id)).toEqual(['same', 'other'])
+    expect(store.items[0].user_answer).toBe('C')
+  })
+
   it('loads the first page with server-side mode filters', async () => {
     vi.mocked(loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
     const store = useMistakeStore()
