@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { getSettings, saveSettings } from '../services/settings'
 
 export const useLayoutStore = defineStore('layout', () => {
@@ -31,8 +31,8 @@ export const useLayoutStore = defineStore('layout', () => {
       const settings = await getSettings()
       leftPanelOpen.value = settings.ui.layout.left_visible
       rightPanelOpen.value = settings.ui.layout.right_visible
-      explorerWidth.value = settings.ui.layout.left_width
-      readerWidth.value = settings.ui.layout.right_width
+      setExplorerWidth(settings.ui.layout.left_width)
+      setReaderWidth(settings.ui.layout.right_width)
     } catch {
       // use defaults
     }
