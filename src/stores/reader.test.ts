@@ -39,6 +39,23 @@ describe('reader store scroll persistence', () => {
     expect(store.scrollTop).toBe(420)
   })
 
+  it('loads note content even when scroll settings cannot be read', async () => {
+    vi.mocked(settingsService.getSettings).mockRejectedValue(new Error('Failed to parse settings.json'))
+    vi.mocked(noteService.readNote).mockResolvedValue({
+      path: '/notes/vue/reactivity.md',
+      title: 'Reactivity',
+      content: '# Reactivity',
+      metadata: {},
+    })
+    const store = useReaderStore()
+
+    await store.loadNote('/notes/vue/reactivity.md')
+
+    expect(store.currentNote?.title).toBe('Reactivity')
+    expect(store.scrollTop).toBe(0)
+    expect(store.error).toBeNull()
+  })
+
   it('persists scroll position by note path', async () => {
     const settings = defaultSettings()
     settings.workspace.selected_path = '/notes/vue/reactivity.md'
