@@ -228,6 +228,10 @@ fn validate_choice_answer(
     }
 
     let normalized_answers = split_answer_text(answer);
+    if matches!(question_type, QuestionType::Single) && normalized_answers.len() != 1 {
+        return Err(format!("Question {} single choice answer must contain exactly one option", index + 1));
+    }
+
     if normalized_answers.iter().all(|normalized_answer| {
         options.iter().any(|option| {
             normalize_answer_text(option) == *normalized_answer
@@ -845,6 +849,27 @@ Good luck."#;
 
         assert!(error.contains("answer"));
         assert!(error.contains("options"));
+    }
+
+    #[test]
+    fn parse_quiz_response_rejects_single_choice_answer_text_list() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "Which claim is true?",
+                    "options": ["A. Alpha", "B. Beta"],
+                    "answer": "Alpha, Beta",
+                    "explanation": "Only one option should be correct."
+                }
+            ]
+        }"#;
+
+        let error = parse_quiz_response(raw)
+            .expect_err("single choice answer text list should be rejected");
+
+        assert!(error.contains("single choice"));
     }
 
     #[test]
