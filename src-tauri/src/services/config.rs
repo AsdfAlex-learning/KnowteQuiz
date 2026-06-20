@@ -44,11 +44,12 @@ fn default_settings() -> Settings {
 pub fn get_settings_path(data_dir: &Path) -> Result<Settings, String> {
     match storage::read_json_path::<Settings>(data_dir, "settings.json") {
         Ok(settings) => Ok(settings),
-        Err(_) => {
+        Err(error) if error.starts_with("File not found:") => {
             let defaults = default_settings();
             storage::write_json_path(data_dir, "settings.json", &defaults)?;
             Ok(defaults)
         }
+        Err(error) => Err(error),
     }
 }
 
@@ -129,5 +130,31 @@ mod tests {
         assert!(settings.workspace.expanded_dirs.is_empty());
         assert_eq!(settings.workspace.selected_path, None);
         assert!(settings.workspace.scroll_positions.is_empty());
+    }
+
+    #[test]
+    fn get_settings_path_creates_defaults_when_file_is_missing() {
+        let dir = temp_data_dir("get_settings_path_creates_defaults_when_file_is_missing");
+
+        let settings = get_settings_path(&dir)
+            .expect("missing settings file should be initialized");
+
+        assert_eq!(settings.version, "1.0.0");
+        assert!(dir.join("settings.json").exists());
+    }
+
+    #[test]
+    fn get_settings_path_reports_corrupt_file_without_overwriting_it() {
+        let dir = temp_data_dir("get_settings_path_reports_corrupt_file_without_overwriting_it");
+        std::fs::write(dir.join("settings.json"), "{ not valid json")
+            .expect("corrupt settings file should be written");
+
+        let error = get_settings_path(&dir)
+            .expect_err("corrupt settings should not be replaced with defaults");
+        let content = std::fs::read_to_string(dir.join("settings.json"))
+            .expect("settings file should still exist");
+
+        assert!(error.contains("Failed to parse"));
+        assert_eq!(content, "{ not valid json");
     }
 }
