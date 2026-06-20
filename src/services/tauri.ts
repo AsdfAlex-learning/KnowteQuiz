@@ -6,7 +6,7 @@ export function isTauri(): boolean {
 
 export async function webStream<T>(
   path: string,
-  body: Record<string, unknown>,
+  body: unknown,
   onMessage: (msg: T) => void,
 ): Promise<void> {
   const response = await fetch(path, {

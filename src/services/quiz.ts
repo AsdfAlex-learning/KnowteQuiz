@@ -17,7 +17,7 @@ export async function generateQuiz(
     }
     await invoke('generate_quiz', { params, onEvent: channel })
   } else {
-    await webStream<QuizEvent>('/api/quiz/generate', { params }, (msg) => {
+    await webStream<QuizEvent>('/api/quiz/generate', params, (msg) => {
       if (msg.event === 'chunk') onChunk(msg.data)
       else if (msg.event === 'done') onDone(msg.data.total)
       else if (msg.event === 'error') onError(msg.data.message)
