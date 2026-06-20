@@ -10,7 +10,7 @@ export async function saveMistake(entry: MistakeEntry): Promise<boolean> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),
   })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) await throwHttpError(res)
   return res.json()
 }
 
@@ -20,8 +20,13 @@ export async function loadMistakes(filter?: MistakeFilter): Promise<MistakeEntry
   }
   const query = mistakeFilterQuery(filter)
   const res = await fetch(`/api/mistakes${query}`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) await throwHttpError(res)
   return res.json()
+}
+
+async function throwHttpError(res: Response): Promise<never> {
+  const message = await res.text().catch(() => '')
+  throw new Error(message ? `HTTP ${res.status}: ${message}` : `HTTP ${res.status}`)
 }
 
 function mistakeFilterQuery(filter?: MistakeFilter): string {
@@ -41,7 +46,7 @@ export async function listPromptTemplates(): Promise<Array<{ name: string; label
     return result.map(([name, label, description]) => ({ name, label, description }))
   }
   const res = await fetch('/api/prompt-templates')
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) await throwHttpError(res)
   const result = await res.json() as Array<[string, string, string]>
   return result.map(([name, label, description]) => ({ name, label, description }))
 }

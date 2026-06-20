@@ -24,4 +24,14 @@ describe('mistake service', () => {
       '/api/mistakes?mode=advanced&note_path=%2Fnotes%2Frust.md&offset=20&limit=10',
     )
   })
+
+  it('includes response text when loading mistakes fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      text: async () => 'Failed to parse mistakes.json',
+    })))
+
+    await expect(loadMistakes()).rejects.toThrow('Failed to parse mistakes.json')
+  })
 })

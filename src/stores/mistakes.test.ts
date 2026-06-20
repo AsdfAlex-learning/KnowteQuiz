@@ -111,4 +111,14 @@ describe('mistake store save state', () => {
     expect(store.items).toHaveLength(21)
     expect(store.hasMore).toBe(false)
   })
+
+  it('records detailed list load errors from the service', async () => {
+    vi.mocked(loadMistakes).mockRejectedValue(new Error('HTTP 500: Failed to parse mistakes.json'))
+    const store = useMistakeStore()
+
+    await store.loadPage()
+
+    expect(store.listError).toContain('Failed to parse mistakes.json')
+    expect(store.loading).toBe(false)
+  })
 })
