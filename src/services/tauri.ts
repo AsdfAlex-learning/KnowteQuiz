@@ -57,7 +57,7 @@ function emitSseChunk<T>(chunk: string, onMessage: (msg: T) => void): void {
       const msg = JSON.parse(data) as T
       onMessage(msg)
     } catch (e) {
-      console.error('SSE parse error:', e)
+      throw new Error(`SSE parse error: ${String(e)}`)
     }
   }
 }

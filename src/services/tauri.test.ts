@@ -26,4 +26,14 @@ describe('webStream', () => {
 
     expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
   })
+
+  it('rejects malformed SSE data instead of silently ignoring it', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      body: streamFromText('data: {"event":"done"'),
+    })))
+
+    await expect(webStream('/api/quiz/generate', {}, vi.fn()))
+      .rejects.toThrow('SSE parse error')
+  })
 })
