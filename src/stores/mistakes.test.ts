@@ -1,14 +1,15 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMistakeStore } from './mistakes'
-import { saveMistake } from '../services/mistake'
-import type { MistakeEntry } from '../types/mistake'
+import { loadMistakes, saveMistake } from '../services/mistake'
+import type { MistakeEntry, MistakeMode } from '../types/mistake'
 
 vi.mock('../services/mistake', () => ({
+  loadMistakes: vi.fn(),
   saveMistake: vi.fn(),
 }))
 
-function mistake(id = 'm1'): MistakeEntry {
+function mistake(id = 'm1', mode: MistakeMode = 'basic'): MistakeEntry {
   return {
     id,
     note_path: '/notes/rust.md',
@@ -17,7 +18,7 @@ function mistake(id = 'm1'): MistakeEntry {
     user_answer: 'A',
     correct_answer: 'B',
     explanation: 'B is correct.',
-    mode: 'basic',
+    mode,
     created_at: '2026-01-01T00:00:00.000Z',
     review_count: 0,
   }
@@ -59,5 +60,43 @@ describe('mistake store save state', () => {
     expect(store.isSaved('q1')).toBe(false)
     expect(store.isSaving('q1')).toBe(false)
     expect(store.errorFor('q1')).toContain('disk full')
+  })
+
+  it('loads the first page with server-side mode filters', async () => {
+    vi.mocked(loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
+    const store = useMistakeStore()
+
+    await store.setModeFilter('advanced')
+
+    expect(loadMistakes).toHaveBeenCalledWith({
+      mode: 'advanced',
+      offset: 0,
+      limit: 20,
+    })
+    expect(store.items.map((item) => item.id)).toEqual(['m2'])
+    expect(store.hasMore).toBe(false)
+  })
+
+  it('loads additional pages by appending mistakes with the next offset', async () => {
+    vi.mocked(loadMistakes)
+      .mockResolvedValueOnce(Array.from({ length: 20 }, (_, i) => mistake(`m${i + 1}`)))
+      .mockResolvedValueOnce([mistake('m21')])
+    const store = useMistakeStore()
+
+    await store.loadPage()
+    await store.loadNextPage()
+
+    expect(loadMistakes).toHaveBeenNthCalledWith(1, {
+      mode: undefined,
+      offset: 0,
+      limit: 20,
+    })
+    expect(loadMistakes).toHaveBeenNthCalledWith(2, {
+      mode: undefined,
+      offset: 20,
+      limit: 20,
+    })
+    expect(store.items).toHaveLength(21)
+    expect(store.hasMore).toBe(false)
   })
 })

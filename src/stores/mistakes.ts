@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { saveMistake } from '../services/mistake'
-import type { MistakeEntry } from '../types/mistake'
+import { loadMistakes, saveMistake } from '../services/mistake'
+import type { MistakeEntry, MistakeMode } from '../types/mistake'
+
+const PAGE_SIZE = 20
 
 export const useMistakeStore = defineStore('mistakes', () => {
+  const items = ref<MistakeEntry[]>([])
+  const loading = ref(false)
+  const listError = ref<string | null>(null)
+  const modeFilter = ref<MistakeMode | undefined>(undefined)
+  const hasMore = ref(false)
   const savingIds = ref(new Set<string>())
   const savedIds = ref(new Set<string>())
   const errors = ref(new Map<string, string>())
@@ -41,7 +48,40 @@ export const useMistakeStore = defineStore('mistakes', () => {
     }
   }
 
+  async function loadPage(offset = 0): Promise<void> {
+    loading.value = true
+    listError.value = null
+    try {
+      const page = await loadMistakes({
+        mode: modeFilter.value,
+        offset,
+        limit: PAGE_SIZE,
+      })
+      items.value = offset === 0 ? page : [...items.value, ...page]
+      hasMore.value = page.length === PAGE_SIZE
+    } catch (e) {
+      listError.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadNextPage(): Promise<void> {
+    if (loading.value || !hasMore.value) return
+    await loadPage(items.value.length)
+  }
+
+  async function setModeFilter(mode: MistakeMode | undefined): Promise<void> {
+    modeFilter.value = mode
+    await loadPage(0)
+  }
+
   return {
+    items,
+    loading,
+    listError,
+    modeFilter,
+    hasMore,
     savingIds,
     savedIds,
     errors,
@@ -49,5 +89,8 @@ export const useMistakeStore = defineStore('mistakes', () => {
     isSaved,
     errorFor,
     saveEntry,
+    loadPage,
+    loadNextPage,
+    setModeFilter,
   }
 })
