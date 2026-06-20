@@ -1,6 +1,6 @@
 use axum::{
     extract::{Json, Path as AxumPath, Query, State},
-    http::header,
+    http::{header, HeaderValue, Method},
     response::{
         sse::{Event, Sse},
         IntoResponse, Response,
@@ -51,6 +51,20 @@ fn get_dist_dir() -> PathBuf {
 
 fn listener_addr(port: u16) -> String {
     format!("127.0.0.1:{}", port)
+}
+
+fn allowed_cors_origins() -> Vec<HeaderValue> {
+    vec![
+        HeaderValue::from_static("http://localhost:1420"),
+        HeaderValue::from_static("http://127.0.0.1:1420"),
+    ]
+}
+
+fn local_cors_layer() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(allowed_cors_origins())
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([header::CONTENT_TYPE])
 }
 
 fn send_missing_session_error(
@@ -133,7 +147,7 @@ pub async fn start(port: u16) {
         .route("/api/quiz/diagnose/{session_id}/follow_up", post(diagnose_follow_up_handler))
         .route("/api/quiz/diagnose/{session_id}/report", get(generate_report_handler))
         .fallback_service(serve_dir)
-        .layer(CorsLayer::permissive())
+        .layer(local_cors_layer())
         .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind(listener_addr(port))
@@ -395,6 +409,15 @@ mod tests {
     #[test]
     fn default_listener_addr_uses_loopback_only() {
         assert_eq!(listener_addr(14200), "127.0.0.1:14200");
+    }
+
+    #[test]
+    fn cors_allows_only_local_dev_origins() {
+        let origins = allowed_cors_origins();
+
+        assert_eq!(origins.len(), 2);
+        assert!(origins.contains(&HeaderValue::from_static("http://localhost:1420")));
+        assert!(origins.contains(&HeaderValue::from_static("http://127.0.0.1:1420")));
     }
 
     #[test]
