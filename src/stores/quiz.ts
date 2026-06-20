@@ -89,6 +89,13 @@ export const useQuizStore = defineStore('quiz', () => {
   async function startQuiz(params: QuizStreamParams) {
     reset()
     quizState.value = 'generating'
+    const failGeneration = (message: string) => {
+      questions.value = []
+      currentIndex.value = 0
+      answers.value = new Map()
+      generatingError.value = message
+      quizState.value = 'idle'
+    }
     try {
       await generateQuiz(
         params,
@@ -97,13 +104,11 @@ export const useQuizStore = defineStore('quiz', () => {
           quizState.value = 'answering'
         },
         (err) => {
-          generatingError.value = err
-          quizState.value = 'idle'
+          failGeneration(err)
         }
       )
     } catch (e) {
-      generatingError.value = String(e)
-      quizState.value = 'idle'
+      failGeneration(String(e))
     }
   }
 
