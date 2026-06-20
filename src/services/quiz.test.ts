@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { generateQuiz, submitAnswerAdvanced } from './quiz'
+import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced } from './quiz'
 import { webStream } from './tauri'
 import type { QuizStreamParams } from '../types/quiz'
 
@@ -12,6 +12,7 @@ vi.mock('./tauri', () => ({
 describe('quiz service', () => {
   afterEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('sends quiz generation params directly to the web endpoint', async () => {
@@ -57,5 +58,15 @@ describe('quiz service', () => {
       }),
       expect.any(Function),
     )
+  })
+
+  it('includes the response body when web diagnosis report generation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      text: async () => 'Session session-1 not found',
+    })))
+
+    await expect(generateDiagnosisReport('session-1')).rejects.toThrow('HTTP 404: Session session-1 not found')
   })
 })

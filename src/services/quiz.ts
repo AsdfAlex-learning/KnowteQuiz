@@ -1,6 +1,11 @@
 import type { QuizStreamParams, QuizQuestion, QuizEvent, DiagnosisEvent, DiagnosisReport, BlindSpot, DiagnosisRound } from '../types'
 import { invoke, isTauri, webStream } from './tauri'
 
+async function throwHttpError(res: Response): Promise<never> {
+  const body = await res.text()
+  throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`)
+}
+
 export async function generateQuiz(
   params: QuizStreamParams,
   onChunk: (q: QuizQuestion) => void,
@@ -104,6 +109,6 @@ export async function generateDiagnosisReport(sessionId: string): Promise<Diagno
     return invoke<DiagnosisReport>('generate_diagnosis_report', { sessionId })
   }
   const res = await fetch(`/api/quiz/diagnose/${sessionId}/report`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) await throwHttpError(res)
   return res.json()
 }
