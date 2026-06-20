@@ -151,13 +151,6 @@ async function restoreReaderScroll() {
   })
 }
 
-watch(() => explorerStore.selectedPath, async (path) => {
-  await flushReaderScrollSave()
-  if (path) {
-    await readerStore.loadNote(path)
-  }
-})
-
 watch(() => readerStore.currentNote?.path, (path) => {
   if (path) {
     void restoreReaderScroll()
@@ -168,6 +161,9 @@ onMounted(async () => {
   layoutStore.loadLayout()
   await settingsStore.loadSettings()
   await explorerStore.restoreWorkspace()
+  if (explorerStore.selectedPath) {
+    await readerStore.loadNote(explorerStore.selectedPath)
+  }
   document.addEventListener('keydown', onKeyDown)
 })
 

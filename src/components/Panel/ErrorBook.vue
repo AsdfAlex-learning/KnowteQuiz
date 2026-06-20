@@ -72,9 +72,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { readNote } from '@/services/note'
-import { useExplorerStore } from '@/stores/explorer'
 import { useMistakeStore } from '@/stores/mistakes'
+import { useNavigationStore } from '@/stores/navigation'
 import MistakeItem from './MistakeItem.vue'
 import MistakeDetail from './MistakeDetail.vue'
 import type { MistakeMode } from '@/types/mistake'
@@ -88,8 +87,8 @@ const filters: { value: FilterValue; label: string }[] = [
 ]
 
 const selectedId = ref<string | null>(null)
-const explorerStore = useExplorerStore()
 const mistakeStore = useMistakeStore()
+const navigationStore = useNavigationStore()
 
 const activeFilter = computed<FilterValue>(() => {
   return mistakeStore.modeFilter ?? 'all'
@@ -105,8 +104,7 @@ async function handleFilter(value: FilterValue) {
 }
 
 function handleOpenNote(path: string) {
-  explorerStore.selectPath(path)
-  readNote(path)
+  navigationStore.openNote(path)
 }
 
 onMounted(async () => {

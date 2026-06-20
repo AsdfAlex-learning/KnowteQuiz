@@ -47,7 +47,7 @@
       :class="{ 'tree-item--active': isSelected }"
       :style="{ paddingLeft: depth * 12 + 20 + 'px' }"
       :title="node.name"
-      @click="explorerStore.selectPath(node.path)"
+      @click="navigationStore.openNote(node.path)"
     >
       <!-- File icon -->
       <svg class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useExplorerStore } from '@/stores/explorer'
+import { useNavigationStore } from '@/stores/navigation'
 import type { NoteTreeNode } from '@/types/note'
 
 const props = defineProps<{
@@ -71,6 +72,7 @@ const props = defineProps<{
 }>()
 
 const explorerStore = useExplorerStore()
+const navigationStore = useNavigationStore()
 
 const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path))
 const isSelected = computed(() => explorerStore.selectedPath === props.node.path)
