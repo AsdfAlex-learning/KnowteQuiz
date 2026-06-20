@@ -583,7 +583,7 @@ fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
 
     Ok(FollowUpResponse {
         progress_assessment: required_diagnosis_string(&parsed, "progress_assessment")?,
-        new_blind_spots: parse_blind_spots_array(&parsed["new_blind_spots"]),
+        new_blind_spots: parse_blind_spots_array(&parsed["new_blind_spots"], "new_blind_spots")?,
         should_continue,
         follow_up_question,
     })
@@ -597,7 +597,7 @@ fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, String> {
 
     Ok(DiagnosisReport {
         summary: required_diagnosis_string(&parsed, "summary")?,
-        blind_spots: parse_blind_spots_array(&parsed["blind_spots"]),
+        blind_spots: parse_blind_spots_array(&parsed["blind_spots"], "blind_spots")?,
         overall_level: required_diagnosis_string(&parsed, "overall_level")?,
         next_steps,
     })
@@ -641,16 +641,16 @@ fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
     }
 }
 
-fn parse_blind_spots_array(value: &Value) -> Vec<BlindSpot> {
-    value.as_array()
-        .map(|arr| arr.iter().map(|v| BlindSpot {
-            tag: v["tag"].as_str().or(v["type"].as_str()).unwrap_or("").to_string(),
-            severity: v["severity"].as_str().unwrap_or("medium").to_string(),
-            description: v["description"].as_str().unwrap_or("").to_string(),
-            note_reference: v["note_reference"].as_str().unwrap_or("").to_string(),
-            suggestion: v["suggestion"].as_str().unwrap_or("").to_string(),
-        }).collect())
-        .unwrap_or_default()
+fn parse_blind_spots_array(value: &Value, label: &str) -> Result<Vec<BlindSpot>, String> {
+    let Some(values) = value.as_array() else {
+        return Ok(vec![]);
+    };
+
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| parse_blind_spot(value, &format!("{}[{}]", label, index + 1)))
+        .collect()
 }
 
 fn required_diagnosis_string(value: &Value, field: &str) -> Result<String, String> {
@@ -959,5 +959,22 @@ Good luck."#;
         };
 
         assert!(error.contains("summary"));
+    }
+
+    #[test]
+    fn parse_diagnosis_report_rejects_empty_blind_spot_items() {
+        let raw = r#"{
+            "summary": "Review ownership.",
+            "blind_spots": [{}],
+            "overall_level": "Needs review",
+            "next_steps": ["Review ownership examples"]
+        }"#;
+
+        let error = match parse_diagnosis_report(raw) {
+            Ok(_) => panic!("empty blind spot item should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(error.contains("blind_spots"));
     }
 }
