@@ -28,6 +28,7 @@ import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
 import { useReaderStore } from '@/stores/reader'
 import { convertFileSrc, isTauri } from '@/services/tauri'
+import { renderMarkdownWithFallback } from '@/utils/markdown'
 import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets'
 import EmptyState from './EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -59,6 +60,6 @@ configureMarkdownAssetRenderer(
 
 const renderedHtml = computed(() => {
   if (!readerStore.currentNote?.content) return ''
-  return md.render(readerStore.currentNote.content)
+  return renderMarkdownWithFallback(readerStore.currentNote.content, (source) => md.render(source))
 })
 </script>

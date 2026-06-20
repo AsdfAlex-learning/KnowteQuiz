@@ -65,12 +65,23 @@ export function getMarkdown_it(options: MarkdownOptions = defaultOptions): Markd
 
 export function renderMarkdown(content: string, options?: MarkdownOptions): string {
   const md = getMarkdown_it(options)
-  return md.render(content)
+  return renderMarkdownWithFallback(content, (source) => md.render(source))
 }
 
 export function renderInline(content: string, options?: MarkdownOptions): string {
   const md = getMarkdown_it(options)
   return md.renderInline(content)
+}
+
+export function renderMarkdownWithFallback(
+  content: string,
+  render: (source: string) => string,
+): string {
+  try {
+    return render(content)
+  } catch {
+    return `<pre class="markdown-render-fallback"><code>${escapeHtml(content)}</code></pre>`
+  }
 }
 
 export function highlightCode(code: string, language: string): string {
@@ -93,4 +104,13 @@ export function extractText(content: string): string {
 
 export function splitByParagraph(content: string): string[] {
   return content.split(/\n\n+/).filter(Boolean)
+}
+
+function escapeHtml(content: string): string {
+  return content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
