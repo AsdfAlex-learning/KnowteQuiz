@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { choiceLettersFromAnswer, isChoiceLetterCorrect, isQuizAnswerCorrect } from './answer'
+import {
+  canSubmitQuizAnswer,
+  choiceLettersFromAnswer,
+  isChoiceLetterCorrect,
+  isQuizAnswerCorrect,
+} from './answer'
 
 describe('answer utilities', () => {
   it('extracts choice letters from common model answer formats', () => {
@@ -22,5 +27,19 @@ describe('answer utilities', () => {
       answer: 'Dependency Injection',
       explanation: '',
     }, ' dependency   injection ')).toBe(true)
+  })
+
+  it('requires reasoning before submitting in advanced mode', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'single' as const,
+      question: 'Pick one.',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'A',
+      explanation: '',
+    }
+
+    expect(canSubmitQuizAnswer(question, 0, '', 'advanced', '')).toBe(false)
+    expect(canSubmitQuizAnswer(question, 0, '', 'advanced', 'I choose A because...')).toBe(true)
   })
 })

@@ -1,5 +1,7 @@
 import type { QuizQuestion } from '../types/quiz'
 
+export type QuizSubmissionMode = 'basic' | 'advanced'
+
 function normalizeTextAnswer(answer: string): string {
   return answer.trim().replace(/\s+/g, ' ').toLowerCase()
 }
@@ -42,4 +44,19 @@ export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string |
   }
 
   return normalizeTextAnswer(userAnswer) === normalizeTextAnswer(question.answer)
+}
+
+export function canSubmitQuizAnswer(
+  question: QuizQuestion | null,
+  selectedOption: number | null,
+  shortAnswer: string,
+  mode: QuizSubmissionMode,
+  reasoning: string,
+): boolean {
+  if (!question) return false
+  if (mode === 'advanced' && reasoning.trim().length === 0) return false
+  if (question.question_type === 'short') {
+    return shortAnswer.trim().length > 0
+  }
+  return selectedOption !== null
 }

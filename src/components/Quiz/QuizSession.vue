@@ -159,6 +159,7 @@ import DiagnosisReportComponent from './DiagnosisReport.vue'
 import QuizResult from './QuizResult.vue'
 import type { QuizMode } from '@/stores/quiz'
 import type { MistakeEntry } from '@/types/mistake'
+import { canSubmitQuizAnswer } from '@/utils/answer'
 
 const props = defineProps<{
   mode: QuizMode
@@ -178,11 +179,13 @@ const diagnosisSubmitting = ref(false)
 const currentQuestion = computed(() => quizStore.currentQuestion)
 
 const canSubmit = computed(() => {
-  if (!currentQuestion.value) return false
-  if (currentQuestion.value.question_type === 'short') {
-    return shortAnswer.value.trim().length > 0
-  }
-  return selectedOption.value !== null
+  return canSubmitQuizAnswer(
+    currentQuestion.value,
+    selectedOption.value,
+    shortAnswer.value,
+    props.mode,
+    reasoning.value,
+  )
 })
 
 function handleSelectOption(index: number) {
