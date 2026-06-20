@@ -27,6 +27,8 @@ import mk from '@traptitech/markdown-it-katex'
 import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
 import { useReaderStore } from '@/stores/reader'
+import { convertFileSrc, isTauri } from '@/services/tauri'
+import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets'
 import EmptyState from './EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 
@@ -49,6 +51,11 @@ const md = new MarkdownIt({
 })
 
 md.use(mk)
+configureMarkdownAssetRenderer(
+  md,
+  () => readerStore.currentNote?.path,
+  (path) => isTauri() ? convertFileSrc(path) : markdownWebAssetUrl(path),
+)
 
 const renderedHtml = computed(() => {
   if (!readerStore.currentNote?.content) return ''

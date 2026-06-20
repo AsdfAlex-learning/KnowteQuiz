@@ -1,13 +1,17 @@
 use axum::{
     extract::{Json, Path as AxumPath, Query, State},
-    response::sse::{Event, Sse},
+    http::header,
+    response::{
+        sse::{Event, Sse},
+        IntoResponse, Response,
+    },
     routing::{get, post},
     Router,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
@@ -77,6 +81,7 @@ pub async fn start(port: u16) {
     let app = Router::new()
         .route("/api/notes/scan", get(scan_notes_handler))
         .route("/api/notes/read", get(read_note_handler))
+        .route("/api/notes/asset", get(read_note_asset_handler))
         .route("/api/settings", get(get_settings_handler).post(save_settings_handler))
         .route("/api/test-connection", post(test_connection_handler))
         .route("/api/prompt-templates", get(list_prompt_templates_handler))
@@ -118,6 +123,11 @@ struct ReadNoteQuery {
     path: String,
 }
 
+#[derive(Deserialize)]
+struct ReadNoteAssetQuery {
+    path: String,
+}
+
 async fn read_note_handler(
     State(_state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteQuery>,
@@ -125,6 +135,36 @@ async fn read_note_handler(
     let content = fs_service::read_file_content(&query.path)?;
     let result = note_service::extract_metadata(&content, &query.path);
     Ok(Json(result))
+}
+
+async fn read_note_asset_handler(
+    Query(query): Query<ReadNoteAssetQuery>,
+) -> Result<Response, String> {
+    let path = PathBuf::from(&query.path);
+    let content_type = asset_content_type(&path)
+        .ok_or_else(|| format!("Unsupported asset type: {}", query.path))?;
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|err| format!("Failed to read asset {}: {}", query.path, err))?;
+
+    Ok(([(header::CONTENT_TYPE, content_type)], bytes).into_response())
+}
+
+fn asset_content_type(path: &Path) -> Option<&'static str> {
+    match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+        .as_deref()
+    {
+        Some("png") => Some("image/png"),
+        Some("jpg") | Some("jpeg") => Some("image/jpeg"),
+        Some("gif") => Some("image/gif"),
+        Some("webp") => Some("image/webp"),
+        Some("bmp") => Some("image/bmp"),
+        Some("svg") => Some("image/svg+xml"),
+        _ => None,
+    }
 }
 
 async fn get_settings_handler(
@@ -319,6 +359,14 @@ mod tests {
             }
             other => panic!("expected error event, got {:?}", event_name(&other)),
         }
+    }
+
+    #[test]
+    fn asset_content_type_allows_common_image_formats_only() {
+        assert_eq!(asset_content_type(Path::new("diagram.png")), Some("image/png"));
+        assert_eq!(asset_content_type(Path::new("photo.JPEG")), Some("image/jpeg"));
+        assert_eq!(asset_content_type(Path::new("clip.webp")), Some("image/webp"));
+        assert_eq!(asset_content_type(Path::new("note.md")), None);
     }
 
     fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {
