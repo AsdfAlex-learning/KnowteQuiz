@@ -18,6 +18,19 @@ describe('answer utilities', () => {
     expect(isChoiceLetterCorrect('A. Alpha', 'B')).toBe(false)
   })
 
+  it('scores a choice answer as correct when the answer is option text', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'single' as const,
+      question: 'Pick one.',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'Alpha',
+      explanation: '',
+    }
+
+    expect(isQuizAnswerCorrect(question, 'A')).toBe(true)
+  })
+
   it('falls back to normalized text comparison for short answers', () => {
     expect(isQuizAnswerCorrect({
       id: 'q1',
@@ -41,6 +54,19 @@ describe('answer utilities', () => {
 
     expect(isQuizAnswerCorrect(question, 'C,A')).toBe(true)
     expect(isQuizAnswerCorrect(question, 'A')).toBe(false)
+  })
+
+  it('scores multiple choice answers when the answer lists option text', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'multiple' as const,
+      question: 'Pick all true claims.',
+      options: ['A. Alpha', 'B. Beta', 'C. Gamma'],
+      answer: 'Alpha, Gamma',
+      explanation: '',
+    }
+
+    expect(isQuizAnswerCorrect(question, 'C,A')).toBe(true)
   })
 
   it('requires reasoning before submitting in advanced mode', () => {

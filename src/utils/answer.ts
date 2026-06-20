@@ -6,6 +6,10 @@ function normalizeTextAnswer(answer: string): string {
   return answer.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+function stripOptionLabel(option: string): string {
+  return option.trim().replace(/^[A-Z]\s*[.)\]:：、]\s*/i, '')
+}
+
 export function choiceLettersFromAnswer(answer: string): string[] {
   const seen = new Set<string>()
   const letters: string[] = []
@@ -32,6 +36,23 @@ export function isChoiceLetterCorrect(correctAnswer: string, letter: string): bo
   return choiceLettersFromAnswer(correctAnswer).includes(letter.toUpperCase())
 }
 
+function choiceLettersFromOptionText(correctAnswer: string, options: string[]): string[] {
+  const normalizedAnswers = correctAnswer
+    .split(/[,;，；、]/)
+    .map(normalizeTextAnswer)
+    .filter(Boolean)
+  const answerSet = new Set(normalizedAnswers.length > 0 ? normalizedAnswers : [normalizeTextAnswer(correctAnswer)])
+
+  return options
+    .map((option, index) => ({
+      letter: String.fromCharCode(65 + index),
+      option: normalizeTextAnswer(option),
+      text: normalizeTextAnswer(stripOptionLabel(option)),
+    }))
+    .filter(({ option, text }) => answerSet.has(option) || answerSet.has(text))
+    .map(({ letter }) => letter)
+}
+
 export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string | undefined): boolean {
   if (!userAnswer) return false
 
@@ -40,9 +61,12 @@ export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string |
     && question.options.length > 0
   ) {
     const expected = choiceLettersFromAnswer(question.answer)
+    const expectedFromOptionText = expected.length > 0
+      ? expected
+      : choiceLettersFromOptionText(question.answer, question.options)
     const actual = choiceLettersFromAnswer(userAnswer)
-    if (expected.length > 0 && actual.length > 0) {
-      return sameLetterSet(expected, actual)
+    if (expectedFromOptionText.length > 0 && actual.length > 0) {
+      return sameLetterSet(expectedFromOptionText, actual)
     }
   }
 

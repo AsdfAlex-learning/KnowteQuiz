@@ -40,6 +40,22 @@ describe('quiz store answer evaluation', () => {
     expect(store.score).toBe(100)
   })
 
+  it('scores a choice answer as correct when the model answer is only option text', () => {
+    const store = useQuizStore()
+    store.addQuestion({
+      id: 'q1',
+      question_type: 'single',
+      question: 'Which letter is first?',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'Alpha',
+      explanation: 'A is the first letter.',
+    })
+
+    store.submitAnswer('q1', 'A')
+
+    expect(store.score).toBe(100)
+  })
+
   it('moves from generation to answering when quiz streaming completes', async () => {
     vi.mocked(generateQuiz).mockImplementation(async (_params, onChunk, onDone) => {
       onChunk({
