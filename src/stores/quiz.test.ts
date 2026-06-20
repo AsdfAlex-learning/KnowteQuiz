@@ -122,6 +122,20 @@ describe('quiz store answer evaluation', () => {
     expect(store.quizState).toBe('report')
   })
 
+  it('returns to answering when initial diagnosis streaming reports an error', async () => {
+    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _answer, _reasoning, _notePath, _onInitial, _onFollowUp, _onReport, onError) => {
+      onError('Failed to parse diagnosis: missing answer_analysis')
+      return 'session-1'
+    })
+    const store = useQuizStore()
+
+    await store.startDiagnosis('Question?', 'A', 'Because A', '/notes/rust.md')
+
+    expect(store.quizState).toBe('answering')
+    expect(store.sessionId).toBeNull()
+    expect(store.generatingError).toContain('missing answer_analysis')
+  })
+
   it('generates a diagnosis report from the current session', async () => {
     vi.mocked(generateDiagnosisReport).mockResolvedValue(report)
     const store = useQuizStore()
@@ -163,6 +177,26 @@ describe('quiz store answer evaluation', () => {
         blind_spots: [],
         follow_up: 'How does the definition change your answer?',
       },
+    ])
+  })
+
+  it('records follow-up errors without appending failed replies', async () => {
+    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, _userReply, _onFollowUp, _onReport, onError) => {
+      onError('Session session-1 not found')
+    })
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.quizState = 'diagnosing'
+    store.diagnosisMessages = [
+      { role: 'ai', content: 'Which definition applies?', blind_spots: [], follow_up: 'Which definition applies?' },
+    ]
+
+    await store.continueDiagnosis('My reply')
+
+    expect(store.quizState).toBe('diagnosing')
+    expect(store.generatingError).toContain('Session session-1 not found')
+    expect(store.diagnosisMessages).toEqual([
+      { role: 'ai', content: 'Which definition applies?', blind_spots: [], follow_up: 'Which definition applies?' },
     ])
   })
 

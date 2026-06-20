@@ -95,6 +95,14 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
+  function failDiagnosis(message: string) {
+    generatingError.value = message
+    sessionId.value = null
+    diagnosisMessages.value = []
+    diagnosisReport.value = null
+    quizState.value = 'answering'
+  }
+
   async function startQuiz(params: QuizStreamParams) {
     reset()
     quizState.value = 'generating'
@@ -131,12 +139,13 @@ export const useQuizStore = defineStore('quiz', () => {
           addDiagnosisMessage({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })
         },
         (report) => setDiagnosisReport(report),
-        (err) => { generatingError.value = err }
+        (err) => { failDiagnosis(err) }
       )
-      sessionId.value = sid
+      if (!generatingError.value) {
+        sessionId.value = sid
+      }
     } catch (e) {
-      generatingError.value = String(e)
-      quizState.value = 'answering'
+      failDiagnosis(String(e))
     }
   }
 
