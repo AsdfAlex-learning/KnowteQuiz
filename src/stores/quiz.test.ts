@@ -95,7 +95,7 @@ describe('quiz store answer evaluation', () => {
   })
 
   it('stores advanced diagnosis messages, session id, and generated report', async () => {
-    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
+    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _correctAnswer, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
       onInitial({
         role: 'ai',
         content: 'Your reasoning skipped the definition.',
@@ -107,7 +107,7 @@ describe('quiz store answer evaluation', () => {
     })
     const store = useQuizStore()
 
-    await store.startDiagnosis('Question?', 'A', 'Because A', '/notes/rust.md')
+    await store.startDiagnosis('Question?', 'B', 'A', 'Because A', '/notes/rust.md')
 
     expect(store.sessionId).toBe('session-1')
     expect(store.diagnosisMessages).toEqual([
@@ -123,13 +123,13 @@ describe('quiz store answer evaluation', () => {
   })
 
   it('returns to answering when initial diagnosis streaming reports an error', async () => {
-    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _answer, _reasoning, _notePath, _onInitial, _onFollowUp, _onReport, onError) => {
+    vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _correctAnswer, _answer, _reasoning, _notePath, _onInitial, _onFollowUp, _onReport, onError) => {
       onError('Failed to parse diagnosis: missing answer_analysis')
       return 'session-1'
     })
     const store = useQuizStore()
 
-    await store.startDiagnosis('Question?', 'A', 'Because A', '/notes/rust.md')
+    await store.startDiagnosis('Question?', 'B', 'A', 'Because A', '/notes/rust.md')
 
     expect(store.quizState).toBe('answering')
     expect(store.sessionId).toBeNull()

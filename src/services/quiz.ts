@@ -27,6 +27,7 @@ export async function generateQuiz(
 
 export async function submitAnswerAdvanced(
   question: string,
+  correct_answer: string,
   user_answer: string,
   user_reasoning: string,
   note_path: string,
@@ -45,13 +46,19 @@ export async function submitAnswerAdvanced(
       else if (msg.event === 'error') onError(msg.data.message)
     }
     return invoke<string>('submit_answer_advanced', {
-      question, userAnswer: user_answer, userReasoning: user_reasoning, notePath: note_path, onEvent: channel,
+      question,
+      correctAnswer: correct_answer,
+      userAnswer: user_answer,
+      userReasoning: user_reasoning,
+      notePath: note_path,
+      onEvent: channel,
     })
   } else {
     const sessionId = crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`
     await webStream<DiagnosisEvent>('/api/quiz/diagnose', {
       session_id: sessionId,
       question,
+      correct_answer,
       user_answer,
       user_reasoning,
       note_path,

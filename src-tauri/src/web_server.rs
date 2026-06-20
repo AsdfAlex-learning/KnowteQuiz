@@ -276,6 +276,7 @@ async fn submit_diagnosis_handler(
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
     let session_id = payload["session_id"].as_str().unwrap_or("").to_string();
     let question = payload["question"].as_str().unwrap_or("").to_string();
+    let correct_answer = payload["correct_answer"].as_str().unwrap_or("").to_string();
     let user_answer = payload["user_answer"].as_str().unwrap_or("").to_string();
     let user_reasoning = payload["user_reasoning"].as_str().unwrap_or("").to_string();
     let note_path = payload["note_path"].as_str().unwrap_or("").to_string();
@@ -306,7 +307,7 @@ async fn submit_diagnosis_handler(
 
     tokio::spawn(async move {
         if let Ok(initial_round) = quiz_engine::submit_diagnosis_initial(
-            &app_state.data_dir, &question, &user_answer, &user_reasoning, &note_path, tx,
+            &app_state.data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx,
         ).await {
             let updated_session = if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
                 sessions_lock.get_mut(&session_id).map(|session| {

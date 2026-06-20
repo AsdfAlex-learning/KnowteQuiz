@@ -222,7 +222,13 @@ function handleSubmit() {
 async function startDiagnosis(answer: string) {
   if (!currentQuestion.value) return
   const notePath = explorerStore.selectedPath || ''
-  await quizStore.startDiagnosis(currentQuestion.value.question, answer, reasoning.value, notePath)
+  await quizStore.startDiagnosis(
+    currentQuestion.value.question,
+    currentQuestion.value.answer,
+    answer,
+    reasoning.value,
+    notePath,
+  )
 }
 
 async function handleDiagnosisReply(text: string) {

@@ -337,6 +337,7 @@ fn extract_json_block(raw: &str) -> String {
 pub async fn submit_diagnosis_initial(
     data_dir: &Path,
     question: &str,
+    correct_answer: &str,
     user_answer: &str,
     user_reasoning: &str,
     note_path: &str,
@@ -345,18 +346,16 @@ pub async fn submit_diagnosis_initial(
     let note_content = crate::services::fs_service::read_file_content(note_path)?;
     let truncated_content: String = note_content.chars().take(8000).collect();
 
-    let mut vars = HashMap::new();
-    vars.insert("note_content", truncated_content);
-    vars.insert("question", question.to_string());
-    vars.insert("correct_answer", "(to be determined by LLM)".to_string());
-    vars.insert("user_answer", user_answer.to_string());
-    vars.insert("user_reasoning", user_reasoning.to_string());
-
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let template_set = crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
         .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
-    let prompt = crate::utils::prompt_templates::fill_template(
-        &template_set.diagnosis_initial_template, &vars
+    let prompt = build_diagnosis_initial_prompt(
+        &template_set.diagnosis_initial_template,
+        &truncated_content,
+        question,
+        correct_answer,
+        user_answer,
+        user_reasoning,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
     let diagnosis = parse_diagnosis_initial(&response_text)?;
@@ -370,6 +369,23 @@ pub async fn submit_diagnosis_initial(
     });
 
     Ok(round)
+}
+
+fn build_diagnosis_initial_prompt(
+    template: &str,
+    note_content: &str,
+    question: &str,
+    correct_answer: &str,
+    user_answer: &str,
+    user_reasoning: &str,
+) -> String {
+    let mut vars = HashMap::new();
+    vars.insert("note_content", note_content.to_string());
+    vars.insert("question", question.to_string());
+    vars.insert("correct_answer", correct_answer.to_string());
+    vars.insert("user_answer", user_answer.to_string());
+    vars.insert("user_reasoning", user_reasoning.to_string());
+    crate::utils::prompt_templates::fill_template(template, &vars)
 }
 
 pub async fn diagnose_follow_up(
@@ -715,6 +731,21 @@ mod tests {
 
         assert!(error.contains("answer"));
         assert!(error.contains("options"));
+    }
+
+    #[test]
+    fn diagnosis_initial_prompt_includes_known_correct_answer() {
+        let prompt = build_diagnosis_initial_prompt(
+            "Question={{question}}\nCorrect={{correct_answer}}\nUser={{user_answer}}\nReason={{user_reasoning}}\nNote={{note_content}}",
+            "Ownership note",
+            "Which claim is true?",
+            "B. Borrowing keeps ownership with the original variable.",
+            "A",
+            "I thought borrowing moves ownership.",
+        );
+
+        assert!(prompt.contains("Correct=B. Borrowing keeps ownership with the original variable."));
+        assert!(!prompt.contains("to be determined"));
     }
 
     #[test]

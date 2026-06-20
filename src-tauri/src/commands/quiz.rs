@@ -77,6 +77,7 @@ pub async fn generate_quiz(
 pub async fn submit_answer_advanced(
     app: AppHandle,
     question: String,
+    correct_answer: String,
     user_answer: String,
     user_reasoning: String,
     note_path: String,
@@ -92,7 +93,7 @@ pub async fn submit_answer_advanced(
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let initial_round = quiz_engine::submit_diagnosis_initial(
-        &data_dir, &question, &user_answer, &user_reasoning, &note_path, tx
+        &data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx
     ).await?;
 
     let note_content = crate::services::fs_service::read_file_content(&note_path)?;

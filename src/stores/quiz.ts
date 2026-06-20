@@ -129,11 +129,11 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  async function startDiagnosis(question: string, userAnswer: string, userReasoning: string, notePath: string) {
+  async function startDiagnosis(question: string, correctAnswer: string, userAnswer: string, userReasoning: string, notePath: string) {
     quizState.value = 'diagnosing'
     try {
       const sid = await submitAnswerAdvanced(
-        question, userAnswer, userReasoning, notePath,
+        question, correctAnswer, userAnswer, userReasoning, notePath,
         (data) => addDiagnosisMessage(data),
         (data) => {
           addDiagnosisMessage({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })

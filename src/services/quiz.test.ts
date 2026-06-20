@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { generateQuiz } from './quiz'
+import { generateQuiz, submitAnswerAdvanced } from './quiz'
 import { webStream } from './tauri'
 import type { QuizStreamParams } from '../types/quiz'
 
@@ -29,6 +29,32 @@ describe('quiz service', () => {
     expect(webStream).toHaveBeenCalledWith(
       '/api/quiz/generate',
       params,
+      expect.any(Function),
+    )
+  })
+
+  it('sends the known correct answer to the web diagnosis endpoint', async () => {
+    vi.mocked(webStream).mockResolvedValue(undefined)
+
+    await submitAnswerAdvanced(
+      'Which claim is true?',
+      'B',
+      'A',
+      'I guessed.',
+      '/notes/rust.md',
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(webStream).toHaveBeenCalledWith(
+      '/api/quiz/diagnose',
+      expect.objectContaining({
+        question: 'Which claim is true?',
+        correct_answer: 'B',
+        user_answer: 'A',
+      }),
       expect.any(Function),
     )
   })
