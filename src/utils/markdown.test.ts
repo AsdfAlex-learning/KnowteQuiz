@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { renderMarkdownWithFallback } from './markdown'
+import { renderMarkdown, renderMarkdownWithFallback } from './markdown'
 
 describe('markdown rendering safety', () => {
   it('returns rendered html when the renderer succeeds', () => {
@@ -13,5 +13,12 @@ describe('markdown rendering safety', () => {
 
     expect(renderMarkdownWithFallback('<script>alert(1)</script>', render))
       .toBe('<pre class="markdown-render-fallback"><code>&lt;script&gt;alert(1)&lt;/script&gt;</code></pre>')
+  })
+
+  it('keeps MarkdownIt instances separate for different option sets', () => {
+    expect(renderMarkdown('<b>raw</b>', { html: false, katex: false, highlight: false }))
+      .toContain('&lt;b&gt;raw&lt;/b&gt;')
+    expect(renderMarkdown('<b>raw</b>', { html: true, katex: false, highlight: false }))
+      .toContain('<b>raw</b>')
   })
 })

@@ -14,7 +14,9 @@ export interface MarkdownOptions {
   highlight?: boolean
 }
 
-const defaultOptions: MarkdownOptions = {
+type ResolvedMarkdownOptions = Required<MarkdownOptions>
+
+const defaultOptions: ResolvedMarkdownOptions = {
   html: false,
   xhtmlOut: false,
   breaks: true,
@@ -24,20 +26,21 @@ const defaultOptions: MarkdownOptions = {
   highlight: true,
 }
 
-let markdownInstance: MarkdownIt | null = null
+const markdownInstances = new Map<string, MarkdownIt>()
 
-export function getMarkdown_it(options: MarkdownOptions = defaultOptions): MarkdownIt {
-  if (markdownInstance) {
-    return markdownInstance
-  }
+export function getMarkdown_it(options: MarkdownOptions = {}): MarkdownIt {
+  const resolvedOptions = resolveMarkdownOptions(options)
+  const cacheKey = JSON.stringify(resolvedOptions)
+  const cached = markdownInstances.get(cacheKey)
+  if (cached) return cached
 
   const md = new MarkdownIt({
-    html: options.html ?? defaultOptions.html,
-    xhtmlOut: options.xhtmlOut ?? defaultOptions.xhtmlOut,
-    breaks: options.breaks ?? defaultOptions.breaks,
-    linkify: options.linkify ?? defaultOptions.linkify,
-    typographer: options.typographer ?? defaultOptions.typographer,
-    highlight: options.highlight
+    html: resolvedOptions.html,
+    xhtmlOut: resolvedOptions.xhtmlOut,
+    breaks: resolvedOptions.breaks,
+    linkify: resolvedOptions.linkify,
+    typographer: resolvedOptions.typographer,
+    highlight: resolvedOptions.highlight
       ? (str: string, lang: string) => {
           const langLower = lang.toLowerCase()
           if (langLower && hljs.getLanguage(langLower)) {
@@ -52,14 +55,14 @@ export function getMarkdown_it(options: MarkdownOptions = defaultOptions): Markd
       : undefined,
   })
 
-  if (options.katex ?? defaultOptions.katex) {
+  if (resolvedOptions.katex) {
     md.use(mk, {
       throwOnError: false,
       errorColor: '#cc0000',
     })
   }
 
-  markdownInstance = md
+  markdownInstances.set(cacheKey, md)
   return md
 }
 
@@ -113,4 +116,16 @@ function escapeHtml(content: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+function resolveMarkdownOptions(options: MarkdownOptions): ResolvedMarkdownOptions {
+  return {
+    html: options.html ?? defaultOptions.html,
+    xhtmlOut: options.xhtmlOut ?? defaultOptions.xhtmlOut,
+    breaks: options.breaks ?? defaultOptions.breaks,
+    linkify: options.linkify ?? defaultOptions.linkify,
+    typographer: options.typographer ?? defaultOptions.typographer,
+    katex: options.katex ?? defaultOptions.katex,
+    highlight: options.highlight ?? defaultOptions.highlight,
+  }
 }
