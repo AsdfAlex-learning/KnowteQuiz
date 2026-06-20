@@ -1,4 +1,4 @@
-export type QuestionType = 'single' | 'short'
+export type QuestionType = 'single' | 'multiple' | 'short'
 export type QuizDifficulty = 'easy' | 'medium' | 'hard'
 export type QuizLanguage = 'zh' | 'en'
 

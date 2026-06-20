@@ -19,7 +19,7 @@
         :question="currentQuestion"
         :current-index="quizStore.currentIndex"
         :total="quizStore.questions.length"
-        :selected-option="selectedOption"
+        :selected-options="selectedOptions"
         :submitted="submitted"
         @select-option="handleSelectOption"
       />
@@ -170,7 +170,7 @@ const explorerStore = useExplorerStore()
 const readerStore = useReaderStore()
 const mistakeStore = useMistakeStore()
 
-const selectedOption = ref<number | null>(null)
+const selectedOptions = ref<number[]>([])
 const shortAnswer = ref('')
 const reasoning = ref('')
 const submitted = ref(false)
@@ -181,7 +181,7 @@ const currentQuestion = computed(() => quizStore.currentQuestion)
 const canSubmit = computed(() => {
   return canSubmitQuizAnswer(
     currentQuestion.value,
-    selectedOption.value,
+    selectedOptions.value,
     shortAnswer.value,
     props.mode,
     reasoning.value,
@@ -190,7 +190,13 @@ const canSubmit = computed(() => {
 
 function handleSelectOption(index: number) {
   if (!submitted.value) {
-    selectedOption.value = index
+    if (currentQuestion.value?.question_type === 'multiple') {
+      selectedOptions.value = selectedOptions.value.includes(index)
+        ? selectedOptions.value.filter((value) => value !== index)
+        : [...selectedOptions.value, index]
+    } else {
+      selectedOptions.value = [index]
+    }
   }
 }
 
@@ -199,7 +205,11 @@ function handleSubmit() {
 
   const answer = currentQuestion.value.question_type === 'short'
     ? shortAnswer.value
-    : String.fromCharCode(65 + (selectedOption.value ?? 0))
+    : selectedOptions.value
+        .slice()
+        .sort((a, b) => a - b)
+        .map((index) => String.fromCharCode(65 + index))
+        .join(',')
 
   quizStore.submitAnswer(currentQuestion.value.id, answer)
   submitted.value = true
@@ -230,7 +240,7 @@ async function handleEndDiagnosis() {
 
 function handleNext() {
   submitted.value = false
-  selectedOption.value = null
+  selectedOptions.value = []
   shortAnswer.value = ''
   reasoning.value = ''
 
@@ -243,7 +253,7 @@ function handleNext() {
 
 function handleNextAfterReport() {
   submitted.value = false
-  selectedOption.value = null
+  selectedOptions.value = []
   shortAnswer.value = ''
   reasoning.value = ''
   quizStore.clearDiagnosis()
@@ -287,7 +297,7 @@ async function handleSaveMistakeFromDiagnosis() {
 function handleNewQuiz() {
   quizStore.resetQuiz()
   submitted.value = false
-  selectedOption.value = null
+  selectedOptions.value = []
   shortAnswer.value = ''
   reasoning.value = ''
   quizStore.clearDiagnosis()

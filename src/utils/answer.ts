@@ -35,7 +35,10 @@ export function isChoiceLetterCorrect(correctAnswer: string, letter: string): bo
 export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string | undefined): boolean {
   if (!userAnswer) return false
 
-  if (question.question_type === 'single' && question.options.length > 0) {
+  if (
+    (question.question_type === 'single' || question.question_type === 'multiple')
+    && question.options.length > 0
+  ) {
     const expected = choiceLettersFromAnswer(question.answer)
     const actual = choiceLettersFromAnswer(userAnswer)
     if (expected.length > 0 && actual.length > 0) {
@@ -48,7 +51,7 @@ export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string |
 
 export function canSubmitQuizAnswer(
   question: QuizQuestion | null,
-  selectedOption: number | null,
+  selectedOptions: number[],
   shortAnswer: string,
   mode: QuizSubmissionMode,
   reasoning: string,
@@ -58,5 +61,5 @@ export function canSubmitQuizAnswer(
   if (question.question_type === 'short') {
     return shortAnswer.trim().length > 0
   }
-  return selectedOption !== null
+  return selectedOptions.length > 0
 }

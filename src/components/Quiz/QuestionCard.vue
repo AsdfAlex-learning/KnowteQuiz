@@ -52,7 +52,7 @@ const props = defineProps<{
   question: QuizQuestion
   currentIndex: number
   total: number
-  selectedOption: number | null
+  selectedOptions: number[]
   submitted: boolean
 }>()
 
@@ -68,6 +68,8 @@ const typeBadgeClass = computed(() => {
   switch (props.question.question_type) {
     case 'single':
       return 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]'
+    case 'multiple':
+      return 'bg-[var(--accent-purple)]/20 text-[var(--accent-purple)]'
     case 'short':
       return 'bg-[var(--accent-green)]/20 text-[var(--accent-green)]'
     default:
@@ -77,13 +79,13 @@ const typeBadgeClass = computed(() => {
 
 function getOptionState(index: number): OptionState {
   if (!props.submitted) {
-    return props.selectedOption === index ? 'selected' : 'default'
+    return props.selectedOptions.includes(index) ? 'selected' : 'default'
   }
   const letter = String.fromCharCode(65 + index)
   const isCorrect = isChoiceLetterCorrect(props.question.answer, letter)
 
   if (isCorrect) return 'correct'
-  if (props.selectedOption === index) return 'incorrect'
+  if (props.selectedOptions.includes(index)) return 'incorrect'
   return 'default'
 }
 </script>

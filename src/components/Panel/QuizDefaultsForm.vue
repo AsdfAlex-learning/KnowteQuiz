@@ -110,6 +110,7 @@ const selectedTemplate = computed(() => {
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'single', label: 'Single Choice' },
+  { value: 'multiple', label: 'Multiple Choice' },
   { value: 'short', label: 'Short Answer' },
 ]
 
