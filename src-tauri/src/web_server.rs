@@ -24,7 +24,7 @@ use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::Settings;
-use crate::services::{config, fs_service, llm_service, mistake_service, note_service, quiz_engine};
+use crate::services::{config, diagnosis_session_service, fs_service, llm_service, mistake_service, note_service, quiz_engine};
 use crate::services::llm_service::ConnectionTestResult;
 
 pub struct AppState {
@@ -60,6 +60,48 @@ fn send_missing_session_error(
     let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
         message: format!("Session {} not found", session_id),
     });
+}
+
+fn load_diagnosis_session(
+    state: &AppState,
+    session_id: &str,
+) -> Result<DiagnosisSession, String> {
+    if let Ok(mut sessions) = state.diagnosis_sessions.lock() {
+        if let Some(session) = sessions.remove(session_id) {
+            return Ok(session);
+        }
+    }
+    diagnosis_session_service::load_session(&state.data_dir, session_id)
+}
+
+fn cache_diagnosis_session(
+    state: &AppState,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    diagnosis_session_service::save_session(&state.data_dir, &session)?;
+    let mut sessions = state
+        .diagnosis_sessions
+        .lock()
+        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+    sessions.insert(session.session_id.clone(), session);
+    Ok(())
+}
+
+fn finish_diagnosis_session(
+    state: &AppState,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    if session.final_report.is_some() {
+        diagnosis_session_service::delete_session(&state.data_dir, &session.session_id)?;
+        let mut sessions = state
+            .diagnosis_sessions
+            .lock()
+            .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+        sessions.remove(&session.session_id);
+        Ok(())
+    } else {
+        cache_diagnosis_session(state, session)
+    }
 }
 
 pub async fn start(port: u16) {
@@ -256,8 +298,8 @@ async fn submit_diagnosis_handler(
                 max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
                 final_report: None,
             };
-            if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
-                sessions_lock.insert(session_id.clone(), session);
+            if let Err(err) = cache_diagnosis_session(&app_state, session) {
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
             }
         }
     }
@@ -266,10 +308,17 @@ async fn submit_diagnosis_handler(
         if let Ok(initial_round) = quiz_engine::submit_diagnosis_initial(
             &app_state.data_dir, &question, &user_answer, &user_reasoning, &note_path, tx,
         ).await {
-            if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
-                if let Some(session) = sessions_lock.get_mut(&session_id) {
+            let updated_session = if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
+                sessions_lock.get_mut(&session_id).map(|session| {
                     session.conversation.push(initial_round);
-                }
+                    session.clone()
+                })
+            } else {
+                None
+            };
+
+            if let Some(session) = updated_session {
+                let _ = diagnosis_session_service::save_session(&app_state.data_dir, &session);
             }
         }
     });
@@ -293,21 +342,23 @@ async fn diagnose_follow_up_handler(
     let app_state = state.clone();
 
     tokio::spawn(async move {
-        let mut session = {
-            let mut sessions_lock = app_state.diagnosis_sessions.lock().unwrap();
-            match sessions_lock.remove(&session_id) {
-                Some(s) => s,
-                None => {
-                    send_missing_session_error(&tx, &session_id);
-                    return;
-                }
+        let mut session = match load_diagnosis_session(&app_state, &session_id) {
+            Ok(session) => session,
+            Err(_) => {
+                send_missing_session_error(&tx, &session_id);
+                return;
             }
         };
 
-        let _ = quiz_engine::diagnose_follow_up(&app_state.data_dir, &mut session, &user_reply, tx).await;
+        if let Err(err) = quiz_engine::diagnose_follow_up(&app_state.data_dir, &mut session, &user_reply, tx.clone()).await {
+            let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+            let _ = cache_diagnosis_session(&app_state, session);
+            return;
+        }
 
-        let mut sessions_lock = app_state.diagnosis_sessions.lock().unwrap();
-        sessions_lock.insert(session_id, session);
+        if let Err(err) = finish_diagnosis_session(&app_state, session) {
+            let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+        }
     });
 
     let stream = UnboundedReceiverStream::new(rx).map(|event| {
@@ -322,18 +373,16 @@ async fn generate_report_handler(
     State(state): State<Arc<AppState>>,
     AxumPath(session_id): AxumPath<String>,
 ) -> Result<Json<DiagnosisReport>, String> {
-    let session = {
-        let sessions = state.diagnosis_sessions.lock().unwrap();
-        sessions
-            .get(&session_id)
-            .ok_or_else(|| format!("Session {} not found", session_id))?
-            .clone()
-    };
+    let mut session = load_diagnosis_session(&state, &session_id)
+        .map_err(|_| format!("Session {} not found", session_id))?;
 
     if let Some(ref report) = session.final_report {
+        finish_diagnosis_session(&state, session.clone())?;
         Ok(Json(report.clone()))
     } else {
         let report = quiz_engine::generate_diagnosis_report(&state.data_dir, &session).await?;
+        session.final_report = Some(report.clone());
+        finish_diagnosis_session(&state, session)?;
         Ok(Json(report))
     }
 }
@@ -362,6 +411,24 @@ mod tests {
     }
 
     #[test]
+    fn load_diagnosis_session_falls_back_to_persisted_session() {
+        let data_dir = temp_data_dir("load_diagnosis_session_falls_back_to_persisted_session");
+        let session = diagnosis_session("session-from-disk");
+        diagnosis_session_service::save_session(&data_dir, &session)
+            .expect("session should be persisted");
+        let state = AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        };
+
+        let loaded = load_diagnosis_session(&state, "session-from-disk")
+            .expect("session should load from disk");
+
+        assert_eq!(loaded.session_id, "session-from-disk");
+        assert_eq!(loaded.question, "What is ownership?");
+    }
+
+    #[test]
     fn asset_content_type_allows_common_image_formats_only() {
         assert_eq!(asset_content_type(Path::new("diagram.png")), Some("image/png"));
         assert_eq!(asset_content_type(Path::new("photo.JPEG")), Some("image/jpeg"));
@@ -375,6 +442,30 @@ mod tests {
             quiz_engine::DiagnosisStreamEvent::FollowUp { .. } => "follow_up",
             quiz_engine::DiagnosisStreamEvent::Report { .. } => "report",
             quiz_engine::DiagnosisStreamEvent::Error { .. } => "error",
+        }
+    }
+
+    fn temp_data_dir(test_name: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join("knowtequiz-web-server-tests")
+            .join(test_name)
+            .join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
+
+    fn diagnosis_session(id: &str) -> DiagnosisSession {
+        DiagnosisSession {
+            session_id: id.to_string(),
+            question: "What is ownership?".to_string(),
+            user_answer: "A".to_string(),
+            user_reasoning: "Because moves copy.".to_string(),
+            note_path: "D:/notes/rust.md".to_string(),
+            note_content: "Ownership note".to_string(),
+            conversation: vec![],
+            current_round: 0,
+            max_rounds: 3,
+            final_report: None,
         }
     }
 }

@@ -1,12 +1,61 @@
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
-use crate::services::quiz_engine;
+use crate::services::{diagnosis_session_service, quiz_engine};
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Mutex;
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
 
 pub struct DiagnosisSessions(pub Mutex<HashMap<String, DiagnosisSession>>);
+
+fn load_diagnosis_session(
+    app: &AppHandle,
+    data_dir: &Path,
+    session_id: &str,
+) -> Result<DiagnosisSession, String> {
+    let sessions = app.state::<DiagnosisSessions>();
+    if let Ok(mut sessions_lock) = sessions.0.lock() {
+        if let Some(session) = sessions_lock.remove(session_id) {
+            return Ok(session);
+        }
+    }
+    diagnosis_session_service::load_session(data_dir, session_id)
+}
+
+fn cache_diagnosis_session(
+    app: &AppHandle,
+    data_dir: &Path,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    diagnosis_session_service::save_session(data_dir, &session)?;
+    let sessions = app.state::<DiagnosisSessions>();
+    sessions
+        .0
+        .lock()
+        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?
+        .insert(session.session_id.clone(), session);
+    Ok(())
+}
+
+fn finish_diagnosis_session(
+    app: &AppHandle,
+    data_dir: &Path,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    if session.final_report.is_some() {
+        diagnosis_session_service::delete_session(data_dir, &session.session_id)?;
+        let sessions = app.state::<DiagnosisSessions>();
+        sessions
+            .0
+            .lock()
+            .map_err(|_| "Failed to lock diagnosis sessions".to_string())?
+            .remove(&session.session_id);
+        Ok(())
+    } else {
+        cache_diagnosis_session(app, data_dir, session)
+    }
+}
 
 #[tauri::command]
 pub async fn generate_quiz(
@@ -61,8 +110,7 @@ pub async fn submit_answer_advanced(
         final_report: None,
     };
 
-    let sessions = app.state::<DiagnosisSessions>();
-    sessions.0.lock().unwrap().insert(session_id.clone(), session);
+    cache_diagnosis_session(&app, &data_dir, session)?;
 
     Ok(session_id)
 }
@@ -82,16 +130,15 @@ pub async fn diagnose_follow_up(
         }
     });
 
-    let sessions = app.state::<DiagnosisSessions>();
-    let mut session = {
-        let mut sessions_lock = sessions.0.lock().unwrap();
-        sessions_lock.remove(&session_id)
-            .ok_or_else(|| format!("Session {} not found", session_id))?
-    };
+    let mut session = load_diagnosis_session(&app, &data_dir, &session_id)
+        .map_err(|_| format!("Session {} not found", session_id))?;
 
-    quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await?;
+    if let Err(err) = quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await {
+        cache_diagnosis_session(&app, &data_dir, session)?;
+        return Err(err);
+    }
 
-    sessions.0.lock().unwrap().insert(session_id, session);
+    finish_diagnosis_session(&app, &data_dir, session)?;
     Ok(())
 }
 
@@ -101,17 +148,16 @@ pub async fn generate_diagnosis_report(
     session_id: String,
 ) -> Result<DiagnosisReport, String> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
-    let sessions = app.state::<DiagnosisSessions>();
-    let session = {
-        let sessions_lock = sessions.0.lock().unwrap();
-        sessions_lock.get(&session_id)
-            .ok_or_else(|| format!("Session {} not found", session_id))?
-            .clone()
-    };
+    let mut session = load_diagnosis_session(&app, &data_dir, &session_id)
+        .map_err(|_| format!("Session {} not found", session_id))?;
 
     if let Some(ref report) = session.final_report {
+        finish_diagnosis_session(&app, &data_dir, session.clone())?;
         Ok(report.clone())
     } else {
-        quiz_engine::generate_diagnosis_report(&data_dir, &session).await
+        let report = quiz_engine::generate_diagnosis_report(&data_dir, &session).await?;
+        session.final_report = Some(report.clone());
+        finish_diagnosis_session(&app, &data_dir, session)?;
+        Ok(report)
     }
 }
