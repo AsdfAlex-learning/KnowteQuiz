@@ -509,8 +509,9 @@ fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, String> {
         .map_err(|e| format!("Failed to parse diagnosis: {}. Raw: {}", e, &raw[..raw.len().min(200)]))?;
 
     Ok(InitialDiagnosis {
-        answer_analysis: parsed["answer_analysis"].as_str().unwrap_or("").to_string(),
-        blind_spots: parse_blind_spots(&parsed["blind_spot"]),
+        answer_analysis: required_diagnosis_string(&parsed, "answer_analysis")?,
+        blind_spots: parse_blind_spot(&parsed["blind_spot"], "blind_spot")
+            .map(|blind_spot| vec![blind_spot])?,
         follow_up_question: parsed["follow_up_question"].as_str().map(String::from),
     })
 }
@@ -535,12 +536,20 @@ fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
     let json_str = extract_json_block(raw);
     let parsed: Value = serde_json::from_str(&json_str)
         .map_err(|e| format!("Failed to parse follow-up: {}", e))?;
+    let should_continue = parsed["should_continue"]
+        .as_bool()
+        .ok_or_else(|| "Diagnosis response missing should_continue".to_string())?;
+    let follow_up_question = string_field(&parsed, "follow_up_question").unwrap_or_default();
+
+    if should_continue && follow_up_question.is_empty() {
+        return Err("Diagnosis response missing follow_up_question".to_string());
+    }
 
     Ok(FollowUpResponse {
-        progress_assessment: parsed["progress_assessment"].as_str().unwrap_or("").to_string(),
+        progress_assessment: required_diagnosis_string(&parsed, "progress_assessment")?,
         new_blind_spots: parse_blind_spots_array(&parsed["new_blind_spots"]),
-        should_continue: parsed["should_continue"].as_bool().unwrap_or(false),
-        follow_up_question: parsed["follow_up_question"].as_str().unwrap_or("").to_string(),
+        should_continue,
+        follow_up_question,
     })
 }
 
@@ -548,25 +557,31 @@ fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, String> {
     let json_str = extract_json_block(raw);
     let parsed: Value = serde_json::from_str(&json_str)
         .map_err(|e| format!("Failed to parse report: {}", e))?;
+    let next_steps = parse_non_empty_string_array(&parsed["next_steps"], "next_steps")?;
 
     Ok(DiagnosisReport {
-        summary: parsed["summary"].as_str().unwrap_or("").to_string(),
+        summary: required_diagnosis_string(&parsed, "summary")?,
         blind_spots: parse_blind_spots_array(&parsed["blind_spots"]),
-        overall_level: parsed["overall_level"].as_str().unwrap_or("").to_string(),
-        next_steps: parsed["next_steps"].as_array()
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
-            .unwrap_or_default(),
+        overall_level: required_diagnosis_string(&parsed, "overall_level")?,
+        next_steps,
     })
 }
 
-fn parse_blind_spots(value: &Value) -> Vec<BlindSpot> {
-    vec![BlindSpot {
-        tag: value["type"].as_str().unwrap_or("").to_string(),
-        severity: "medium".to_string(),
-        description: value["description"].as_str().unwrap_or("").to_string(),
-        note_reference: String::new(),
-        suggestion: String::new(),
-    }]
+fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, String> {
+    let tag = string_field(value, "tag")
+        .or_else(|| string_field(value, "type"))
+        .or_else(|| string_field(value, "concept"))
+        .ok_or_else(|| format!("Diagnosis response missing {} tag", label))?;
+    let description = string_field(value, "description")
+        .ok_or_else(|| format!("Diagnosis response missing {} description", label))?;
+
+    Ok(BlindSpot {
+        tag,
+        severity: string_field(value, "severity").unwrap_or_else(|| "medium".to_string()),
+        description,
+        note_reference: string_field(value, "note_reference").unwrap_or_default(),
+        suggestion: string_field(value, "suggestion").unwrap_or_default(),
+    })
 }
 
 fn parse_blind_spots_array(value: &Value) -> Vec<BlindSpot> {
@@ -579,6 +594,41 @@ fn parse_blind_spots_array(value: &Value) -> Vec<BlindSpot> {
             suggestion: v["suggestion"].as_str().unwrap_or("").to_string(),
         }).collect())
         .unwrap_or_default()
+}
+
+fn required_diagnosis_string(value: &Value, field: &str) -> Result<String, String> {
+    value[field]
+        .as_str()
+        .map(str::trim)
+        .filter(|raw| !raw.is_empty())
+        .map(String::from)
+        .ok_or_else(|| format!("Diagnosis response missing {}", field))
+}
+
+fn string_field(value: &Value, field: &str) -> Option<String> {
+    value[field]
+        .as_str()
+        .map(str::trim)
+        .filter(|raw| !raw.is_empty())
+        .map(String::from)
+}
+
+fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String>, String> {
+    let items = value
+        .as_array()
+        .ok_or_else(|| format!("Diagnosis response missing {}", field))?
+        .iter()
+        .filter_map(|item| item.as_str())
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(String::from)
+        .collect::<Vec<_>>();
+
+    if items.is_empty() {
+        Err(format!("Diagnosis response missing {}", field))
+    } else {
+        Ok(items)
+    }
 }
 
 #[cfg(test)]
@@ -687,5 +737,74 @@ mod tests {
         assert_eq!(round.content, diagnosis.answer_analysis);
         assert_eq!(round.blind_spots.len(), 1);
         assert_eq!(round.follow_up, diagnosis.follow_up_question);
+    }
+
+    #[test]
+    fn parse_diagnosis_initial_rejects_empty_answer_analysis() {
+        let raw = r#"{
+            "answer_analysis": "",
+            "blind_spot": {
+                "type": "concept confusion",
+                "description": "Move semantics were treated as cloning."
+            },
+            "follow_up_question": "When does Rust clone?"
+        }"#;
+
+        let error = match parse_diagnosis_initial(raw) {
+            Ok(_) => panic!("empty answer analysis should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(error.contains("answer_analysis"));
+    }
+
+    #[test]
+    fn parse_diagnosis_initial_rejects_empty_blind_spot() {
+        let raw = r#"{
+            "answer_analysis": "You confused move and copy.",
+            "blind_spot": {},
+            "follow_up_question": "When does Rust clone?"
+        }"#;
+
+        let error = match parse_diagnosis_initial(raw) {
+            Ok(_) => panic!("empty blind spot should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(error.contains("blind_spot"));
+    }
+
+    #[test]
+    fn parse_follow_up_rejects_continue_without_question() {
+        let raw = r#"{
+            "progress_assessment": "The user is improving.",
+            "new_blind_spots": [],
+            "should_continue": true,
+            "follow_up_question": ""
+        }"#;
+
+        let error = match parse_follow_up(raw) {
+            Ok(_) => panic!("continued follow-up should include a question"),
+            Err(error) => error,
+        };
+
+        assert!(error.contains("follow_up_question"));
+    }
+
+    #[test]
+    fn parse_diagnosis_report_rejects_empty_summary() {
+        let raw = r#"{
+            "summary": "",
+            "blind_spots": [],
+            "overall_level": "Needs review",
+            "next_steps": ["Review ownership examples"]
+        }"#;
+
+        let error = match parse_diagnosis_report(raw) {
+            Ok(_) => panic!("empty report summary should be rejected"),
+            Err(error) => error,
+        };
+
+        assert!(error.contains("summary"));
     }
 }
