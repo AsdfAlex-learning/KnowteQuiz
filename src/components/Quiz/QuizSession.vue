@@ -1,5 +1,15 @@
 <template>
   <div class="h-full flex flex-col">
+    <div
+      v-if="quizStore.hasSession && quizStore.generatingError"
+      class="mx-4 mt-4 rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
+    >
+      <p class="text-xs font-medium text-[var(--color-error)]">Quiz session error</p>
+      <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+        {{ quizStore.generatingError }}
+      </p>
+    </div>
+
     <!-- Generating state -->
     <div
       v-if="quizStore.isGenerating"
