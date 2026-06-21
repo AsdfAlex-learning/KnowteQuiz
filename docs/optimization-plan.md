@@ -58,7 +58,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 短期：继续使用 `mistakes.json`，但增加备份和分页加载（`MistakeFilter.offset/limit`）
 - ❌ 中期：改为 `mistakes.jsonl`，一行一条错题，追加写入
 - ✅ 增加去重策略，避免同一题反复保存（`fix: dedupe and filter mistakes`）
-- ❌ 增加导出功能
+- ✅ 增加导出功能（`feat: export mistakes as JSON or Markdown`）
 
 相关 commit：`feat: paginate mistake book filters`、`fix: dedupe and filter mistakes`、`feat: track mistake save state`
 
@@ -66,7 +66,7 @@ KnowteQuiz 的方向是正确的：
 
 设置页建议加入：
 
-- ❌ 打开数据目录
+- ✅ 打开数据目录（`feat: add open data directory button to settings`）
 - ✅ 立即备份（`Backup Data Now` -> `settingsService.backupData()`）
 - ✅ 恢复备份（`Restore Latest Backup` -> `settingsService.restoreLatestBackup()`）
 - ❌ 导出错题
@@ -101,7 +101,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 将未完成诊断 session 临时落盘到 `sessions/`
 - ✅ 会话完成后写入错题完整上下文
 - ✅ follow-up 找不到 session 时返回明确 error
-- ❌ 定期清理过期 session
+- ✅ 定期清理过期 session（`feat: add periodic session cleanup`）
 
 涉及文件：
 
@@ -142,6 +142,7 @@ KnowteQuiz 的方向是正确的：
 - ❌ 解析失败时自动发起一次"JSON 修复请求"
 - ❌ 保存 raw LLM response 到 debug 日志
 - ✅ 校验字段完整性
+- ✅ 保存 raw LLM response 到 debug 日志（`feat: save raw LLM responses to debug log`）
 
 校验规则示例：
 
@@ -161,7 +162,7 @@ KnowteQuiz 的方向是正确的：
 
 短期：
 
-- ◐ 前端显示阶段进度 — 目前只显示 "Generating questions..." 和错误信息，未实现细粒度阶段指示（读取笔记→请求模型→生成中→解析题目→完成）
+- ✅ 前端显示阶段进度 — `feat: show quiz generation phase progress`：显示 "Requesting model..." / "Parsing response..." 等阶段
 - ✅ 流式错误传递（`fix: stream web diagnosis startup errors`、`fix: flush trailing sse messages`）
 
 中期：
@@ -283,7 +284,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ Web server 默认绑定 `127.0.0.1`
 - ✅ 增加最小 Rust 测试
 
-### 第 2 周：LLM 稳定性 ◐（部分完成）
+### 第 2 周：LLM 稳定性 ✅（全部完成）
 
 目标：减少模型输出导致的失败。
 
@@ -292,9 +293,9 @@ KnowteQuiz 的方向是正确的：
 - ✅ 引入结构化 schema
 - ✅ 增加 JSON 解析校验
 - ❌ 解析失败时自动修复一次
-- ❌ 增加 raw LLM debug 日志
+- ✅ 增加 raw LLM debug 日志
 - ✅ 增加错误分类（结构化返回）
-- ❌ 前端显示生成阶段（目前仅有简单文本）
+- ✅ 前端显示生成阶段
 
 ### 第 3 周：长期使用体验 ◐（部分完成）
 
@@ -307,8 +308,9 @@ KnowteQuiz 的方向是正确的：
 - ✅ 保存阅读位置
 - ✅ 错题本分页
 - ❌ 错题搜索
-- ❌ 错题导出
+- ✅ 错题导出
 - ✅ 设置页增加数据备份/恢复
+- ✅ 设置页增加打开数据目录
 
 ### 第 4 周：规模化和发布 ❌（基本未开始）
 
@@ -317,6 +319,7 @@ KnowteQuiz 的方向是正确的：
 任务：
 
 - ✅ 目录扫描忽略规则
+- ✅ session 定期清理
 - ❌ 轻量索引 `index.json`
 - ❌ 增加发布前检查脚本
 - ❌ Windows release 自测清单
@@ -328,18 +331,25 @@ KnowteQuiz 的方向是正确的：
 
 | 优先级 | 内容 | 进度 | 已完成 | 未完成 |
 |--------|------|------|--------|--------|
-| P1 数据可靠性 | JSON 原子写入、数据管理 | ◐ ~80% | 原子写入、去重、备份恢复、文件状态 | 打开数据目录、导出错题 |
-| P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ ~95% | 全部核心功能完成 | session 定期清理 |
-| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ◐ ~55% | schema 校验、多题型支持 | 自动修复、raw 日志、阶段进度、能力探测 |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ◐ ~55% | 滚动/图片/降级、分页、模式过滤 | 搜索、大纲、复习、导出、index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ◐ ~65% | 48 Rust + 117 前端测试 | 冒烟流程、CI、发布检查 |
+| P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
+| P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ ~100% | 全部核心功能完成，包括 session 定期清理 | — |
+| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ◐ ~75% | schema 校验、多题型支持、raw 日志、阶段进度 | 自动修复、能力探测 |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ◐ ~60% | 滚动/图片/降级、分页、模式过滤、导出 | 搜索、大纲、复习、index.json |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ◐ ~70% | 45 Rust + 99 前端测试 | 冒烟流程、CI、发布检查 |
 
 ### 最推荐下一步
 
 按投入产出比排序：
 
-1. **导出错题** — 设置页已有备份框架，增加导出 JSON/Markdown 工作量不大
-2. **前端生成阶段进度** — 用户体验提升明显，实现简单
-3. **打开数据目录按钮** — 单行命令调用，对用户数据管理安全感提升大
-4. **session 定期清理** — 避免长期运行后 sessions 目录膨胀
-5. **LLM raw debug 日志** — 排查模型输出问题的关键基础设施
+1. ~~导出错题~~ ✅ 已完成
+2. ~~前端生成阶段进度~~ ✅ 已完成
+3. ~~打开数据目录按钮~~ ✅ 已完成
+4. ~~session 定期清理~~ ✅ 已完成
+5. ~~LLM raw debug 日志~~ ✅ 已完成
+
+后续可选方向：
+- 错题搜索
+- 笔记内搜索 / 大纲目录
+- 发布检查脚本 / 冒烟流程
+- LLM 能力探测
+- 解析失败自动修复
