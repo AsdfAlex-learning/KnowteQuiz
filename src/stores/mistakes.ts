@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { loadMistakes, saveMistake } from '../services/mistake'
+import { exportMistakes as exportMistakesService, loadMistakes, saveMistake } from '../services/mistake'
 import type { MistakeEntry, MistakeMode } from '../types/mistake'
 
 const PAGE_SIZE = 20
@@ -88,6 +88,23 @@ export const useMistakeStore = defineStore('mistakes', () => {
     await loadPage(0)
   }
 
+  const exportError = ref<string | null>(null)
+  const isExporting = ref(false)
+
+  async function exportMistakes(format: 'json' | 'markdown'): Promise<boolean> {
+    isExporting.value = true
+    exportError.value = null
+    try {
+      await exportMistakesService(format)
+      return true
+    } catch (e) {
+      exportError.value = e instanceof Error ? e.message : String(e)
+      return false
+    } finally {
+      isExporting.value = false
+    }
+  }
+
   return {
     items,
     loading,
@@ -105,5 +122,8 @@ export const useMistakeStore = defineStore('mistakes', () => {
     loadPage,
     loadNextPage,
     setModeFilter,
+    exportMistakes,
+    isExporting,
+    exportError,
   }
 })

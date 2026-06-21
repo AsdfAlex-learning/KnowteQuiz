@@ -1,12 +1,13 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMistakeStore } from './mistakes'
-import { loadMistakes, saveMistake } from '../services/mistake'
+import * as mistakeService from '../services/mistake'
 import type { MistakeEntry, MistakeMode } from '../types/mistake'
 
 vi.mock('../services/mistake', () => ({
   loadMistakes: vi.fn(),
   saveMistake: vi.fn(),
+  exportMistakes: vi.fn(),
 }))
 
 function mistake(id = 'm1', mode: MistakeMode = 'basic'): MistakeEntry {
@@ -32,7 +33,7 @@ describe('mistake store save state', () => {
 
   it('prevents duplicate saves while a mistake is already saving', async () => {
     let resolveSave!: (value: boolean) => void
-    vi.mocked(saveMistake).mockReturnValue(new Promise((resolve) => {
+    vi.mocked(mistakeService.saveMistake).mockReturnValue(new Promise((resolve) => {
       resolveSave = resolve
     }))
     const store = useMistakeStore()
@@ -45,13 +46,13 @@ describe('mistake store save state', () => {
 
     expect(second).toBe(false)
     expect(firstResult).toBe(true)
-    expect(saveMistake).toHaveBeenCalledTimes(1)
+    expect(mistakeService.saveMistake).toHaveBeenCalledTimes(1)
     expect(store.isSaved('q1')).toBe(true)
     expect(store.isSaving('q1')).toBe(false)
   })
 
   it('records save errors without marking the mistake as saved', async () => {
-    vi.mocked(saveMistake).mockRejectedValue(new Error('disk full'))
+    vi.mocked(mistakeService.saveMistake).mockRejectedValue(new Error('disk full'))
     const store = useMistakeStore()
 
     const result = await store.saveEntry('q1', mistake())
@@ -63,7 +64,7 @@ describe('mistake store save state', () => {
   })
 
   it('can clear per-quiz save state so reused question ids can be saved again', async () => {
-    vi.mocked(saveMistake).mockResolvedValue(true)
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
     const store = useMistakeStore()
 
     await store.saveEntry('q1', mistake('m1'))
@@ -71,11 +72,11 @@ describe('mistake store save state', () => {
     const result = await store.saveEntry('q1', mistake('m2'))
 
     expect(result).toBe(true)
-    expect(saveMistake).toHaveBeenCalledTimes(2)
+    expect(mistakeService.saveMistake).toHaveBeenCalledTimes(2)
   })
 
   it('prepends a successfully saved mistake to the current list', async () => {
-    vi.mocked(saveMistake).mockResolvedValue(true)
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
     const store = useMistakeStore()
     store.items = [mistake('old')]
     const entry = mistake('new')
@@ -87,7 +88,7 @@ describe('mistake store save state', () => {
   })
 
   it('replaces an existing listed mistake when saving the same mistake id again', async () => {
-    vi.mocked(saveMistake).mockResolvedValue(true)
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
     const store = useMistakeStore()
     const older = mistake('same')
     older.user_answer = 'A'
@@ -102,12 +103,12 @@ describe('mistake store save state', () => {
   })
 
   it('loads the first page with server-side mode filters', async () => {
-    vi.mocked(loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
+    vi.mocked(mistakeService.loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
     const store = useMistakeStore()
 
     await store.setModeFilter('advanced')
 
-    expect(loadMistakes).toHaveBeenCalledWith({
+    expect(mistakeService.loadMistakes).toHaveBeenCalledWith({
       mode: 'advanced',
       offset: 0,
       limit: 20,
@@ -117,7 +118,7 @@ describe('mistake store save state', () => {
   })
 
   it('loads additional pages by appending mistakes with the next offset', async () => {
-    vi.mocked(loadMistakes)
+    vi.mocked(mistakeService.loadMistakes)
       .mockResolvedValueOnce(Array.from({ length: 20 }, (_, i) => mistake(`m${i + 1}`)))
       .mockResolvedValueOnce([mistake('m21')])
     const store = useMistakeStore()
@@ -125,12 +126,12 @@ describe('mistake store save state', () => {
     await store.loadPage()
     await store.loadNextPage()
 
-    expect(loadMistakes).toHaveBeenNthCalledWith(1, {
+    expect(mistakeService.loadMistakes).toHaveBeenNthCalledWith(1, {
       mode: undefined,
       offset: 0,
       limit: 20,
     })
-    expect(loadMistakes).toHaveBeenNthCalledWith(2, {
+    expect(mistakeService.loadMistakes).toHaveBeenNthCalledWith(2, {
       mode: undefined,
       offset: 20,
       limit: 20,
@@ -140,12 +141,84 @@ describe('mistake store save state', () => {
   })
 
   it('records detailed list load errors from the service', async () => {
-    vi.mocked(loadMistakes).mockRejectedValue(new Error('HTTP 500: Failed to parse mistakes.json'))
+    vi.mocked(mistakeService.loadMistakes).mockRejectedValue(new Error('HTTP 500: Failed to parse mistakes.json'))
     const store = useMistakeStore()
 
     await store.loadPage()
 
     expect(store.listError).toContain('Failed to parse mistakes.json')
     expect(store.loading).toBe(false)
+  })
+})
+
+describe('mistake store export', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('delegates JSON export to the service and returns true on success', async () => {
+    vi.mocked(mistakeService.exportMistakes).mockResolvedValue(undefined)
+    const store = useMistakeStore()
+
+    const result = await store.exportMistakes('json')
+
+    expect(result).toBe(true)
+    expect(mistakeService.exportMistakes).toHaveBeenCalledWith('json')
+  })
+
+  it('delegates Markdown export to the service and returns true on success', async () => {
+    vi.mocked(mistakeService.exportMistakes).mockResolvedValue(undefined)
+    const store = useMistakeStore()
+
+    const result = await store.exportMistakes('markdown')
+
+    expect(result).toBe(true)
+    expect(mistakeService.exportMistakes).toHaveBeenCalledWith('markdown')
+  })
+
+  it('sets isExporting true during export and false after completing', async () => {
+    vi.mocked(mistakeService.exportMistakes).mockResolvedValue(undefined)
+    const store = useMistakeStore()
+
+    const promise = store.exportMistakes('json')
+    expect(store.isExporting).toBe(true)
+    await promise
+    expect(store.isExporting).toBe(false)
+  })
+
+  it('captures export errors and returns false', async () => {
+    vi.mocked(mistakeService.exportMistakes).mockRejectedValue(new Error('No mistakes to export'))
+    const store = useMistakeStore()
+
+    const result = await store.exportMistakes('json')
+
+    expect(result).toBe(false)
+    expect(store.exportError).toBe('No mistakes to export')
+    expect(store.isExporting).toBe(false)
+  })
+
+  it('clears a previous export error on a new export attempt', async () => {
+    vi.mocked(mistakeService.exportMistakes)
+      .mockRejectedValueOnce(new Error('First failure'))
+      .mockResolvedValueOnce(undefined)
+    const store = useMistakeStore()
+
+    await store.exportMistakes('json')
+    expect(store.exportError).toBe('First failure')
+
+    const result = await store.exportMistakes('json')
+    expect(result).toBe(true)
+    expect(store.exportError).toBeNull()
+  })
+
+  it('handles non-Error exceptions during export', async () => {
+    vi.mocked(mistakeService.exportMistakes).mockRejectedValue('Unknown failure')
+    const store = useMistakeStore()
+
+    const result = await store.exportMistakes('json')
+
+    expect(result).toBe(false)
+    expect(store.exportError).toBe('Unknown failure')
   })
 })

@@ -18,6 +18,31 @@
       <span class="ml-auto text-[11px] text-[var(--text-faint)]">
         {{ mistakeStore.items.length }} items
       </span>
+      <div class="flex items-center gap-1">
+        <button
+          class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="mistakeStore.isExporting || mistakeStore.items.length === 0"
+          title="Export as JSON"
+          @click="handleExport('json')"
+        >
+          JSON
+        </button>
+        <button
+          class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          :disabled="mistakeStore.isExporting || mistakeStore.items.length === 0"
+          title="Export as Markdown"
+          @click="handleExport('markdown')"
+        >
+          MD
+        </button>
+      </div>
+      <div
+        v-if="mistakeStore.exportError"
+        class="text-[11px] text-[var(--color-error)]"
+        :title="mistakeStore.exportError"
+      >
+        Export failed
+      </div>
     </div>
 
     <!-- Detail view -->
@@ -105,6 +130,10 @@ async function handleFilter(value: FilterValue) {
 
 function handleOpenNote(path: string) {
   navigationStore.openNote(path)
+}
+
+async function handleExport(format: 'json' | 'markdown') {
+  await mistakeStore.exportMistakes(format)
 }
 
 onMounted(async () => {
