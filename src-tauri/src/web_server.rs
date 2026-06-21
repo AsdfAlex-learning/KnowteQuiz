@@ -320,20 +320,25 @@ async fn submit_diagnosis_handler(
     }
 
     tokio::spawn(async move {
-        if let Ok(initial_round) = quiz_engine::submit_diagnosis_initial(
-            &app_state.data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx,
+        match quiz_engine::submit_diagnosis_initial(
+            &app_state.data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx.clone(),
         ).await {
-            let updated_session = if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
-                sessions_lock.get_mut(&session_id).map(|session| {
-                    session.conversation.push(initial_round);
-                    session.clone()
-                })
-            } else {
-                None
-            };
+            Ok(initial_round) => {
+                let updated_session = if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
+                    sessions_lock.get_mut(&session_id).map(|session| {
+                        session.conversation.push(initial_round);
+                        session.clone()
+                    })
+                } else {
+                    None
+                };
 
-            if let Some(session) = updated_session {
-                let _ = diagnosis_session_service::save_session(&app_state.data_dir, &session);
+                if let Some(session) = updated_session {
+                    let _ = diagnosis_session_service::save_session(&app_state.data_dir, &session);
+                }
+            }
+            Err(err) => {
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
             }
         }
     });
@@ -405,6 +410,9 @@ async fn generate_report_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::{to_bytes, Body};
+    use axum::http::{Request, StatusCode};
+    use tower::util::ServiceExt;
 
     #[test]
     fn default_listener_addr_uses_loopback_only() {
@@ -458,6 +466,48 @@ mod tests {
         assert_eq!(asset_content_type(Path::new("photo.JPEG")), Some("image/jpeg"));
         assert_eq!(asset_content_type(Path::new("clip.webp")), Some("image/webp"));
         assert_eq!(asset_content_type(Path::new("note.md")), None);
+    }
+
+    #[tokio::test]
+    async fn submit_diagnosis_stream_reports_initial_failures() {
+        let data_dir = temp_data_dir("submit_diagnosis_stream_reports_initial_failures");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = Router::new()
+            .route("/diagnose", post(submit_diagnosis_handler))
+            .with_state(state);
+        let body = serde_json::json!({
+            "session_id": "session-1",
+            "question": "Which claim is true?",
+            "correct_answer": "B",
+            "user_answer": "A",
+            "user_reasoning": "I guessed.",
+            "note_path": "D:/missing-note.md"
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/diagnose")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body.to_string()))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("response body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec())
+            .expect("SSE body should be utf8");
+
+        assert!(body_text.contains("\"event\":\"error\""));
+        assert!(body_text.contains("File does not exist"));
     }
 
     fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {
