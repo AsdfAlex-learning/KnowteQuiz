@@ -204,8 +204,8 @@ KnowteQuiz 的方向是正确的：
 
 - ✅ 记住每篇笔记滚动位置（`feat: persist reader scroll positions`）
 - ✅ 恢复阅读滚动（`feat: restore reader scroll in app`）
-- ❌ 当前笔记搜索
-- ❌ 大纲目录
+- ✅ 当前笔记搜索（`feat: add in-reader note search with Ctrl+F`）
+- ✅ 大纲目录（`feat: add TOC outline from markdown headings`）
 - ✅ 图片相对路径解析（`fix: resolve markdown image assets`）
 - ✅ Markdown 渲染失败时降级显示原文（`fix: fall back on markdown render errors`）
 - ✅ 支持跳转到错题相关笔记（ErrorBook -> MistakeDetail 有 "Open Note" 按钮）
@@ -334,8 +334,8 @@ KnowteQuiz 的方向是正确的：
 | P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ ~100% | 全部核心功能完成，包括 session 定期清理 | — |
 | P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ◐ ~75% | schema 校验、多题型支持、raw 日志、阶段进度 | 自动修复、能力探测 |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ◐ ~60% | 滚动/图片/降级、分页、模式过滤、导出 | 搜索、大纲、复习、index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ◐ ~70% | 45 Rust + 99 前端测试 | 冒烟流程、CI、发布检查 |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ◐ ~75% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲 | 复习、index.json |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ◐ ~70% | 46 Rust + 103 前端测试 | 冒烟流程、CI、发布检查 |
 
 ### 最推荐下一步
 
