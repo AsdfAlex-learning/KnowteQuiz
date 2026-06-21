@@ -57,7 +57,7 @@ describe('quiz store answer evaluation', () => {
   })
 
   it('moves from generation to answering when quiz streaming completes', async () => {
-    vi.mocked(generateQuiz).mockImplementation(async (_params, onChunk, onDone) => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onPhase, onChunk, onDone) => {
       onChunk({
         id: 'q1',
         question_type: 'single',
@@ -84,7 +84,7 @@ describe('quiz store answer evaluation', () => {
   })
 
   it('returns to a retryable state and clears partial questions when generation reports an error', async () => {
-    vi.mocked(generateQuiz).mockImplementation(async (_params, onChunk, _onDone, onError) => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onPhase, onChunk, _onDone, onError) => {
       onChunk({
         id: 'q1',
         question_type: 'single',
@@ -111,7 +111,7 @@ describe('quiz store answer evaluation', () => {
   })
 
   it('returns to a retryable state when generation completes without questions', async () => {
-    vi.mocked(generateQuiz).mockImplementation(async (_params, _onChunk, onDone) => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onPhase, _onChunk, onDone) => {
       onDone(0)
     })
     const store = useQuizStore()
@@ -248,5 +248,57 @@ describe('quiz store answer evaluation', () => {
     expect(store.diagnosisMessages).toEqual([])
     expect(store.diagnosisReport).toBeNull()
     expect(store.quizState).toBe('answering')
+  })
+})
+
+describe('quiz store generation phase', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('tracks phase changes as the backend emits progress events', async () => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, onPhase, onChunk, onDone) => {
+      onPhase('requesting_model')
+      onChunk({
+        id: 'q1', question_type: 'single', question: 'Q?',
+        options: ['A'], answer: 'A', explanation: '',
+      })
+      onPhase('parsing_response')
+      onDone(1)
+    })
+    const store = useQuizStore()
+
+    await store.startQuiz({
+      path: '/notes/rust.md',
+      types: ['single'],
+      count: 1,
+      difficulty: 'easy',
+      lang: 'en',
+    })
+
+    expect(store.isGenerating).toBe(false)
+    expect(store.generatingPhase).toBeNull()
+    expect(store.quizState).toBe('answering')
+  })
+
+  it('clears generating phase on generation errors', async () => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, onPhase, _onChunk, _onDone, onError) => {
+      onPhase('requesting_model')
+      onError('LLM API error')
+    })
+    const store = useQuizStore()
+
+    await store.startQuiz({
+      path: '/notes/rust.md',
+      types: ['single'],
+      count: 1,
+      difficulty: 'easy',
+      lang: 'en',
+    })
+
+    expect(store.generatingPhase).toBeNull()
+    expect(store.quizState).toBe('idle')
+    expect(store.generatingError).toContain('LLM API error')
   })
 })

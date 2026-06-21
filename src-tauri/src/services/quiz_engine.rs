@@ -11,6 +11,9 @@ use tokio::sync::mpsc::UnboundedSender;
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum QuizStreamEvent {
+    Phase {
+        phase: String,
+    },
     Chunk {
         id: String,
         question_type: String,
@@ -78,6 +81,10 @@ pub async fn generate_quiz_stream(
             .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
     let prompt = crate::utils::prompt_templates::fill_template(&template_set.quiz_template, &vars);
 
+    let _ = tx.send(QuizStreamEvent::Phase {
+        phase: "requesting_model".to_string(),
+    });
+
     let client = Client::new();
     let request_body = serde_json::json!({
         "model": llm.model,
@@ -142,6 +149,10 @@ pub async fn generate_quiz_stream(
             }
         }
     }
+
+    let _ = tx.send(QuizStreamEvent::Phase {
+        phase: "parsing_response".to_string(),
+    });
 
     match parse_quiz_response(&accumulated) {
         Ok(questions) => {

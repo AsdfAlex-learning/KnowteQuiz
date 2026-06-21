@@ -25,7 +25,7 @@ describe('quiz service', () => {
     }
     vi.mocked(webStream).mockResolvedValue(undefined)
 
-    await generateQuiz(params, vi.fn(), vi.fn(), vi.fn())
+    await generateQuiz(params, vi.fn(), vi.fn(), vi.fn(), vi.fn())
 
     expect(webStream).toHaveBeenCalledWith(
       '/api/quiz/generate',

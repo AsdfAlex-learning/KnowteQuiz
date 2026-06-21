@@ -24,7 +24,7 @@ describe('QuizGenerator', () => {
   })
 
   function mockGeneratedQuiz() {
-    vi.mocked(generateQuiz).mockImplementation(async (_params, onChunk, onDone) => {
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onPhase, onChunk, onDone) => {
       onChunk({
         id: 'q1',
         question_type: 'single',
@@ -118,6 +118,7 @@ describe('QuizGenerator', () => {
         difficulty: 'hard',
         lang: 'en',
       }),
+      expect.any(Function),
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),

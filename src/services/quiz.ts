@@ -8,6 +8,7 @@ async function throwHttpError(res: Response): Promise<never> {
 
 export async function generateQuiz(
   params: QuizStreamParams,
+  onPhase: (phase: string) => void,
   onChunk: (q: QuizQuestion) => void,
   onDone: (total: number) => void,
   onError: (msg: string) => void,
@@ -16,14 +17,16 @@ export async function generateQuiz(
     const { Channel } = await import('@tauri-apps/api/core')
     const channel = new Channel<QuizEvent>()
     channel.onmessage = (msg) => {
-      if (msg.event === 'chunk') onChunk(msg.data)
+      if (msg.event === 'phase') onPhase(msg.data.phase)
+      else if (msg.event === 'chunk') onChunk(msg.data)
       else if (msg.event === 'done') onDone(msg.data.total)
       else if (msg.event === 'error') onError(msg.data.message)
     }
     await invoke('generate_quiz', { params, onEvent: channel })
   } else {
     await webStream<QuizEvent>('/api/quiz/generate', params, (msg) => {
-      if (msg.event === 'chunk') onChunk(msg.data)
+      if (msg.event === 'phase') onPhase(msg.data.phase)
+      else if (msg.event === 'chunk') onChunk(msg.data)
       else if (msg.event === 'done') onDone(msg.data.total)
       else if (msg.event === 'error') onError(msg.data.message)
     })

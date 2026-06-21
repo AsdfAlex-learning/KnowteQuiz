@@ -19,6 +19,7 @@ export const useQuizStore = defineStore('quiz', () => {
   const diagnosisMessages = ref<DiagnosisRound[]>([])
   const diagnosisReport = ref<DiagnosisReport | null>(null)
   const generatingError = ref<string | null>(null)
+  const generatingPhase = ref<string | null>(null)
 
   const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null)
   const totalQuestions = computed(() => questions.value.length)
@@ -106,22 +107,26 @@ export const useQuizStore = defineStore('quiz', () => {
   async function startQuiz(params: QuizStreamParams) {
     reset()
     quizState.value = 'generating'
+    generatingPhase.value = null
     const failGeneration = (message: string) => {
       questions.value = []
       currentIndex.value = 0
       answers.value = new Map()
       generatingError.value = message
+      generatingPhase.value = null
       quizState.value = 'idle'
     }
     try {
       await generateQuiz(
         params,
+        (phase) => { generatingPhase.value = phase },
         (q) => addQuestion(q),
         (total) => {
           if (total <= 0 || questions.value.length === 0) {
             failGeneration('No questions generated')
             return
           }
+          generatingPhase.value = null
           quizState.value = 'answering'
         },
         (err) => {
@@ -184,7 +189,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
   return {
     mode, quizState, questions, currentIndex, answers, userReasoning,
-    sessionId, diagnosisMessages, diagnosisReport, generatingError,
+    sessionId, diagnosisMessages, diagnosisReport, generatingError, generatingPhase,
     currentQuestion, totalQuestions, isGenerating, hasSession, hasQuestions,
     showResults, isLastQuestion, userAnswers, progress, score,
     setMode, reset, resetQuiz, addQuestion, setAnswer, submitAnswer, nextQuestion,

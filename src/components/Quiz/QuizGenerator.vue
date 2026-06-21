@@ -79,7 +79,7 @@
       :disabled="quizStore.isGenerating || !notePath"
       @click="handleGenerate"
     >
-      {{ quizStore.isGenerating ? 'Generating...' : 'Start Quiz' }}
+      {{ generatingLabel }}
     </button>
 
     <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">
@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { useExplorerStore } from '@/stores/explorer'
@@ -120,6 +120,14 @@ const difficulty = ref<QuizDifficulty>('medium')
 const lang = ref<QuizLanguage>('zh')
 
 const notePath = ref<string | null>(null)
+
+const generatingLabel = computed(() => {
+  if (!quizStore.isGenerating) return 'Start Quiz'
+  const phase = quizStore.generatingPhase
+  if (phase === 'requesting_model') return 'Requesting model...'
+  if (phase === 'parsing_response') return 'Parsing response...'
+  return 'Generating...'
+})
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'single', label: 'Single Choice' },

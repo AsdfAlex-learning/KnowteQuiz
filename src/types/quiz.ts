@@ -20,6 +20,7 @@ export interface QuizStreamParams {
 }
 
 export type QuizEvent =
+  | { event: 'phase'; data: { phase: string } }
   | { event: 'chunk'; data: QuizQuestion }
   | { event: 'done'; data: { total: number } }
   | { event: 'error'; data: { message: string } }
