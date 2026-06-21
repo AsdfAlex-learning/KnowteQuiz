@@ -91,6 +91,44 @@ See `AGENTS.md` for in-depth developer context.
 
 ---
 
+## 💾 Data & Backup
+
+### Where your data lives
+
+All KnowteQuiz data is stored as plain JSON files in your OS app data directory:
+
+| Platform | Path |
+|----------|------|
+| Windows | `%APPDATA%\knowtequiz\` |
+| macOS | `~/Library/Application Support/knowtequiz/` |
+| Linux | `~/.local/share/knowtequiz/` |
+
+Files managed:
+- `settings.json` — Your LLM config, quiz defaults, workspace layout
+- `settings.json.bak` — Automatic backup of settings
+- `mistakes.json` — Your mistake book (questions you got wrong)
+- `mistakes.json.bak` — Automatic backup of mistakes
+- `sessions/` — In-progress diagnosis sessions (auto-cleaned after 7 days)
+- `debug/` — Raw LLM responses for troubleshooting
+- `backups/` — Manual backups you create
+
+### Backup & Restore
+
+**Via Settings UI**: Open Settings → click **Backup Data Now**. This copies all managed files into a timestamped folder under `backups/`. To restore, click **Restore Latest Backup**.
+
+**Manual backup**: Copy the entire `knowtequiz` folder from the path above to a safe location. To restore, copy it back.
+
+**Open data directory**: Click **Open Folder** in Settings to open the data directory in your file explorer.
+
+### Data Safety
+
+- Every write uses **atomic writes** (write to `.tmp` → sync → rename over the official file).
+- If `settings.json` or `mistakes.json` becomes corrupt, KnowteQuiz **automatically recovers** from the `.bak` copy.
+- Old diagnosis sessions are **cleaned up automatically** after 7 days.
+- You can **export mistakes** as JSON or Markdown from the Error Book panel.
+
+---
+
 ## 📄 License
 
 [MIT](LICENSE)
