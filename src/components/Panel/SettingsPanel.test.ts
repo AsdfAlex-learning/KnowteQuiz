@@ -43,4 +43,18 @@ describe('SettingsPanel', () => {
     expect(wrapper.text()).toContain('LLM endpoint rejected the API key')
     expect(wrapper.find('.bg-\\[var\\(--color-error\\)\\]\\/10').exists()).toBe(true)
   })
+
+  it('shows settings persistence errors after saving fails', async () => {
+    vi.mocked(settingsService.saveSettings).mockRejectedValue(new Error('HTTP 500: Failed to write settings.json'))
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Save Settings')?.trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Failed to write settings.json')
+  })
 })

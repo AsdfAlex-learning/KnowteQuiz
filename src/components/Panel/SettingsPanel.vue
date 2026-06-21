@@ -46,6 +46,16 @@
       >
         Save Settings
       </button>
+
+      <div
+        v-if="settingsStore.error"
+        class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
+      >
+        <p class="text-xs font-medium text-[var(--color-error)]">Settings error</p>
+        <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
+          {{ settingsStore.error }}
+        </p>
+      </div>
     </div>
   </div>
 </template>
