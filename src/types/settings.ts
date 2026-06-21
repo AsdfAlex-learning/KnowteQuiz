@@ -50,6 +50,11 @@ export interface ConnectionTestResult {
   status?: number | null
 }
 
+export interface DataBackupResult {
+  backup_dir: string
+  files: string[]
+}
+
 export interface Settings {
   version: string
   theme: string

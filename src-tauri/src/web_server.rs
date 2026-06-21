@@ -13,9 +13,9 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
-use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -24,8 +24,11 @@ use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::Settings;
-use crate::services::{config, diagnosis_session_service, fs_service, llm_service, mistake_service, note_service, quiz_engine};
 use crate::services::llm_service::ConnectionTestResult;
+use crate::services::{
+    config, diagnosis_session_service, fs_service, llm_service, mistake_service, note_service,
+    quiz_engine, storage,
+};
 
 pub struct AppState {
     pub data_dir: PathBuf,
@@ -76,10 +79,7 @@ fn send_missing_session_error(
     });
 }
 
-fn load_diagnosis_session(
-    state: &AppState,
-    session_id: &str,
-) -> Result<DiagnosisSession, String> {
+fn load_diagnosis_session(state: &AppState, session_id: &str) -> Result<DiagnosisSession, String> {
     if let Ok(mut sessions) = state.diagnosis_sessions.lock() {
         if let Some(session) = sessions.remove(session_id) {
             return Ok(session);
@@ -88,10 +88,7 @@ fn load_diagnosis_session(
     diagnosis_session_service::load_session(&state.data_dir, session_id)
 }
 
-fn cache_diagnosis_session(
-    state: &AppState,
-    session: DiagnosisSession,
-) -> Result<(), String> {
+fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
     diagnosis_session_service::save_session(&state.data_dir, &session)?;
     let mut sessions = state
         .diagnosis_sessions
@@ -101,10 +98,7 @@ fn cache_diagnosis_session(
     Ok(())
 }
 
-fn finish_diagnosis_session(
-    state: &AppState,
-    session: DiagnosisSession,
-) -> Result<(), String> {
+fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
     if session.final_report.is_some() {
         diagnosis_session_service::delete_session(&state.data_dir, &session.session_id)?;
         let mut sessions = state
@@ -131,21 +125,33 @@ pub async fn start(port: u16) {
 
     let dist_dir = get_dist_dir();
     let index_path = dist_dir.join("index.html");
-    let serve_dir = ServeDir::new(&dist_dir)
-        .fallback(ServeFile::new(index_path));
+    let serve_dir = ServeDir::new(&dist_dir).fallback(ServeFile::new(index_path));
 
     let app = Router::new()
         .route("/api/notes/scan", get(scan_notes_handler))
         .route("/api/notes/read", get(read_note_handler))
         .route("/api/notes/asset", get(read_note_asset_handler))
-        .route("/api/settings", get(get_settings_handler).post(save_settings_handler))
+        .route(
+            "/api/settings",
+            get(get_settings_handler).post(save_settings_handler),
+        )
         .route("/api/test-connection", post(test_connection_handler))
+        .route("/api/data/backup", post(backup_data_handler))
         .route("/api/prompt-templates", get(list_prompt_templates_handler))
-        .route("/api/mistakes", get(load_mistakes_handler).post(save_mistake_handler))
+        .route(
+            "/api/mistakes",
+            get(load_mistakes_handler).post(save_mistake_handler),
+        )
         .route("/api/quiz/generate", post(generate_quiz_handler))
         .route("/api/quiz/diagnose", post(submit_diagnosis_handler))
-        .route("/api/quiz/diagnose/{session_id}/follow_up", post(diagnose_follow_up_handler))
-        .route("/api/quiz/diagnose/{session_id}/report", get(generate_report_handler))
+        .route(
+            "/api/quiz/diagnose/{session_id}/follow_up",
+            post(diagnose_follow_up_handler),
+        )
+        .route(
+            "/api/quiz/diagnose/{session_id}/report",
+            get(generate_report_handler),
+        )
         .fallback_service(serve_dir)
         .layer(local_cors_layer())
         .with_state(app_state);
@@ -156,9 +162,7 @@ pub async fn start(port: u16) {
 
     println!("KnowteQuiz web server running on http://localhost:{}", port);
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server error");
+    axum::serve(listener, app).await.expect("Server error");
 }
 
 #[derive(Deserialize)]
@@ -245,8 +249,13 @@ async fn test_connection_handler(
     Ok(Json(llm_service::test_connection(&settings.llm).await))
 }
 
-async fn list_prompt_templates_handler(
-) -> Result<Json<Vec<(String, String, String)>>, String> {
+async fn backup_data_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<storage::DataBackupResult>, String> {
+    Ok(Json(storage::backup_data_files_path(&state.data_dir)?))
+}
+
+async fn list_prompt_templates_handler() -> Result<Json<Vec<(String, String, String)>>, String> {
     Ok(Json(crate::utils::prompt_templates::list_template_sets()))
 }
 
@@ -321,17 +330,26 @@ async fn submit_diagnosis_handler(
 
     tokio::spawn(async move {
         match quiz_engine::submit_diagnosis_initial(
-            &app_state.data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx.clone(),
-        ).await {
+            &app_state.data_dir,
+            &question,
+            &correct_answer,
+            &user_answer,
+            &user_reasoning,
+            &note_path,
+            tx.clone(),
+        )
+        .await
+        {
             Ok(initial_round) => {
-                let updated_session = if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
-                    sessions_lock.get_mut(&session_id).map(|session| {
-                        session.conversation.push(initial_round);
-                        session.clone()
-                    })
-                } else {
-                    None
-                };
+                let updated_session =
+                    if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
+                        sessions_lock.get_mut(&session_id).map(|session| {
+                            session.conversation.push(initial_round);
+                            session.clone()
+                        })
+                    } else {
+                        None
+                    };
 
                 if let Some(session) = updated_session {
                     let _ = diagnosis_session_service::save_session(&app_state.data_dir, &session);
@@ -370,7 +388,14 @@ async fn diagnose_follow_up_handler(
             }
         };
 
-        if let Err(err) = quiz_engine::diagnose_follow_up(&app_state.data_dir, &mut session, &user_reply, tx.clone()).await {
+        if let Err(err) = quiz_engine::diagnose_follow_up(
+            &app_state.data_dir,
+            &mut session,
+            &user_reply,
+            tx.clone(),
+        )
+        .await
+        {
             let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
             let _ = cache_diagnosis_session(&app_state, session);
             return;
@@ -462,9 +487,18 @@ mod tests {
 
     #[test]
     fn asset_content_type_allows_common_image_formats_only() {
-        assert_eq!(asset_content_type(Path::new("diagram.png")), Some("image/png"));
-        assert_eq!(asset_content_type(Path::new("photo.JPEG")), Some("image/jpeg"));
-        assert_eq!(asset_content_type(Path::new("clip.webp")), Some("image/webp"));
+        assert_eq!(
+            asset_content_type(Path::new("diagram.png")),
+            Some("image/png")
+        );
+        assert_eq!(
+            asset_content_type(Path::new("photo.JPEG")),
+            Some("image/jpeg")
+        );
+        assert_eq!(
+            asset_content_type(Path::new("clip.webp")),
+            Some("image/webp")
+        );
         assert_eq!(asset_content_type(Path::new("note.md")), None);
     }
 
@@ -503,8 +537,7 @@ mod tests {
         let bytes = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("response body should be readable");
-        let body_text = String::from_utf8(bytes.to_vec())
-            .expect("SSE body should be utf8");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("SSE body should be utf8");
 
         assert!(body_text.contains("\"event\":\"error\""));
         assert!(body_text.contains("File does not exist"));

@@ -91,7 +91,10 @@ mod tests {
         assert_eq!(loaded.session_id, original.session_id);
         assert_eq!(loaded.question, original.question);
         assert_eq!(loaded.conversation.len(), 1);
-        assert_eq!(loaded.conversation[0].blind_spots[0].tag, "concept confusion");
+        assert_eq!(
+            loaded.conversation[0].blind_spots[0].tag,
+            "concept confusion"
+        );
     }
 
     #[test]

@@ -47,6 +47,31 @@
         Save Settings
       </button>
 
+      <button
+        class="w-full py-2 rounded-md text-sm font-medium transition-colors btn-press"
+        :class="
+          backingUp
+            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
+        "
+        :disabled="backingUp"
+        @click="handleBackup"
+      >
+        {{ backingUp ? 'Backing up...' : 'Backup Data Now' }}
+      </button>
+
+      <div
+        v-if="settingsStore.lastBackupResult"
+        class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
+      >
+        <p class="text-xs font-medium text-[var(--accent-green)]">
+          Backed up {{ settingsStore.lastBackupResult.files.length }} files
+        </p>
+        <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
+          {{ backupFolderName(settingsStore.lastBackupResult.backup_dir) }}
+        </p>
+      </div>
+
       <div
         v-if="settingsStore.error"
         class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
@@ -70,6 +95,7 @@ import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/se
 const settingsStore = useSettingsStore()
 const settings = settingsStore.settings
 const testing = ref(false)
+const backingUp = ref(false)
 const connectionResult = ref<ConnectionTestResult | null>(null)
 
 function updateLLM(llm: SettingsLLM) {
@@ -99,6 +125,21 @@ async function handleTestConnection() {
 
 async function handleSave() {
   await settingsStore.persistSettings()
+}
+
+async function handleBackup() {
+  backingUp.value = true
+  try {
+    await settingsStore.backupDataNow()
+  } catch {
+    // The store owns the user-visible error state.
+  } finally {
+    backingUp.value = false
+  }
+}
+
+function backupFolderName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() || path
 }
 
 onMounted(() => {

@@ -1,5 +1,5 @@
+use crate::models::diagnosis::{DiagnosisReport, DiagnosisRound};
 use serde::{Deserialize, Serialize};
-use crate::models::diagnosis::{DiagnosisRound, DiagnosisReport};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

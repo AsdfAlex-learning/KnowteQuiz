@@ -1,6 +1,6 @@
+use crate::models::quiz::QuestionType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::models::quiz::QuestionType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmConfig {

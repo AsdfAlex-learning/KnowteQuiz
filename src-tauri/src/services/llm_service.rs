@@ -21,7 +21,10 @@ pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
     });
 
     match client
-        .post(format!("{}/chat/completions", llm.base_url.trim_end_matches('/')))
+        .post(format!(
+            "{}/chat/completions",
+            llm.base_url.trim_end_matches('/')
+        ))
         .header("Authorization", format!("Bearer {}", llm.api_key))
         .header("Content-Type", "application/json")
         .json(&request_body)

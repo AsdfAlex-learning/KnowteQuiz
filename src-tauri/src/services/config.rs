@@ -1,8 +1,8 @@
+use crate::models::quiz::QuestionType;
 use crate::models::settings::*;
 use crate::services::storage;
-use tauri::AppHandle;
-use crate::models::quiz::QuestionType;
 use std::path::Path;
+use tauri::AppHandle;
 
 fn default_settings() -> Settings {
     Settings {
@@ -83,7 +83,9 @@ mod tests {
 
     #[test]
     fn get_settings_path_preserves_old_settings_and_defaults_missing_workspace() {
-        let dir = temp_data_dir("get_settings_path_preserves_old_settings_and_defaults_missing_workspace");
+        let dir = temp_data_dir(
+            "get_settings_path_preserves_old_settings_and_defaults_missing_workspace",
+        );
         let old_settings = serde_json::json!({
             "version": "1.0.0",
             "theme": "obsidian-dark",
@@ -136,8 +138,8 @@ mod tests {
     fn get_settings_path_creates_defaults_when_file_is_missing() {
         let dir = temp_data_dir("get_settings_path_creates_defaults_when_file_is_missing");
 
-        let settings = get_settings_path(&dir)
-            .expect("missing settings file should be initialized");
+        let settings =
+            get_settings_path(&dir).expect("missing settings file should be initialized");
 
         assert_eq!(settings.version, "1.0.0");
         assert!(dir.join("settings.json").exists());

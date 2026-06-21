@@ -1,6 +1,6 @@
 mod commands;
-mod services;
 mod models;
+mod services;
 mod utils;
 mod web_server;
 
@@ -27,6 +27,7 @@ pub fn run_desktop() {
             settings::save_settings,
             settings::list_prompt_templates,
             settings::test_connection,
+            settings::backup_data,
             settings::save_mistake,
             settings::load_mistakes,
         ])

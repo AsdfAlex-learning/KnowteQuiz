@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getSettings, saveSettings, testConnection } from './settings'
+import { backupData, getSettings, saveSettings, testConnection } from './settings'
 
 describe('settings service', () => {
   afterEach(() => {
@@ -55,5 +55,22 @@ describe('settings service', () => {
     })))
 
     await expect(testConnection()).rejects.toThrow('HTTP 502: LLM endpoint unavailable')
+  })
+
+  it('posts to the web data backup endpoint and returns the backup details', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+        files: ['settings.json', 'mistakes.json'],
+      }),
+    }))
+    vi.stubGlobal('fetch', fetch)
+
+    const result = await backupData()
+
+    expect(fetch).toHaveBeenCalledWith('/api/data/backup', { method: 'POST' })
+    expect(result.files).toEqual(['settings.json', 'mistakes.json'])
+    expect(result.backup_dir).toContain('backups')
   })
 })

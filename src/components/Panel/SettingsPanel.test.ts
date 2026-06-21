@@ -11,6 +11,7 @@ vi.mock('@/services/settings', () => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   testConnection: vi.fn(),
+  backupData: vi.fn(),
 }))
 
 vi.mock('@/services/mistake', () => ({
@@ -56,5 +57,23 @@ describe('SettingsPanel', () => {
     await vi.dynamicImportSettled()
 
     expect(wrapper.text()).toContain('Failed to write settings.json')
+  })
+
+  it('shows data backup results after a manual backup succeeds', async () => {
+    vi.mocked(settingsService.backupData).mockResolvedValue({
+      backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+      files: ['settings.json', 'mistakes.json'],
+    })
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Backup Data Now')?.trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Backed up 2 files')
+    expect(wrapper.text()).toContain('20260621-120000')
   })
 })

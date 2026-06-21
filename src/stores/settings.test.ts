@@ -7,6 +7,7 @@ vi.mock('../services/settings', () => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   testConnection: vi.fn(),
+  backupData: vi.fn(),
 }))
 
 describe('settings store', () => {
@@ -31,5 +32,20 @@ describe('settings store', () => {
     expect(result.ok).toBe(true)
     expect(store.llmConnected).toBe(true)
     expect(store.llmConnectionResult?.message).toBe('Connection successful')
+  })
+
+  it('stores data backup results for the settings panel', async () => {
+    vi.mocked(settingsService.backupData).mockResolvedValue({
+      backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+      files: ['settings.json', 'mistakes.json'],
+    })
+    const store = useSettingsStore()
+
+    const result = await store.backupDataNow()
+
+    expect(settingsService.backupData).toHaveBeenCalledOnce()
+    expect(result.files).toEqual(['settings.json', 'mistakes.json'])
+    expect(store.lastBackupResult?.backup_dir).toContain('backups')
+    expect(store.error).toBeNull()
   })
 })

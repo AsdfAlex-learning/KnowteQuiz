@@ -2,11 +2,13 @@
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let mode = args.iter()
+    let mode = args
+        .iter()
         .find(|a| a.starts_with("--mode="))
         .map(|a| a.split('=').nth(1).unwrap_or("desktop"))
         .unwrap_or("desktop");
-    let port = args.iter()
+    let port = args
+        .iter()
         .find(|a| a.starts_with("--port="))
         .and_then(|a| a.split('=').nth(1))
         .and_then(|p| p.parse::<u16>().ok())

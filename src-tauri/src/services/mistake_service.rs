@@ -40,10 +40,9 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
     let mut filtered = mistakes
         .iter()
         .filter(|entry| {
-            filter
-                .mode
-                .as_ref()
-                .map_or(true, |mode| std::mem::discriminant(&entry.mode) == std::mem::discriminant(mode))
+            filter.mode.as_ref().map_or(true, |mode| {
+                std::mem::discriminant(&entry.mode) == std::mem::discriminant(mode)
+            })
         })
         .filter(|entry| {
             filter
@@ -117,10 +116,28 @@ mod tests {
     #[test]
     fn upsert_mistake_moves_duplicate_to_front_and_replaces_old_entry() {
         let existing = vec![
-            mistake("old", "/notes/rust.md", "What is ownership?", MistakeMode::Basic, "2026-01-01T00:00:00Z"),
-            mistake("other", "/notes/vue.md", "What is ref?", MistakeMode::Basic, "2026-01-02T00:00:00Z"),
+            mistake(
+                "old",
+                "/notes/rust.md",
+                "What is ownership?",
+                MistakeMode::Basic,
+                "2026-01-01T00:00:00Z",
+            ),
+            mistake(
+                "other",
+                "/notes/vue.md",
+                "What is ref?",
+                MistakeMode::Basic,
+                "2026-01-02T00:00:00Z",
+            ),
         ];
-        let incoming = mistake("new", "/notes/rust.md", " What is ownership? ", MistakeMode::Basic, "2026-01-03T00:00:00Z");
+        let incoming = mistake(
+            "new",
+            "/notes/rust.md",
+            " What is ownership? ",
+            MistakeMode::Basic,
+            "2026-01-03T00:00:00Z",
+        );
 
         let updated = upsert_mistake(existing, incoming);
 
@@ -132,10 +149,34 @@ mod tests {
     #[test]
     fn filter_mistakes_applies_mode_note_path_offset_and_limit() {
         let mistakes = vec![
-            mistake("a", "/notes/rust.md", "A?", MistakeMode::Basic, "2026-01-04T00:00:00Z"),
-            mistake("b", "/notes/rust.md", "B?", MistakeMode::Advanced, "2026-01-03T00:00:00Z"),
-            mistake("c", "/notes/rust.md", "C?", MistakeMode::Advanced, "2026-01-02T00:00:00Z"),
-            mistake("d", "/notes/vue.md", "D?", MistakeMode::Advanced, "2026-01-01T00:00:00Z"),
+            mistake(
+                "a",
+                "/notes/rust.md",
+                "A?",
+                MistakeMode::Basic,
+                "2026-01-04T00:00:00Z",
+            ),
+            mistake(
+                "b",
+                "/notes/rust.md",
+                "B?",
+                MistakeMode::Advanced,
+                "2026-01-03T00:00:00Z",
+            ),
+            mistake(
+                "c",
+                "/notes/rust.md",
+                "C?",
+                MistakeMode::Advanced,
+                "2026-01-02T00:00:00Z",
+            ),
+            mistake(
+                "d",
+                "/notes/vue.md",
+                "D?",
+                MistakeMode::Advanced,
+                "2026-01-01T00:00:00Z",
+            ),
         ];
         let filter = MistakeFilter {
             mode: Some(MistakeMode::Advanced),

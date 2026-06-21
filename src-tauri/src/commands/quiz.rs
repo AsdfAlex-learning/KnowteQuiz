@@ -93,8 +93,15 @@ pub async fn submit_answer_advanced(
 
     let session_id = uuid::Uuid::new_v4().to_string();
     let initial_round = quiz_engine::submit_diagnosis_initial(
-        &data_dir, &question, &correct_answer, &user_answer, &user_reasoning, &note_path, tx
-    ).await?;
+        &data_dir,
+        &question,
+        &correct_answer,
+        &user_answer,
+        &user_reasoning,
+        &note_path,
+        tx,
+    )
+    .await?;
 
     let note_content = crate::services::fs_service::read_file_content(&note_path)?;
     let settings = crate::services::config::get_settings_path(&data_dir)?;
@@ -134,7 +141,9 @@ pub async fn diagnose_follow_up(
     let mut session = load_diagnosis_session(&app, &data_dir, &session_id)
         .map_err(|_| format!("Session {} not found", session_id))?;
 
-    if let Err(err) = quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await {
+    if let Err(err) =
+        quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await
+    {
         cache_diagnosis_session(&app, &data_dir, session)?;
         return Err(err);
     }

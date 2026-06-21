@@ -11,18 +11,44 @@ use tokio::sync::mpsc::UnboundedSender;
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum QuizStreamEvent {
-    Chunk { id: String, question_type: String, question: String, options: Vec<String>, answer: String, explanation: String },
-    Done { total: u32 },
-    Error { message: String },
+    Chunk {
+        id: String,
+        question_type: String,
+        question: String,
+        options: Vec<String>,
+        answer: String,
+        explanation: String,
+    },
+    Done {
+        total: u32,
+    },
+    Error {
+        message: String,
+    },
 }
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
 pub enum DiagnosisStreamEvent {
-    Initial { role: String, content: String, blind_spots: Vec<BlindSpot>, follow_up: Option<String> },
-    FollowUp { question: String, blind_spots: Vec<BlindSpot> },
-    Report { summary: String, blind_spots: Vec<BlindSpot>, overall_level: String, next_steps: Vec<String> },
-    Error { message: String },
+    Initial {
+        role: String,
+        content: String,
+        blind_spots: Vec<BlindSpot>,
+        follow_up: Option<String>,
+    },
+    FollowUp {
+        question: String,
+        blind_spots: Vec<BlindSpot>,
+    },
+    Report {
+        summary: String,
+        blind_spots: Vec<BlindSpot>,
+        overall_level: String,
+        next_steps: Vec<String>,
+    },
+    Error {
+        message: String,
+    },
 }
 
 pub async fn generate_quiz_stream(
@@ -35,7 +61,9 @@ pub async fn generate_quiz_stream(
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let llm = &settings.llm;
 
-    let question_types_str = params.types.iter()
+    let question_types_str = params
+        .types
+        .iter()
         .map(|qt| format!("{:?}", qt).to_lowercase())
         .collect::<Vec<_>>()
         .join(", ");
@@ -45,11 +73,10 @@ pub async fn generate_quiz_stream(
     vars.insert("count", params.count.to_string());
     vars.insert("difficulty", params.difficulty.clone());
     vars.insert("language", params.lang.clone());
-    let template_set = crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
-        .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
-    let prompt = crate::utils::prompt_templates::fill_template(
-        &template_set.quiz_template, &vars
-    );
+    let template_set =
+        crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
+            .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
+    let prompt = crate::utils::prompt_templates::fill_template(&template_set.quiz_template, &vars);
 
     let client = Client::new();
     let request_body = serde_json::json!({
@@ -64,7 +91,10 @@ pub async fn generate_quiz_stream(
     });
 
     let response = client
-        .post(format!("{}/chat/completions", llm.base_url.trim_end_matches('/')))
+        .post(format!(
+            "{}/chat/completions",
+            llm.base_url.trim_end_matches('/')
+        ))
         .header("Authorization", format!("Bearer {}", llm.api_key))
         .header("Content-Type", "application/json")
         .json(&request_body)
@@ -95,7 +125,9 @@ pub async fn generate_quiz_stream(
                                 continue;
                             }
                             if let Ok(json) = serde_json::from_str::<Value>(data) {
-                                if let Some(content) = json["choices"][0]["delta"]["content"].as_str() {
+                                if let Some(content) =
+                                    json["choices"][0]["delta"]["content"].as_str()
+                                {
                                     accumulated.push_str(content);
                                 }
                             }
@@ -123,7 +155,9 @@ pub async fn generate_quiz_stream(
                     explanation: q.explanation.clone(),
                 });
             }
-            let _ = tx.send(QuizStreamEvent::Done { total: questions.len() as u32 });
+            let _ = tx.send(QuizStreamEvent::Done {
+                total: questions.len() as u32,
+            });
         }
         Err(e) => {
             let _ = tx.send(QuizStreamEvent::Error {
@@ -137,8 +171,13 @@ pub async fn generate_quiz_stream(
 
 fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, String> {
     let json_str = extract_json_block(raw);
-    let parsed: serde_json::Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("JSON parse error: {}. Raw: {}", e, &raw[..raw.len().min(200)]))?;
+    let parsed: serde_json::Value = serde_json::from_str(&json_str).map_err(|e| {
+        format!(
+            "JSON parse error: {}. Raw: {}",
+            e,
+            &raw[..raw.len().min(200)]
+        )
+    })?;
 
     let questions = parsed["questions"]
         .as_array()
@@ -183,8 +222,12 @@ fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> 
         })
         .unwrap_or_default();
 
-    if matches!(question_type, QuestionType::Single | QuestionType::Multiple) && options.is_empty() {
-        return Err(format!("Question {} options are required for choice questions", index + 1));
+    if matches!(question_type, QuestionType::Single | QuestionType::Multiple) && options.is_empty()
+    {
+        return Err(format!(
+            "Question {} options are required for choice questions",
+            index + 1
+        ));
     }
     validate_choice_answer(&question_type, &options, &answer, index)?;
 
@@ -211,7 +254,10 @@ fn validate_choice_answer(
     let letters = choice_letters_from_answer(answer);
     if !letters.is_empty() {
         if matches!(question_type, QuestionType::Single) && letters.len() != 1 {
-            return Err(format!("Question {} single choice answer must contain exactly one option", index + 1));
+            return Err(format!(
+                "Question {} single choice answer must contain exactly one option",
+                index + 1
+            ));
         }
 
         for letter in letters {
@@ -229,7 +275,10 @@ fn validate_choice_answer(
 
     let normalized_answers = split_answer_text(answer);
     if matches!(question_type, QuestionType::Single) && normalized_answers.len() != 1 {
-        return Err(format!("Question {} single choice answer must contain exactly one option", index + 1));
+        return Err(format!(
+            "Question {} single choice answer must contain exactly one option",
+            index + 1
+        ));
     }
 
     if normalized_answers.iter().all(|normalized_answer| {
@@ -316,7 +365,11 @@ fn parse_question_type(raw: &str, index: usize) -> Result<QuestionType, String> 
         "single" => Ok(QuestionType::Single),
         "multiple" => Ok(QuestionType::Multiple),
         "short" => Ok(QuestionType::Short),
-        other => Err(format!("Question {} has unsupported question type: {}", index + 1, other)),
+        other => Err(format!(
+            "Question {} has unsupported question type: {}",
+            index + 1,
+            other
+        )),
     }
 }
 
@@ -388,8 +441,9 @@ pub async fn submit_diagnosis_initial(
     let truncated_content: String = note_content.chars().take(8000).collect();
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
-    let template_set = crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
-        .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
+    let template_set =
+        crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
+            .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
     let prompt = build_diagnosis_initial_prompt(
         &template_set.diagnosis_initial_template,
         &truncated_content,
@@ -444,10 +498,12 @@ pub async fn diagnose_follow_up(
     vars.insert("user_follow_up_answer", user_reply.to_string());
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
-    let template_set = crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
-        .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
+    let template_set =
+        crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
+            .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
     let prompt = crate::utils::prompt_templates::fill_template(
-        &template_set.diagnosis_followup_template, &vars
+        &template_set.diagnosis_followup_template,
+        &vars,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
     let follow_up = parse_follow_up(&response_text)?;
@@ -501,10 +557,12 @@ pub async fn generate_diagnosis_report(
     vars.insert("note_content", truncated_content);
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
-    let template_set = crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
-        .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
+    let template_set =
+        crate::utils::prompt_templates::get_template_set(&settings.quiz.prompt_template)
+            .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
     let prompt = crate::utils::prompt_templates::fill_template(
-        &template_set.diagnosis_report_template, &vars
+        &template_set.diagnosis_report_template,
+        &vars,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
     parse_diagnosis_report(&response_text)
@@ -526,12 +584,18 @@ async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Resul
 
     if settings.base_url.contains("openai") || settings.base_url.contains("localhost:11434") {
         if let Some(obj) = request_body.as_object_mut() {
-            obj.insert("response_format".to_string(), serde_json::json!({ "type": "json_object" }));
+            obj.insert(
+                "response_format".to_string(),
+                serde_json::json!({ "type": "json_object" }),
+            );
         }
     }
 
     let response = client
-        .post(format!("{}/chat/completions", settings.base_url.trim_end_matches('/')))
+        .post(format!(
+            "{}/chat/completions",
+            settings.base_url.trim_end_matches('/')
+        ))
         .header("Authorization", format!("Bearer {}", settings.api_key))
         .header("Content-Type", "application/json")
         .json(&request_body)
@@ -545,7 +609,9 @@ async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Resul
         return Err(format!("LLM API error {}: {}", status, body));
     }
 
-    let json: Value = response.json().await
+    let json: Value = response
+        .json()
+        .await
         .map_err(|e| format!("Failed to parse LLM response: {}", e))?;
 
     json["choices"][0]["message"]["content"]
@@ -562,8 +628,13 @@ struct InitialDiagnosis {
 
 fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, String> {
     let json_str = extract_json_block(raw);
-    let parsed: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Failed to parse diagnosis: {}. Raw: {}", e, &raw[..raw.len().min(200)]))?;
+    let parsed: Value = serde_json::from_str(&json_str).map_err(|e| {
+        format!(
+            "Failed to parse diagnosis: {}. Raw: {}",
+            e,
+            &raw[..raw.len().min(200)]
+        )
+    })?;
 
     Ok(InitialDiagnosis {
         answer_analysis: required_diagnosis_string(&parsed, "answer_analysis")?,
@@ -590,8 +661,8 @@ struct FollowUpResponse {
 
 fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
     let json_str = extract_json_block(raw);
-    let parsed: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Failed to parse follow-up: {}", e))?;
+    let parsed: Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Failed to parse follow-up: {}", e))?;
     let should_continue = parsed["should_continue"]
         .as_bool()
         .ok_or_else(|| "Diagnosis response missing should_continue".to_string())?;
@@ -611,8 +682,8 @@ fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
 
 fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, String> {
     let json_str = extract_json_block(raw);
-    let parsed: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Failed to parse report: {}", e))?;
+    let parsed: Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Failed to parse report: {}", e))?;
     let next_steps = parse_non_empty_string_array(&parsed["next_steps"], "next_steps")?;
 
     Ok(DiagnosisReport {
@@ -645,9 +716,7 @@ fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
         let spots = values
             .iter()
             .enumerate()
-            .map(|(index, value)| {
-                parse_blind_spot(value, &format!("blind_spots[{}]", index + 1))
-            })
+            .map(|(index, value)| parse_blind_spot(value, &format!("blind_spots[{}]", index + 1)))
             .collect::<Result<Vec<_>, _>>()?;
 
         if spots.is_empty() {
@@ -656,8 +725,7 @@ fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
             Ok(spots)
         }
     } else {
-        parse_blind_spot(&parsed["blind_spot"], "blind_spot")
-            .map(|blind_spot| vec![blind_spot])
+        parse_blind_spot(&parsed["blind_spot"], "blind_spot").map(|blind_spot| vec![blind_spot])
     }
 }
 
@@ -773,8 +841,8 @@ mod tests {
 }
 Good luck."#;
 
-        let questions = parse_quiz_response(raw)
-            .expect("JSON extraction should ignore braces inside strings");
+        let questions =
+            parse_quiz_response(raw).expect("JSON extraction should ignore braces inside strings");
 
         assert_eq!(questions.len(), 1);
         assert!(questions[0].question.contains("fn main()"));
@@ -804,8 +872,7 @@ Good luck."#;
     fn parse_quiz_response_rejects_empty_question_list() {
         let raw = r#"{ "questions": [] }"#;
 
-        let error = parse_quiz_response(raw)
-            .expect_err("empty question list should be rejected");
+        let error = parse_quiz_response(raw).expect_err("empty question list should be rejected");
 
         assert!(error.contains("questions"));
     }
@@ -845,7 +912,8 @@ Good luck."#;
             ]
         }"#;
 
-        let error = parse_quiz_response(raw).expect_err("answer outside options should be rejected");
+        let error =
+            parse_quiz_response(raw).expect_err("answer outside options should be rejected");
 
         assert!(error.contains("answer"));
         assert!(error.contains("options"));
@@ -887,8 +955,8 @@ Good luck."#;
             ]
         }"#;
 
-        let questions = parse_quiz_response(raw)
-            .expect("multiple choice answer text list should parse");
+        let questions =
+            parse_quiz_response(raw).expect("multiple choice answer text list should parse");
 
         assert_eq!(questions.len(), 1);
         assert_eq!(questions[0].answer, "Alpha, Gamma");
@@ -982,8 +1050,7 @@ Good luck."#;
             "follow_up_question": "When does Rust clone?"
         }"#;
 
-        let diagnosis = parse_diagnosis_initial(raw)
-            .expect("blind_spots array should be accepted");
+        let diagnosis = parse_diagnosis_initial(raw).expect("blind_spots array should be accepted");
 
         assert_eq!(diagnosis.blind_spots.len(), 1);
         assert_eq!(diagnosis.blind_spots[0].tag, "move semantics");

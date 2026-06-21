@@ -24,7 +24,8 @@ fn scan_recursive(dir: &Path, root: &Path) -> Result<Vec<NoteTreeNode>, String> 
     for entry in read_dir {
         let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
         let path = entry.path();
-        let name = path.file_name()
+        let name = path
+            .file_name()
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
@@ -80,8 +81,7 @@ pub fn read_file_content(path: &str) -> Result<String, String> {
     if !file_path.exists() {
         return Err(format!("File does not exist: {}", path));
     }
-    fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read file {}: {}", path, e))
+    fs::read_to_string(file_path).map_err(|e| format!("Failed to read file {}: {}", path, e))
 }
 
 #[cfg(test)]

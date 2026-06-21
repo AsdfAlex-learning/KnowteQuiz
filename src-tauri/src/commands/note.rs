@@ -1,4 +1,4 @@
-use crate::models::note::{NoteTreeNode, NoteContent};
+use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::services::fs_service;
 use crate::services::note_service;
 use tauri::AppHandle;

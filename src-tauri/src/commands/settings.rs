@@ -1,7 +1,8 @@
-use crate::models::settings::Settings;
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
-use crate::services::{config, llm_service, mistake_service, storage};
+use crate::models::settings::Settings;
 use crate::services::llm_service::ConnectionTestResult;
+use crate::services::storage::DataBackupResult;
+use crate::services::{config, llm_service, mistake_service, storage};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -28,6 +29,11 @@ pub async fn test_connection(app: AppHandle) -> Result<ConnectionTestResult, Str
 }
 
 #[tauri::command]
+pub async fn backup_data(app: AppHandle) -> Result<DataBackupResult, String> {
+    storage::backup_data_files(&app)
+}
+
+#[tauri::command]
 pub async fn save_mistake(app: AppHandle, entry: MistakeEntry) -> Result<bool, String> {
     let data_dir = storage::get_data_dir(&app)?;
     mistake_service::save_mistake(&data_dir, entry)?;
@@ -35,7 +41,10 @@ pub async fn save_mistake(app: AppHandle, entry: MistakeEntry) -> Result<bool, S
 }
 
 #[tauri::command]
-pub async fn load_mistakes(app: AppHandle, filter: Option<MistakeFilter>) -> Result<Vec<MistakeEntry>, String> {
+pub async fn load_mistakes(
+    app: AppHandle,
+    filter: Option<MistakeFilter>,
+) -> Result<Vec<MistakeEntry>, String> {
     let data_dir = storage::get_data_dir(&app)?;
     let filter = filter.unwrap_or_default();
     mistake_service::load_mistakes(&data_dir, &filter)
