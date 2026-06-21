@@ -98,11 +98,17 @@
           <div
             v-for="file in settingsStore.dataStatus.files"
             :key="file.name"
-            class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-xs"
+            class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-0.5 text-xs"
           >
             <span class="truncate text-[var(--text-primary)]">{{ file.name }}</span>
             <span :class="file.exists ? 'text-[var(--text-muted)]' : 'text-[var(--color-error)]'">
               {{ file.exists ? formatFileSize(file.size_bytes) : 'Missing' }}
+            </span>
+            <span
+              v-if="file.exists && file.modified_at"
+              class="col-span-2 truncate text-[11px] text-[var(--text-muted)]"
+            >
+              {{ formatModifiedAt(file.modified_at) }}
             </span>
           </div>
         </div>
@@ -188,6 +194,10 @@ function backupFolderName(path: string): string {
 function formatFileSize(sizeBytes: number): string {
   if (sizeBytes < 1024) return `${sizeBytes} B`
   return `${Math.round(sizeBytes / 1024)} KB`
+}
+
+function formatModifiedAt(value: string): string {
+  return value.slice(0, 16).replace('T', ' ')
 }
 
 onMounted(() => {

@@ -111,6 +111,7 @@ describe('SettingsPanel', () => {
     expect(wrapper.text()).toContain('Data Files')
     expect(wrapper.text()).toContain('settings.json')
     expect(wrapper.text()).toContain('2 KB')
+    expect(wrapper.text()).toContain('2026-06-21 12:00')
     expect(wrapper.text()).toContain('mistakes.json')
     expect(wrapper.text()).toContain('Missing')
   })
