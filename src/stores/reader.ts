@@ -38,17 +38,21 @@ export const useReaderStore = defineStore('reader', () => {
   }
 
   async function saveScrollPosition(path: string, top: number) {
-    const settings = await getSettings()
-    await saveSettings({
-      ...settings,
-      workspace: {
-        ...settings.workspace,
-        scroll_positions: {
-          ...(settings.workspace.scroll_positions ?? {}),
-          [path]: Math.max(0, Math.round(top)),
+    try {
+      const settings = await getSettings()
+      await saveSettings({
+        ...settings,
+        workspace: {
+          ...settings.workspace,
+          scroll_positions: {
+            ...(settings.workspace.scroll_positions ?? {}),
+            [path]: Math.max(0, Math.round(top)),
+          },
         },
-      },
-    })
+      })
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
   }
 
   function clearNote() {

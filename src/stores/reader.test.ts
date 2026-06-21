@@ -75,4 +75,15 @@ describe('reader store scroll persistence', () => {
       },
     })
   })
+
+  it('records scroll persistence errors without throwing', async () => {
+    vi.mocked(settingsService.getSettings).mockRejectedValue(new Error('Failed to parse settings.json'))
+    const store = useReaderStore()
+
+    await expect(store.saveScrollPosition('/notes/vue/reactivity.md', 640))
+      .resolves.toBeUndefined()
+
+    expect(store.error).toContain('Failed to parse settings.json')
+    expect(settingsService.saveSettings).not.toHaveBeenCalled()
+  })
 })
