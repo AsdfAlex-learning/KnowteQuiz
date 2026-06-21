@@ -28,11 +28,13 @@ pub fn run_desktop() {
             settings::save_settings,
             settings::list_prompt_templates,
             settings::test_connection,
+            settings::probe_llm,
             settings::backup_data,
             settings::get_data_status,
             settings::restore_latest_backup,
             settings::save_mistake,
             settings::load_mistakes,
+            settings::mark_mistake_reviewed,
             settings::open_data_dir,
         ])
         .run(tauri::generate_context!())

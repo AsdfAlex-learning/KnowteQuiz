@@ -21,6 +21,7 @@ export interface MistakeEntry {
   diagnosis?: DiagnosisContext
   created_at: string
   review_count: number
+  last_reviewed_at?: string
 }
 
 export interface MistakeFilter {

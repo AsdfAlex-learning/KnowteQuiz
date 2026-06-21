@@ -32,6 +32,8 @@ pub struct MistakeEntry {
     pub created_at: String,
     #[serde(default)]
     pub review_count: u32,
+    #[serde(default)]
+    pub last_reviewed_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

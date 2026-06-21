@@ -25,6 +25,13 @@
     </div>
     <p class="text-[11px] text-[var(--text-faint)] mt-1">
       {{ formattedDate }}
+      <span
+        v-if="mistake.review_count > 0"
+        class="ml-2 text-[var(--accent-green)]"
+        :title="`Reviewed ${mistake.review_count} time${mistake.review_count === 1 ? '' : 's'}`"
+      >
+        ✓{{ mistake.review_count }}
+      </span>
     </p>
   </button>
 </template>

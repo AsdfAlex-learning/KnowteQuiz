@@ -14,6 +14,24 @@ pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), String> 
     crate::services::storage::write_json_path(data_dir, MISTAKES_FILE, &updated)
 }
 
+pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), String> {
+    let mut mistakes = read_mistakes_or_empty(data_dir)?;
+    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+    let mut found = false;
+    for entry in &mut mistakes {
+        if entry.id == mistake_id {
+            entry.review_count += 1;
+            entry.last_reviewed_at = Some(now.clone());
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        return Err(format!("Mistake {} not found", mistake_id));
+    }
+    crate::services::storage::write_json_path(data_dir, MISTAKES_FILE, &mistakes)
+}
+
 fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, String> {
     match crate::services::storage::read_json_path(data_dir, MISTAKES_FILE) {
         Ok(mistakes) => Ok(mistakes),
@@ -120,6 +138,7 @@ mod tests {
             diagnosis: None,
             created_at: created_at.to_string(),
             review_count: 0,
+            last_reviewed_at: None,
         }
     }
 

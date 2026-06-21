@@ -1,6 +1,7 @@
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::settings::Settings;
 use crate::services::llm_service::ConnectionTestResult;
+use crate::services::llm_service::LlmCapabilities;
 use crate::services::storage::{DataBackupResult, DataRestoreResult, DataStatus};
 use crate::services::{config, llm_service, mistake_service, storage};
 use tauri::AppHandle;
@@ -26,6 +27,13 @@ pub async fn test_connection(app: AppHandle) -> Result<ConnectionTestResult, Str
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;
     Ok(llm_service::test_connection(&settings.llm).await)
+}
+
+#[tauri::command]
+pub async fn probe_llm(app: AppHandle) -> Result<LlmCapabilities, String> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let settings = config::get_settings_path(&data_dir)?;
+    Ok(llm_service::probe_capabilities(&settings.llm).await)
 }
 
 #[tauri::command]
@@ -58,6 +66,13 @@ pub async fn load_mistakes(
     let data_dir = storage::get_data_dir(&app)?;
     let filter = filter.unwrap_or_default();
     mistake_service::load_mistakes(&data_dir, &filter)
+}
+
+#[tauri::command]
+pub async fn mark_mistake_reviewed(app: AppHandle, mistake_id: String) -> Result<bool, String> {
+    let data_dir = storage::get_data_dir(&app)?;
+    mistake_service::mark_mistake_reviewed(&data_dir, &mistake_id)?;
+    Ok(true)
 }
 
 #[tauri::command]

@@ -41,6 +41,41 @@
       </div>
 
       <button
+        class="w-full py-2 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors disabled:opacity-50"
+        :disabled="probing"
+        @click="handleProbeLlm"
+      >
+        {{ probing ? 'Probing...' : 'Probe LLM Capabilities' }}
+      </button>
+
+      <div
+        v-if="settingsStore.llmCapabilities"
+        class="rounded-md border border-[var(--border-default)] bg-[var(--bg-base)] p-3 space-y-1"
+      >
+        <p class="text-xs font-medium text-[var(--text-primary)]">
+          Model: {{ settingsStore.llmCapabilities.default_model }}
+        </p>
+        <p class="text-xs text-[var(--text-muted)]">
+          Streaming: {{ settingsStore.llmCapabilities.supports_streaming ? '✓ Yes' : '✗ No' }}
+        </p>
+        <p class="text-xs text-[var(--text-muted)]">
+          json_object: {{ settingsStore.llmCapabilities.supports_response_format ? '✓ Yes' : '✗ No' }}
+        </p>
+        <p
+          v-if="settingsStore.llmCapabilities.available_models.length > 0"
+          class="text-xs text-[var(--text-muted)] mt-1"
+        >
+          Available: {{ settingsStore.llmCapabilities.available_models.join(', ') }}
+        </p>
+      </div>
+      <div
+        v-if="settingsStore.probeErr"
+        class="text-xs text-[var(--color-error)]"
+      >
+        {{ settingsStore.probeErr }}
+      </div>
+
+      <button
         class="w-full py-2 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
         @click="handleSave"
       >
@@ -218,6 +253,7 @@ const settings = settingsStore.settings
 const testing = ref(false)
 const backingUp = ref(false)
 const restoring = ref(false)
+const probing = ref(false)
 const connectionResult = ref<ConnectionTestResult | null>(null)
 
 function updateLLM(llm: SettingsLLM) {
@@ -277,6 +313,15 @@ async function handleOpenDataDir() {
 
 async function handleCleanupSessions() {
   await settingsStore.cleanupSessionsNow()
+}
+
+async function handleProbeLlm() {
+  probing.value = true
+  try {
+    await settingsStore.probeLlmNow()
+  } finally {
+    probing.value = false
+  }
 }
 
 function backupFolderName(path: string): string {

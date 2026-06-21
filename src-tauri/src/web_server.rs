@@ -136,6 +136,7 @@ pub async fn start(port: u16) {
             get(get_settings_handler).post(save_settings_handler),
         )
         .route("/api/test-connection", post(test_connection_handler))
+        .route("/api/probe-llm", post(probe_llm_handler))
         .route("/api/data/backup", post(backup_data_handler))
         .route("/api/data/status", get(data_status_handler))
         .route(
@@ -146,6 +147,10 @@ pub async fn start(port: u16) {
         .route(
             "/api/mistakes",
             get(load_mistakes_handler).post(save_mistake_handler),
+        )
+        .route(
+            "/api/mistakes/review",
+            post(mark_mistake_reviewed_handler),
         )
         .route("/api/quiz/generate", post(generate_quiz_handler))
         .route("/api/quiz/diagnose", post(submit_diagnosis_handler))
@@ -258,6 +263,13 @@ async fn test_connection_handler(
     Ok(Json(llm_service::test_connection(&settings.llm).await))
 }
 
+async fn probe_llm_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<llm_service::LlmCapabilities>, String> {
+    let settings = config::get_settings_path(&state.data_dir)?;
+    Ok(Json(llm_service::probe_capabilities(&settings.llm).await))
+}
+
 async fn backup_data_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataBackupResult>, String> {
@@ -293,6 +305,18 @@ async fn save_mistake_handler(
     Json(entry): Json<MistakeEntry>,
 ) -> Result<Json<bool>, String> {
     mistake_service::save_mistake(&state.data_dir, entry)?;
+    Ok(Json(true))
+}
+
+async fn mark_mistake_reviewed_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<bool>, String> {
+    let mistake_id = payload["mistake_id"]
+        .as_str()
+        .ok_or("Missing mistake_id")?
+        .to_string();
+    mistake_service::mark_mistake_reviewed(&state.data_dir, &mistake_id)?;
     Ok(Json(true))
 }
 

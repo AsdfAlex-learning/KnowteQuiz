@@ -6,6 +6,7 @@ import {
   getDataStatus,
   getSettings,
   openDataDir,
+  probeLlm,
   restoreLatestBackup,
   saveSettings,
   testConnection as testSettingsConnection,
@@ -141,6 +142,20 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  const llmCapabilities = ref<{ available_models: string[]; supports_streaming: boolean; supports_response_format: boolean; default_model: string } | null>(null)
+  const probeErr = ref<string | null>(null)
+
+  async function probeLlmNow(): Promise<void> {
+    probeErr.value = null
+    llmCapabilities.value = null
+    try {
+      const caps = await probeLlm()
+      llmCapabilities.value = caps
+    } catch (e) {
+      probeErr.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   return {
     settings,
     loading,
@@ -163,5 +178,8 @@ export const useSettingsStore = defineStore('settings', () => {
     cleanupResult,
     cleanupErr,
     isCleaningUp,
+    probeLlmNow,
+    llmCapabilities,
+    probeErr,
   }
 })

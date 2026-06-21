@@ -52,6 +52,19 @@ export async function listPromptTemplates(): Promise<Array<{ name: string; label
   return result.map(([name, label, description]) => ({ name, label, description }))
 }
 
+export async function markMistakeReviewed(mistakeId: string): Promise<boolean> {
+  if (isTauri()) {
+    return invoke<boolean>('mark_mistake_reviewed', { mistakeId })
+  }
+  const res = await fetch('/api/mistakes/review', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mistake_id: mistakeId }),
+  })
+  if (!res.ok) await throwHttpError(res)
+  return res.json()
+}
+
 function dateStamp(): string {
   const now = new Date()
   const year = now.getFullYear()

@@ -10,6 +10,97 @@ pub struct ConnectionTestResult {
     pub status: Option<u16>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmCapabilities {
+    pub available_models: Vec<String>,
+    pub supports_streaming: bool,
+    pub supports_response_format: bool,
+    pub default_model: String,
+}
+
+pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
+    let base = llm.base_url.trim_end_matches('/');
+    let client = reqwest::Client::new();
+    let mut available_models: Vec<String> = vec![];
+    let mut supports_streaming = false;
+    let mut supports_response_format = false;
+
+    // Probe models endpoint
+    if let Ok(resp) = client
+        .get(format!("{}/models", base))
+        .header("Authorization", format!("Bearer {}", llm.api_key))
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(body) = resp.text().await {
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+                    if let Some(models) = json["data"].as_array() {
+                        available_models = models
+                            .iter()
+                            .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
+                            .collect();
+                        available_models.sort();
+                        available_models.truncate(20); // cap at 20 models
+                    }
+                }
+            }
+        }
+    }
+
+    // Probe streaming support
+    let stream_body = serde_json::json!({
+        "model": llm.model,
+        "messages": [{"role": "user", "content": "say ok"}],
+        "stream": true,
+        "max_tokens": 5,
+    });
+    if let Ok(resp) = client
+        .post(format!("{}/chat/completions", base))
+        .header("Authorization", format!("Bearer {}", llm.api_key))
+        .header("Content-Type", "application/json")
+        .json(&stream_body)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            // Streaming responses contain "data:" lines
+            supports_streaming = text.contains("data:");
+        }
+    }
+
+    // Probe response_format support
+    let json_body = serde_json::json!({
+        "model": llm.model,
+        "messages": [{"role": "user", "content": "say ok"}],
+        "response_format": {"type": "json_object"},
+        "max_tokens": 10,
+    });
+    if let Ok(resp) = client
+        .post(format!("{}/chat/completions", base))
+        .header("Authorization", format!("Bearer {}", llm.api_key))
+        .header("Content-Type", "application/json")
+        .json(&json_body)
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            if let Ok(body) = resp.text().await {
+                // Check if response is valid JSON (indicates response_format worked)
+                supports_response_format = serde_json::from_str::<serde_json::Value>(&body).is_ok();
+            }
+        }
+    }
+
+    LlmCapabilities {
+        available_models,
+        supports_streaming,
+        supports_response_format,
+        default_model: llm.model.clone(),
+    }
+}
+
 pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
     let client = reqwest::Client::new();
     let request_body = serde_json::json!({

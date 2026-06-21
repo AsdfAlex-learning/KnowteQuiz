@@ -70,3 +70,19 @@ export async function openDataDir(): Promise<string> {
   }
   throw new Error('Opening the data directory is only supported in the desktop app')
 }
+
+export interface LlmCapabilities {
+  available_models: string[]
+  supports_streaming: boolean
+  supports_response_format: boolean
+  default_model: string
+}
+
+export async function probeLlm(): Promise<LlmCapabilities> {
+  if (isTauri()) {
+    return invoke<LlmCapabilities>('probe_llm')
+  }
+  const res = await fetch('/api/probe-llm', { method: 'POST' })
+  if (!res.ok) await throwHttpError(res)
+  return res.json()
+}
