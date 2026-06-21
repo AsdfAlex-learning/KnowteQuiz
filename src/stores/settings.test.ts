@@ -10,6 +10,7 @@ vi.mock('../services/settings', () => ({
   backupData: vi.fn(),
   getDataStatus: vi.fn(),
   restoreLatestBackup: vi.fn(),
+  openDataDir: vi.fn(),
 }))
 
 describe('settings store', () => {
@@ -86,5 +87,44 @@ describe('settings store', () => {
     expect(result.files).toEqual(['settings.json', 'mistakes.json'])
     expect(store.lastRestoreResult?.backup_dir).toContain('20260621-120000')
     expect(store.error).toBeNull()
+  })
+})
+
+describe('settings store open data directory', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+  })
+
+  it('calls openDataDir service and clears previous errors', async () => {
+    vi.mocked(settingsService.openDataDir).mockResolvedValue('/path/to/data')
+    const store = useSettingsStore()
+    store.openDirErr = 'previous error'
+
+    await store.openDataDirNow()
+
+    expect(settingsService.openDataDir).toHaveBeenCalledOnce()
+    expect(store.openDirErr).toBeNull()
+  })
+
+  it('captures errors from the openDataDir service', async () => {
+    vi.mocked(settingsService.openDataDir).mockRejectedValue(
+      new Error('Failed to open data directory: access denied'),
+    )
+    const store = useSettingsStore()
+
+    await store.openDataDirNow()
+
+    expect(store.openDirErr).toBe('Failed to open data directory: access denied')
+  })
+
+  it('handles non-Error exceptions when opening data directory', async () => {
+    vi.mocked(settingsService.openDataDir).mockRejectedValue('Permission denied')
+    const store = useSettingsStore()
+
+    await store.openDataDirNow()
+
+    expect(store.openDirErr).toBe('Permission denied')
   })
 })

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { backupData, getDataStatus, getSettings, restoreLatestBackup, saveSettings, testConnection } from './settings'
+import { backupData, getDataStatus, getSettings, openDataDir, restoreLatestBackup, saveSettings, testConnection } from './settings'
 
 describe('settings service', () => {
   afterEach(() => {
@@ -114,5 +114,17 @@ describe('settings service', () => {
     expect(fetch).toHaveBeenCalledWith('/api/data/restore-latest', { method: 'POST' })
     expect(result.files).toEqual(['settings.json', 'mistakes.json'])
     expect(result.pre_restore_backup_dir).toContain('backups')
+  })
+})
+
+describe('open data directory service', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('rejects in web mode since opening folders requires the desktop app', async () => {
+    await expect(openDataDir()).rejects.toThrow(
+      'Opening the data directory is only supported in the desktop app',
+    )
   })
 })

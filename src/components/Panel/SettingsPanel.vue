@@ -108,12 +108,21 @@
               {{ settingsStore.dataStatus.data_dir }}
             </p>
           </div>
-          <button
-            class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-active)]"
-            @click="settingsStore.loadDataStatus()"
-          >
-            Refresh
-          </button>
+          <div class="flex items-center gap-1">
+            <button
+              class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-active)]"
+              title="Open data directory"
+              @click="handleOpenDataDir"
+            >
+              Open Folder
+            </button>
+            <button
+              class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-active)]"
+              @click="settingsStore.loadDataStatus()"
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div
@@ -143,6 +152,12 @@
           class="text-xs text-[var(--color-error)]"
         >
           {{ settingsStore.dataStatusError }}
+        </p>
+        <p
+          v-if="settingsStore.openDirErr"
+          class="text-[11px] text-[var(--color-error)]"
+        >
+          {{ settingsStore.openDirErr }}
         </p>
       </div>
 
@@ -222,6 +237,10 @@ async function handleRestore() {
   } finally {
     restoring.value = false
   }
+}
+
+async function handleOpenDataDir() {
+  await settingsStore.openDataDirNow()
 }
 
 function backupFolderName(path: string): string {

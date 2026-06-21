@@ -59,3 +59,35 @@ pub async fn load_mistakes(
     let filter = filter.unwrap_or_default();
     mistake_service::load_mistakes(&data_dir, &filter)
 }
+
+#[tauri::command]
+pub async fn open_data_dir(app: AppHandle) -> Result<String, String> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let path = data_dir.to_string_lossy().to_string();
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer.exe")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data directory: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open data directory: {}", e))?;
+    }
+
+    Ok(path)
+}

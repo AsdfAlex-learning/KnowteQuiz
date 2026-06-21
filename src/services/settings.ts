@@ -63,3 +63,10 @@ export async function restoreLatestBackup(): Promise<DataRestoreResult> {
   if (!res.ok) await throwHttpError(res)
   return res.json()
 }
+
+export async function openDataDir(): Promise<string> {
+  if (isTauri()) {
+    return invoke<string>('open_data_dir')
+  }
+  throw new Error('Opening the data directory is only supported in the desktop app')
+}

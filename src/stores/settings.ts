@@ -5,6 +5,7 @@ import {
   backupData,
   getDataStatus,
   getSettings,
+  openDataDir,
   restoreLatestBackup,
   saveSettings,
   testConnection as testSettingsConnection,
@@ -110,6 +111,17 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  const openDirErr = ref<string | null>(null)
+
+  async function openDataDirNow(): Promise<void> {
+    openDirErr.value = null
+    try {
+      await openDataDir()
+    } catch (e) {
+      openDirErr.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   return {
     settings,
     loading,
@@ -126,5 +138,7 @@ export const useSettingsStore = defineStore('settings', () => {
     backupDataNow,
     loadDataStatus,
     restoreLatestBackupNow,
+    openDataDirNow,
+    openDirErr,
   }
 })
