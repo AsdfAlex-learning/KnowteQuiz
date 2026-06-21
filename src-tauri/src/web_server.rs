@@ -137,6 +137,7 @@ pub async fn start(port: u16) {
         )
         .route("/api/test-connection", post(test_connection_handler))
         .route("/api/data/backup", post(backup_data_handler))
+        .route("/api/data/status", get(data_status_handler))
         .route("/api/prompt-templates", get(list_prompt_templates_handler))
         .route(
             "/api/mistakes",
@@ -253,6 +254,12 @@ async fn backup_data_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataBackupResult>, String> {
     Ok(Json(storage::backup_data_files_path(&state.data_dir)?))
+}
+
+async fn data_status_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<storage::DataStatus>, String> {
+    Ok(Json(storage::data_status_path(&state.data_dir)?))
 }
 
 async fn list_prompt_templates_handler() -> Result<Json<Vec<(String, String, String)>>, String> {

@@ -12,6 +12,7 @@ vi.mock('@/services/settings', () => ({
   saveSettings: vi.fn(),
   testConnection: vi.fn(),
   backupData: vi.fn(),
+  getDataStatus: vi.fn(),
 }))
 
 vi.mock('@/services/mistake', () => ({
@@ -23,6 +24,10 @@ describe('SettingsPanel', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     vi.mocked(settingsService.getSettings).mockResolvedValue(defaultSettings())
+    vi.mocked(settingsService.getDataStatus).mockResolvedValue({
+      data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
+      files: [],
+    })
   })
 
   it('renders failed connection tests with the error state', async () => {
@@ -75,5 +80,38 @@ describe('SettingsPanel', () => {
 
     expect(wrapper.text()).toContain('Backed up 2 files')
     expect(wrapper.text()).toContain('20260621-120000')
+  })
+
+  it('shows data file sizes from the settings store', async () => {
+    vi.mocked(settingsService.getDataStatus).mockResolvedValue({
+      data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
+      files: [
+        {
+          name: 'settings.json',
+          exists: true,
+          size_bytes: 2048,
+          modified_at: '2026-06-21T12:00:00Z',
+        },
+        {
+          name: 'mistakes.json',
+          exists: false,
+          size_bytes: 0,
+          modified_at: null,
+        },
+      ],
+    })
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Data Files')
+    expect(wrapper.text()).toContain('settings.json')
+    expect(wrapper.text()).toContain('2 KB')
+    expect(wrapper.text()).toContain('mistakes.json')
+    expect(wrapper.text()).toContain('Missing')
   })
 })

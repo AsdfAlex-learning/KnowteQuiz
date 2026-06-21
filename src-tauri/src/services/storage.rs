@@ -17,6 +17,20 @@ pub struct DataBackupResult {
     pub files: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct DataFileStatus {
+    pub name: String,
+    pub exists: bool,
+    pub size_bytes: u64,
+    pub modified_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DataStatus {
+    pub data_dir: String,
+    pub files: Vec<DataFileStatus>,
+}
+
 pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let data_dir = app
         .path()
@@ -123,6 +137,46 @@ pub fn backup_data_files(app: &AppHandle) -> Result<DataBackupResult, String> {
     backup_data_files_path(&dir)
 }
 
+pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, String> {
+    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
+    let mut files = Vec::new();
+
+    for filename in MANAGED_DATA_FILES {
+        let path = data_dir.join(filename);
+        if path.exists() {
+            let metadata = fs::metadata(&path)
+                .map_err(|e| format!("Failed to inspect {}: {}", filename, e))?;
+            let modified_at = metadata
+                .modified()
+                .ok()
+                .map(chrono::DateTime::<chrono::Utc>::from);
+            files.push(DataFileStatus {
+                name: filename.to_string(),
+                exists: true,
+                size_bytes: metadata.len(),
+                modified_at,
+            });
+        } else {
+            files.push(DataFileStatus {
+                name: filename.to_string(),
+                exists: false,
+                size_bytes: 0,
+                modified_at: None,
+            });
+        }
+    }
+
+    Ok(DataStatus {
+        data_dir: data_dir.to_string_lossy().to_string(),
+        files,
+    })
+}
+
+pub fn data_status(app: &AppHandle) -> Result<DataStatus, String> {
+    let dir = get_data_dir(app)?;
+    data_status_path(&dir)
+}
+
 // Backward-compatible wrappers for Tauri commands
 pub fn read_json<T: DeserializeOwned>(app: &AppHandle, filename: &str) -> Result<T, String> {
     let dir = get_data_dir(app)?;
@@ -227,5 +281,33 @@ mod tests {
             r#"[{"id":"m1"}]"#
         );
         assert!(!backup_dir.join("scratch.tmp").exists());
+    }
+
+    #[test]
+    fn data_status_path_reports_managed_file_sizes_and_missing_files() {
+        let dir = temp_data_dir("data_status_path_reports_managed_file_sizes_and_missing_files");
+        fs::write(dir.join("settings.json"), "12345").expect("settings should be written");
+        fs::write(dir.join("mistakes.json"), "[]").expect("mistakes should be written");
+
+        let status = data_status_path(&dir).expect("data status should load");
+
+        assert_eq!(status.data_dir, dir.to_string_lossy());
+        let settings = status
+            .files
+            .iter()
+            .find(|file| file.name == "settings.json")
+            .expect("settings status should exist");
+        assert!(settings.exists);
+        assert_eq!(settings.size_bytes, 5);
+        assert!(settings.modified_at.is_some());
+
+        let settings_backup = status
+            .files
+            .iter()
+            .find(|file| file.name == "settings.json.bak")
+            .expect("settings backup status should exist");
+        assert!(!settings_backup.exists);
+        assert_eq!(settings_backup.size_bytes, 0);
+        assert!(settings_backup.modified_at.is_none());
     }
 }

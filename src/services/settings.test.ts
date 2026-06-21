@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { backupData, getSettings, saveSettings, testConnection } from './settings'
+import { backupData, getDataStatus, getSettings, saveSettings, testConnection } from './settings'
 
 describe('settings service', () => {
   afterEach(() => {
@@ -72,5 +72,29 @@ describe('settings service', () => {
     expect(fetch).toHaveBeenCalledWith('/api/data/backup', { method: 'POST' })
     expect(result.files).toEqual(['settings.json', 'mistakes.json'])
     expect(result.backup_dir).toContain('backups')
+  })
+
+  it('loads web data file status from the data status endpoint', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
+        files: [
+          {
+            name: 'settings.json',
+            exists: true,
+            size_bytes: 2048,
+            modified_at: '2026-06-21T12:00:00Z',
+          },
+        ],
+      }),
+    }))
+    vi.stubGlobal('fetch', fetch)
+
+    const result = await getDataStatus()
+
+    expect(fetch).toHaveBeenCalledWith('/api/data/status')
+    expect(result.data_dir).toContain('knowtequiz')
+    expect(result.files[0].size_bytes).toBe(2048)
   })
 })

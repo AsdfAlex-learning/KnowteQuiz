@@ -55,6 +55,18 @@ export interface DataBackupResult {
   files: string[]
 }
 
+export interface DataFileStatus {
+  name: string
+  exists: boolean
+  size_bytes: number
+  modified_at?: string | null
+}
+
+export interface DataStatus {
+  data_dir: string
+  files: DataFileStatus[]
+}
+
 export interface Settings {
   version: string
   theme: string
