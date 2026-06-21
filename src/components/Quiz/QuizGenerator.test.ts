@@ -8,6 +8,7 @@ import QuizGenerator from './QuizGenerator.vue'
 import { useExplorerStore } from '@/stores/explorer'
 import { useQuizStore } from '@/stores/quiz'
 import { useMistakeStore } from '@/stores/mistakes'
+import { useSettingsStore } from '@/stores/settings'
 import { generateQuiz } from '@/services/quiz'
 
 vi.mock('@/services/quiz', () => ({
@@ -81,5 +82,44 @@ describe('QuizGenerator', () => {
 
     expect(mistakeStore.isSaved('q1')).toBe(false)
     expect(mistakeStore.errorFor('q1')).toBeNull()
+  })
+
+  it('uses quiz defaults that load after the generator is mounted', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const explorerStore = useExplorerStore()
+    explorerStore.selectedPath = '/notes/rust.md'
+    const settingsStore = useSettingsStore()
+    mockGeneratedQuiz()
+
+    const wrapper = mount(QuizGenerator, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await nextTick()
+
+    settingsStore.settings.quiz = {
+      ...settingsStore.settings.quiz,
+      default_types: ['multiple'],
+      default_count: 7,
+      default_language: 'en',
+      default_difficulty: 'hard',
+    }
+    await nextTick()
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Start Quiz')?.trigger('click')
+
+    expect(generateQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({
+        types: ['multiple'],
+        count: 7,
+        difficulty: 'hard',
+        lang: 'en',
+      }),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+    )
   })
 })

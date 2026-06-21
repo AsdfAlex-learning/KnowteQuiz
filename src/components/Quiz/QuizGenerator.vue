@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import { useSettingsStore } from '@/stores/settings'
 import { useExplorerStore } from '@/stores/explorer'
@@ -155,14 +155,12 @@ async function handleGenerate() {
 
 watch(() => explorerStore.selectedPath, (path) => {
   notePath.value = path
-})
+}, { immediate: true })
 
-onMounted(() => {
-  const defaults = settingsStore.settings.quiz
+watch(() => settingsStore.settings.quiz, (defaults) => {
   selectedTypes.value = defaults.default_types as QuestionType[]
   count.value = defaults.default_count
   lang.value = defaults.default_language as QuizLanguage
   difficulty.value = defaults.default_difficulty as QuizDifficulty
-  notePath.value = explorerStore.selectedPath
-})
+}, { immediate: true, deep: true })
 </script>
