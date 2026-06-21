@@ -122,4 +122,22 @@ describe('QuizGenerator', () => {
       expect.any(Function),
     )
   })
+
+  it('does not mutate saved quiz default types when toggling generator types', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const settingsStore = useSettingsStore()
+    settingsStore.settings.quiz.default_types = ['single', 'short']
+
+    const wrapper = mount(QuizGenerator, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await nextTick()
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Multiple Choice')?.trigger('click')
+
+    expect(settingsStore.settings.quiz.default_types).toEqual(['single', 'short'])
+  })
 })

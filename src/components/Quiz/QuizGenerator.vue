@@ -146,7 +146,7 @@ async function handleGenerate() {
 
   await quizStore.startQuiz({
     path: notePath.value,
-    types: selectedTypes.value,
+    types: [...selectedTypes.value],
     count: count.value,
     difficulty: difficulty.value,
     lang: lang.value,
@@ -158,7 +158,7 @@ watch(() => explorerStore.selectedPath, (path) => {
 }, { immediate: true })
 
 watch(() => settingsStore.settings.quiz, (defaults) => {
-  selectedTypes.value = defaults.default_types as QuestionType[]
+  selectedTypes.value = [...defaults.default_types] as QuestionType[]
   count.value = defaults.default_count
   lang.value = defaults.default_language as QuizLanguage
   difficulty.value = defaults.default_difficulty as QuizDifficulty
