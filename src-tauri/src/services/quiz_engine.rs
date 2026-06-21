@@ -173,9 +173,44 @@ pub async fn generate_quiz_stream(
             });
         }
         Err(e) => {
-            let _ = tx.send(QuizStreamEvent::Error {
-                message: format!("Failed to parse quiz response: {}", e),
-            });
+            // Attempt one auto-repair by asking the LLM to fix the JSON
+            let fixup_prompt = format!(
+                "你刚才返回了以下内容，但它不是有效的 JSON 格式。请用标准 JSON 格式重新输出完整的题目数组。\n\n原始返回内容：\n```\n{}\n```\n\n请严格按照以下格式输出：\n```json\n{{\n  \"questions\": [\n    {{\n      \"question_type\": \"single\",\n      \"question\": \"题目文本\",\n      \"options\": [\"A. 选项\", \"B. 选项\"],\n      \"answer\": \"正确答案字母或文本\",\n      \"explanation\": \"解释\"\n    }}\n  ]\n}}\n```",
+                accumulated
+            );
+            match call_llm(llm, &fixup_prompt, 0.3).await {
+                Ok(fixup_text) => {
+                    save_llm_debug_log(data_dir, "quiz_fixup", &fixup_text);
+                    match parse_quiz_response(&fixup_text) {
+                        Ok(questions) => {
+                            for q in &questions {
+                                let _ = tx.send(QuizStreamEvent::Chunk {
+                                    id: q.id.clone(),
+                                    question_type: format!("{:?}", q.question_type).to_lowercase(),
+                                    question: q.question.clone(),
+                                    options: q.options.clone(),
+                                    answer: q.answer.clone(),
+                                    explanation: q.explanation.clone(),
+                                });
+                            }
+                            let _ = tx.send(QuizStreamEvent::Done {
+                                total: questions.len() as u32,
+                            });
+                            return Ok(());
+                        }
+                        Err(fixup_error) => {
+                            let _ = tx.send(QuizStreamEvent::Error {
+                                message: format!("Failed to parse quiz response after retry: {} (original: {})", fixup_error, e),
+                            });
+                        }
+                    }
+                }
+                Err(fixup_err) => {
+                    let _ = tx.send(QuizStreamEvent::Error {
+                        message: format!("Failed to parse quiz response: {} (fixup also failed: {})", e, fixup_err),
+                    });
+                }
+            }
         }
     }
 
