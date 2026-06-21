@@ -157,6 +157,10 @@ pub async fn start(port: u16) {
             "/api/quiz/diagnose/{session_id}/report",
             get(generate_report_handler),
         )
+        .route(
+            "/api/sessions/cleanup",
+            post(cleanup_sessions_handler),
+        )
         .fallback_service(serve_dir)
         .layer(local_cors_layer())
         .with_state(app_state);
@@ -447,6 +451,13 @@ async fn generate_report_handler(
         finish_diagnosis_session(&state, session)?;
         Ok(Json(report))
     }
+}
+
+async fn cleanup_sessions_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<diagnosis_session_service::SessionCleanupResult>, String> {
+    let result = diagnosis_session_service::cleanup_expired_sessions(&state.data_dir, 7)?;
+    Ok(Json(result))
 }
 
 #[cfg(test)]

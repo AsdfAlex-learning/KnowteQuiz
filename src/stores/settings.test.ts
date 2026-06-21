@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSettingsStore } from './settings'
 import * as settingsService from '../services/settings'
+import * as quizService from '../services/quiz'
 
 vi.mock('../services/settings', () => ({
   getSettings: vi.fn(),
@@ -11,6 +12,10 @@ vi.mock('../services/settings', () => ({
   getDataStatus: vi.fn(),
   restoreLatestBackup: vi.fn(),
   openDataDir: vi.fn(),
+}))
+
+vi.mock('../services/quiz', () => ({
+  cleanupSessions: vi.fn(),
 }))
 
 describe('settings store', () => {
@@ -126,5 +131,52 @@ describe('settings store open data directory', () => {
     await store.openDataDirNow()
 
     expect(store.openDirErr).toBe('Permission denied')
+  })
+})
+
+describe('settings store session cleanup', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+  })
+
+  it('delegates session cleanup to the quiz service and stores the result', async () => {
+    vi.mocked(quizService.cleanupSessions).mockResolvedValue({
+      deleted_count: 3,
+      remaining_count: 2,
+    })
+    const store = useSettingsStore()
+
+    await store.cleanupSessionsNow()
+
+    expect(quizService.cleanupSessions).toHaveBeenCalledOnce()
+    expect(store.cleanupResult).toEqual({ deleted_count: 3, remaining_count: 2 })
+    expect(store.cleanupErr).toBeNull()
+  })
+
+  it('captures errors from session cleanup', async () => {
+    vi.mocked(quizService.cleanupSessions).mockRejectedValue(
+      new Error('Failed to read sessions directory'),
+    )
+    const store = useSettingsStore()
+
+    await store.cleanupSessionsNow()
+
+    expect(store.cleanupErr).toBe('Failed to read sessions directory')
+    expect(store.cleanupResult).toBeNull()
+  })
+
+  it('sets isCleaningUp true during cleanup and false after completing', async () => {
+    vi.mocked(quizService.cleanupSessions).mockResolvedValue({
+      deleted_count: 0,
+      remaining_count: 1,
+    })
+    const store = useSettingsStore()
+
+    const promise = store.cleanupSessionsNow()
+    expect(store.isCleaningUp).toBe(true)
+    await promise
+    expect(store.isCleaningUp).toBe(false)
   })
 })

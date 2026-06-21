@@ -73,6 +73,38 @@
         {{ restoring ? 'Restoring...' : 'Restore Latest Backup' }}
       </button>
 
+      <button
+        class="w-full py-2 rounded-md text-sm font-medium transition-colors btn-press"
+        :class="
+          settingsStore.isCleaningUp
+            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
+        "
+        :disabled="settingsStore.isCleaningUp"
+        @click="handleCleanupSessions"
+      >
+        {{ settingsStore.isCleaningUp ? 'Cleaning up...' : 'Clean Up Old Sessions' }}
+      </button>
+
+      <div
+        v-if="settingsStore.cleanupResult"
+        class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
+      >
+        <p class="text-xs font-medium text-[var(--accent-green)]">
+          Removed {{ settingsStore.cleanupResult.deleted_count }} old session(s)
+        </p>
+        <p class="mt-1 text-xs text-[var(--text-muted)]">
+          {{ settingsStore.cleanupResult.remaining_count }} session(s) kept
+        </p>
+      </div>
+
+      <div
+        v-if="settingsStore.cleanupErr"
+        class="text-xs text-[var(--color-error)]"
+      >
+        {{ settingsStore.cleanupErr }}
+      </div>
+
       <div
         v-if="settingsStore.lastBackupResult"
         class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
@@ -241,6 +273,10 @@ async function handleRestore() {
 
 async function handleOpenDataDir() {
   await settingsStore.openDataDirNow()
+}
+
+async function handleCleanupSessions() {
+  await settingsStore.cleanupSessionsNow()
 }
 
 function backupFolderName(path: string): string {

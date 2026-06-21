@@ -1,6 +1,7 @@
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
 use crate::services::{diagnosis_session_service, quiz_engine};
+use diagnosis_session_service::SessionCleanupResult;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
@@ -170,4 +171,10 @@ pub async fn generate_diagnosis_report(
         finish_diagnosis_session(&app, &data_dir, session)?;
         Ok(report)
     }
+}
+
+#[tauri::command]
+pub async fn cleanup_sessions(app: AppHandle) -> Result<SessionCleanupResult, String> {
+    let data_dir = crate::services::storage::get_data_dir(&app)?;
+    diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7)
 }

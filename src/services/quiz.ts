@@ -115,3 +115,17 @@ export async function generateDiagnosisReport(sessionId: string): Promise<Diagno
   if (!res.ok) await throwHttpError(res)
   return res.json()
 }
+
+export interface SessionCleanupResult {
+  deleted_count: number
+  remaining_count: number
+}
+
+export async function cleanupSessions(): Promise<SessionCleanupResult> {
+  if (isTauri()) {
+    return invoke<SessionCleanupResult>('cleanup_sessions')
+  }
+  const res = await fetch('/api/sessions/cleanup', { method: 'POST' })
+  if (!res.ok) await throwHttpError(res)
+  return res.json()
+}

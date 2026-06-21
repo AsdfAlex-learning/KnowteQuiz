@@ -10,6 +10,7 @@ import {
   saveSettings,
   testConnection as testSettingsConnection,
 } from '../services/settings'
+import { cleanupSessions } from '../services/quiz'
 import { defaultSettings } from '../utils/defaults'
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -122,6 +123,24 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  const cleanupResult = ref<{ deleted_count: number; remaining_count: number } | null>(null)
+  const cleanupErr = ref<string | null>(null)
+  const isCleaningUp = ref(false)
+
+  async function cleanupSessionsNow(): Promise<void> {
+    isCleaningUp.value = true
+    cleanupErr.value = null
+    cleanupResult.value = null
+    try {
+      const result = await cleanupSessions()
+      cleanupResult.value = result
+    } catch (e) {
+      cleanupErr.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      isCleaningUp.value = false
+    }
+  }
+
   return {
     settings,
     loading,
@@ -140,5 +159,9 @@ export const useSettingsStore = defineStore('settings', () => {
     restoreLatestBackupNow,
     openDataDirNow,
     openDirErr,
+    cleanupSessionsNow,
+    cleanupResult,
+    cleanupErr,
+    isCleaningUp,
   }
 })

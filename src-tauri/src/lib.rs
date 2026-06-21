@@ -23,6 +23,7 @@ pub fn run_desktop() {
             quiz::submit_answer_advanced,
             quiz::diagnose_follow_up,
             quiz::generate_diagnosis_report,
+            quiz::cleanup_sessions,
             settings::get_settings,
             settings::save_settings,
             settings::list_prompt_templates,

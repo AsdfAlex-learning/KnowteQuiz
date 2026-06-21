@@ -19,11 +19,66 @@ pub fn delete_session(data_dir: &Path, session_id: &str) -> Result<(), String> {
     let sessions_dir = sessions_dir(data_dir)?;
     let filename = session_filename(session_id)?;
     let path = sessions_dir.join(filename);
+    remove_file_if_exists(&path, session_id)
+}
+
+fn remove_file_if_exists(path: &Path, session_id: &str) -> Result<(), String> {
     if path.exists() {
-        std::fs::remove_file(&path)
+        std::fs::remove_file(path)
             .map_err(|err| format!("Failed to delete diagnosis session {}: {}", session_id, err))?;
     }
     Ok(())
+}
+
+#[derive(Clone, serde::Serialize)]
+pub struct SessionCleanupResult {
+    pub deleted_count: u32,
+    pub remaining_count: u32,
+}
+
+pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<SessionCleanupResult, String> {
+    let sessions_dir = sessions_dir(data_dir)?;
+    let now = std::time::SystemTime::now();
+    let cutoff = std::time::Duration::from_secs(max_age_days as u64 * 86400);
+
+    let mut deleted = 0u32;
+    let mut remaining = 0u32;
+
+    let entries = std::fs::read_dir(&sessions_dir)
+        .map_err(|e| format!("Failed to read sessions directory: {}", e))?;
+
+    for entry in entries {
+        let Ok(entry) = entry else { continue };
+        let path = entry.path();
+
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+
+        let Ok(metadata) = entry.metadata() else { continue };
+        let Ok(modified) = metadata.modified() else { continue };
+
+        let Ok(elapsed) = now.duration_since(modified) else { continue };
+
+        if elapsed > cutoff {
+            let id = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown");
+            if remove_file_if_exists(&path, id).is_ok() {
+                deleted += 1;
+            } else {
+                remaining += 1;
+            }
+        } else {
+            remaining += 1;
+        }
+    }
+
+    Ok(SessionCleanupResult {
+        deleted_count: deleted,
+        remaining_count: remaining,
+    })
 }
 
 fn sessions_dir(data_dir: &Path) -> Result<PathBuf, String> {
@@ -98,14 +153,48 @@ mod tests {
     }
 
     #[test]
-    fn delete_session_removes_persisted_session_file() {
-        let dir = temp_data_dir("delete_session_removes_persisted_session_file");
-        let original = session("session-2");
-        save_session(&dir, &original).expect("session should save");
+    fn cleanup_removes_sessions_older_than_cutoff() {
+        let dir = temp_data_dir("cleanup_removes_sessions_older_than_cutoff");
+        let old = session("old-session");
+        save_session(&dir, &old).expect("old session should save");
 
-        delete_session(&dir, "session-2").expect("session should delete");
+        // Immediately after saving, cleanup with max_age_days=0 should NOT remove it
+        // because max_age_days=0 means instant cutoff, i.e. anything is older
+        let result =
+            cleanup_expired_sessions(&dir, 0).expect("cleanup should succeed");
+        assert!(result.deleted_count > 0, "session just created should be deleted with max_age=0");
+        assert_eq!(result.remaining_count, 0);
 
-        let error = load_session(&dir, "session-2").expect_err("deleted session should not load");
+        let error = load_session(&dir, "old-session").expect_err("deleted session should not load");
         assert!(error.contains("File not found"));
+    }
+
+    #[test]
+    fn cleanup_keeps_recent_sessions() {
+        let dir = temp_data_dir("cleanup_keeps_recent_sessions");
+        let recent = session("recent-session");
+        save_session(&dir, &recent).expect("session should save");
+
+        let result = cleanup_expired_sessions(&dir, 365).expect("cleanup should succeed");
+        assert_eq!(result.deleted_count, 0);
+        assert_eq!(result.remaining_count, 1);
+
+        let loaded = load_session(&dir, "recent-session").expect("recent session should load");
+        assert_eq!(loaded.session_id, "recent-session");
+    }
+
+    #[test]
+    fn cleanup_skips_non_json_files_in_sessions_directory() {
+        let dir = temp_data_dir("cleanup_skips_non_json_files");
+        let session = session("keep-me");
+        save_session(&dir, &session).expect("session should save");
+
+        // Create a non-json file that should be ignored
+        let readme = dir.join("sessions").join("README.txt");
+        std::fs::write(&readme, "ignore me").expect("readme should write");
+
+        let result = cleanup_expired_sessions(&dir, 0).expect("cleanup should succeed");
+        assert_eq!(result.deleted_count, 1); // only the json session
+        assert!(readme.exists(), "non-json files should not be touched");
     }
 }
