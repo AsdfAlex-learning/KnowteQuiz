@@ -36,25 +36,71 @@
       </button>
     </div>
 
-    <div class="flex-1 overflow-y-auto p-6">
-      <!-- Loading state -->
-      <LoadingSpinner v-if="readerStore.isLoading" label="Loading note..." overlay />
+    <div class="flex-1 flex">
+      <!-- TOC sidebar -->
+      <aside
+        v-if="showToc && tocHeadings.length > 0"
+        class="w-48 shrink-0 overflow-y-auto border-r border-[var(--border-default)] bg-[var(--bg-elevated)] p-3"
+      >
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-medium text-[var(--text-secondary)]">Outline</span>
+          <button
+            class="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            @click="showToc = false"
+          >
+            ✕
+          </button>
+        </div>
+        <nav>
+          <a
+            v-for="h in tocHeadings"
+            :key="h.id"
+            class="block truncate py-0.5 text-[11px] leading-relaxed cursor-pointer transition-colors"
+            :class="{
+              'text-[var(--text-secondary)] hover:text-[var(--text-primary)]': true,
+              'pl-0': h.level === 1,
+              'pl-3': h.level === 2,
+              'pl-5': h.level === 3,
+              'pl-7': h.level >= 4,
+            }"
+            @click.prevent="scrollToHeading(h.id)"
+          >
+            {{ h.text }}
+          </a>
+        </nav>
+      </aside>
 
-      <!-- Error state -->
-      <div v-else-if="readerStore.error" class="flex flex-col items-center justify-center h-full text-center">
-        <svg class="w-12 h-12 text-[var(--color-error)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v4m0 4h.01" />
-        </svg>
-        <p class="text-[var(--text-sm)] text-[var(--color-error)]">{{ readerStore.error }}</p>
+      <!-- Main content -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <!-- Loading state -->
+        <LoadingSpinner v-if="readerStore.isLoading" label="Loading note..." overlay />
+
+        <!-- Error state -->
+        <div v-else-if="readerStore.error" class="flex flex-col items-center justify-center h-full text-center">
+          <svg class="w-12 h-12 text-[var(--color-error)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4m0 4h.01" />
+          </svg>
+          <p class="text-[var(--text-sm)] text-[var(--color-error)]">{{ readerStore.error }}</p>
+        </div>
+
+        <!-- Rendered markdown -->
+        <article v-else-if="readerStore.currentNote" class="markdown-body max-w-none" v-html="renderedHtml" />
+
+        <!-- Empty state -->
+        <EmptyState v-else />
       </div>
-
-      <!-- Rendered markdown -->
-      <article v-else-if="readerStore.currentNote" class="markdown-body max-w-none" v-html="renderedHtml" />
-
-      <!-- Empty state -->
-      <EmptyState v-else />
     </div>
+
+    <!-- TOC toggle button (fixed) -->
+    <button
+      v-if="tocHeadings.length > 0 && !showToc"
+      class="fixed right-4 bottom-4 w-8 h-8 rounded-full bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] flex items-center justify-center text-xs font-medium shadow hover:bg-[var(--accent-purple)]/30 transition-colors z-10"
+      title="Toggle outline"
+      @click="showToc = true"
+    >
+      ☰
+    </button>
   </div>
 </template>
 
@@ -67,6 +113,7 @@ import 'katex/dist/katex.min.css'
 import { useReaderStore } from '@/stores/reader'
 import { convertFileSrc, isTauri } from '@/services/tauri'
 import { renderMarkdownWithFallback } from '@/utils/markdown'
+import { extractHeadings, type TocHeading } from '@/utils/markdown'
 import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets'
 import EmptyState from './EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -96,10 +143,39 @@ configureMarkdownAssetRenderer(
   (path) => isTauri() ? convertFileSrc(path) : markdownWebAssetUrl(path),
 )
 
+// Add heading IDs for TOC navigation
+md.renderer.rules.heading_open = function (tokens, idx) {
+  const token = tokens[idx]
+  const level = token.tag
+  const nextToken = tokens[idx + 1]
+  const text = nextToken?.type === 'inline' ? nextToken.content || '' : ''
+  const id = text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return `<${level} id="${id}">`
+}
+
 const renderedHtml = computed(() => {
   if (!readerStore.currentNote?.content) return ''
   return renderMarkdownWithFallback(readerStore.currentNote.content, (source) => md.render(source))
 })
+
+// TOC outline
+const showToc = ref(false)
+const tocHeadings = computed<TocHeading[]>(() => {
+  if (!readerStore.currentNote?.content) return []
+  return extractHeadings(readerStore.currentNote.content)
+})
+
+function scrollToHeading(id: string) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
 
 // In-note search
 const showSearch = ref(false)
