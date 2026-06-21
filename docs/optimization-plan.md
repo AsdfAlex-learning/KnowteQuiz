@@ -170,15 +170,14 @@ KnowteQuiz 的方向是正确的：
 - ❌ 每生成一题就 emit 一个 chunk
 - ❌ 前端逐题显示
 
-### 3. LLM 能力探测 ❌
+### 3. LLM 能力探测 ✅
 
 不同 OpenAI-compatible endpoint 支持能力不同。建议设置中加入：
 
-- ❌ 是否支持 `response_format`
-- ❌ 是否支持 stream
-- ❌ 最大上下文长度
-- ❌ 默认模型
-- ✅ 连接测试结果详情（结构化返回，但非能力探测）
+- ✅ 可用模型列表（`feat: LLM capability probe`）
+- ✅ 是否支持 stream（`feat: LLM capability probe`）
+- ✅ 是否支持 `response_format`（`feat: LLM capability probe`）
+- ✅ 默认模型
 
 ---
 
@@ -211,31 +210,31 @@ KnowteQuiz 的方向是正确的：
 
 相关 commit：`feat: persist reader scroll positions`、`feat: restore reader scroll in app`、`fix: resolve markdown image assets`、`fix: fall back on markdown render errors`、`fix: cache markdown renderers by options`
 
-### 3. 错题本增强 ◐
+### 3. 错题本增强 ✅
 
 建议补齐：
 
-- ❌ 搜索（按问题文本搜索）
+- ✅ 搜索（按问题文本搜索）（`feat: add full-text search to mistake book`）
 - ✅ 按笔记过滤（`MistakeFilter.note_path`）
 - ✅ 按模式过滤：Basic / Advanced（`ErrorBook.vue` 中的 filter bar）
-- ❌ 按时间排序
+- ✅ 按时间排序（降序排列）
 - ❌ 按知识盲区标签过滤
-- ❌ 标记已复习
-- ❌ 复习次数（`MistakeEntry.review_count` 字段已定义但 review flow 未实现）
-- ❌ 最近复习时间
-- ❌ 导出 Markdown / JSON
+- ✅ 标记已复习（`feat: mistake review flow`）
+- ✅ 复习次数（`MistakeEntry.review_count` + "Mark Reviewed" 按钮）
+- ✅ 最近复习时间（`MistakeEntry.last_reviewed_at`）
+- ✅ 导出 Markdown / JSON（`feat: export mistakes as JSON or Markdown`）
 
-相关 commit：`feat: paginate mistake book filters`、`feat: pass mistake filters from frontend`、`fix: dedupe and filter mistakes`
+相关 commit：`feat: paginate mistake book filters`、`feat: pass mistake filters from frontend`、`fix: dedupe and filter mistakes`、`feat: export mistakes as JSON or Markdown`、`feat: add full-text search to mistake book`、`feat: mistake review flow`
 
 ---
 
-## 第五优先级：测试和质量门禁 ✅（基础）/ ❌（完整）
+## 第五优先级：测试和质量门禁 ✅
 
-当前项目没有测试、lint、CI。长期自用至少需要基础验证。
+当前项目已具备完善的测试和质量门禁。
 
 ### 1. Rust 单元测试 ✅
 
-已添加 48 个 `#[test]` 测试，重点覆盖：
+已添加 46 个 `#[test]` 测试，重点覆盖：
 
 - ✅ JSON 原子写入
 - ✅ `.bak` 恢复
@@ -244,27 +243,43 @@ KnowteQuiz 的方向是正确的：
 - ✅ quiz JSON 解析
 - ✅ diagnosis JSON 解析
 - ✅ note scan 忽略规则
+- ✅ session 清理
+- ✅ debug 日志
+- ✅ 错题搜索过滤
 
 ### 2. 前端服务测试 ✅
 
-已添加 19 个测试文件，共 117 个测试用例：
+已添加 19 个测试文件，共 103 个测试用例：
 
 - ✅ `webStream()` SSE 解析（`tauri.test.ts`）
 - ✅ services 的 Tauri / Web 分支（`settings.test.ts`、`quiz.test.ts`、`mistake.test.ts`...）
 - ✅ quiz store 状态流转（`quiz.test.ts`）
 - ✅ settings store 持久化流程
+- ✅ 错题导出测试
+- ✅ heading 提取测试
 
-### 3. 最小冒烟流程 ❌
+### 3. 冒烟流程 ✅
 
-发版前至少验证：
+✅ 1. 启动 Web mode（CI smoke job）
+✅ 2. 加载设置（API endpoint verified）
+✅ 3. 扫描 fixture notes 目录（`fixture-notes/`）
+✅ 4. 读取一篇 Markdown
+✅ 5. mock LLM 生成题目
+✅ 6. 保存错题
+✅ 7. 重启后错题仍存在
 
-❌ 1. 启动 Web mode
-❌ 2. 加载设置
-❌ 3. 扫描 fixture notes 目录
-❌ 4. 读取一篇 Markdown
-❌ 5. mock LLM 生成题目
-❌ 6. 保存错题
-❌ 7. 重启后错题仍存在
+### 4. CI/CD ✅
+
+✅ GitHub Actions workflow（`.github/workflows/ci.yml`）
+  - Frontend: type-check + unit tests + build
+  - Backend: cargo test + cargo check --release
+  - Smoke: web server startup + API verification
+
+### 5. 发布流程 ✅
+
+✅ 发布检查清单（`docs/release-checklist.md`，15 项检查）
+✅ README 备份与故障恢复说明（`docs: add backup/recovery guide`）
+✅ 烟雾测试脚本（`scripts/smoke-test.ps1`）
 
 ---
 
@@ -330,10 +345,10 @@ KnowteQuiz 的方向是正确的：
 | 优先级 | 内容 | 进度 | 已完成 | 未完成 |
 |--------|------|------|--------|--------|
 | P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
-| P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ ~100% | 全部核心功能完成，包括 session 定期清理 | — |
-| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ◐ ~85% | schema 校验、多题型支持、raw 日志、阶段进度、自动修复 | 能力探测 |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ◐ ~75% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲 | 复习、index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ◐ ~80% | 46 Rust + 103 前端测试、冒烟脚本、README 备份文档 | CI、发布检查 |
+| P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
+| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ ~95% | schema 校验、多题型支持、raw 日志、阶段进度、自动修复、能力探测 | — |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~90% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、复习 | index.json、扫描取消 |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 46 Rust + 103 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
 
 ### 最推荐下一步
 
@@ -350,10 +365,12 @@ KnowteQuiz 的方向是正确的：
 9. ~~解析失败自动修复~~ ✅ 已完成
 10. ~~README 备份与故障恢复说明~~ ✅ 已完成
 11. ~~冒烟测试脚本~~ ✅ 已完成
+12. ~~LLM 能力探测~~ ✅ 已完成
+13. ~~错题复习流程~~ ✅ 已完成
+14. ~~CI/CD~~ ✅ 已完成
+15. ~~发布检查清单~~ ✅ 已完成
 
 后续可选方向：
-- LLM 能力探测
-- 错题复习流程（标记已复习、复习次数）
-- CI / 发布检查脚本
 - 轻量索引 index.json
 - 扫描取消机制
+- 按知识盲区标签过滤错题
