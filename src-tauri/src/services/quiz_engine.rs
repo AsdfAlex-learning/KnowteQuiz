@@ -150,6 +150,8 @@ pub async fn generate_quiz_stream(
         }
     }
 
+    save_llm_debug_log(data_dir, "quiz", &accumulated);
+
     let _ = tx.send(QuizStreamEvent::Phase {
         phase: "parsing_response".to_string(),
     });
@@ -464,6 +466,7 @@ pub async fn submit_diagnosis_initial(
         user_reasoning,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
+    save_llm_debug_log(data_dir, "diagnosis_initial", &response_text);
     let diagnosis = parse_diagnosis_initial(&response_text)?;
     let round = initial_diagnosis_round(&diagnosis);
 
@@ -517,6 +520,7 @@ pub async fn diagnose_follow_up(
         &vars,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
+    save_llm_debug_log(data_dir, "diagnosis_followup", &response_text);
     let follow_up = parse_follow_up(&response_text)?;
 
     session.conversation.push(DiagnosisRound {
@@ -576,6 +580,7 @@ pub async fn generate_diagnosis_report(
         &vars,
     );
     let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
+    save_llm_debug_log(data_dir, "diagnosis_report", &response_text);
     parse_diagnosis_report(&response_text)
 }
 
@@ -787,9 +792,59 @@ fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String
     }
 }
 
+fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
+    let debug_dir = data_dir.join("debug");
+    if let Err(_) = std::fs::create_dir_all(&debug_dir) {
+        return;
+    }
+
+    let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
+    let filename = format!("{}_{}_raw.txt", timestamp, kind);
+    let path = debug_dir.join(filename);
+
+    let _ = std::fs::write(&path, raw);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+
+    fn temp_data_dir(test_name: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join("knowtequiz-quiz-engine-tests")
+            .join(test_name)
+            .join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
+
+    #[test]
+    fn debug_log_writes_raw_response_to_debug_directory() {
+        let dir = temp_data_dir("debug_log_writes_raw_response");
+        let raw = r#"{"questions": [{"question": "Q?", "answer": "A"}]}"#;
+
+        save_llm_debug_log(&dir, "quiz", raw);
+
+        let debug_dir = dir.join("debug");
+        assert!(debug_dir.exists(), "debug directory should be created");
+
+        let entries: Vec<_> = std::fs::read_dir(&debug_dir)
+            .expect("should read debug dir")
+            .filter_map(|e| e.ok())
+            .collect();
+        assert_eq!(entries.len(), 1, "one debug file should be written");
+
+        let content = std::fs::read_to_string(entries[0].path()).expect("should read debug file");
+        assert_eq!(content, raw);
+    }
+
+    #[test]
+    fn debug_log_does_not_panic_when_data_dir_is_readonly() {
+        // Use a path that can't be created (e.g., inside a file)
+        let dir = std::path::Path::new("/nonexistent/readonly/debug_test");
+        save_llm_debug_log(dir, "quiz", "test"); // should not panic
+    }
 
     #[test]
     fn parse_quiz_response_accepts_type_alias_from_spec() {
