@@ -101,6 +101,7 @@ describe('QuizGenerator', () => {
 
     settingsStore.settings.quiz = {
       ...settingsStore.settings.quiz,
+      default_mode: 'basic',
       default_types: ['multiple'],
       default_count: 7,
       default_language: 'en',
@@ -121,6 +122,32 @@ describe('QuizGenerator', () => {
       expect.any(Function),
       expect.any(Function),
     )
+  })
+
+  it('uses the loaded default quiz mode when starting a quiz', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const explorerStore = useExplorerStore()
+    explorerStore.selectedPath = '/notes/rust.md'
+    const settingsStore = useSettingsStore()
+    mockGeneratedQuiz()
+
+    const wrapper = mount(QuizGenerator, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await nextTick()
+
+    settingsStore.settings.quiz = {
+      ...settingsStore.settings.quiz,
+      default_mode: 'advanced',
+    }
+    await nextTick()
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Start Quiz')?.trigger('click')
+
+    expect(useQuizStore().mode).toBe('advanced')
   })
 
   it('does not mutate saved quiz default types when toggling generator types', async () => {

@@ -1,6 +1,6 @@
 export type QuestionType = 'single' | 'multiple' | 'short'
 export type QuizDifficulty = 'easy' | 'medium' | 'hard'
-export type QuizLanguage = 'zh' | 'en'
+export type QuizLanguage = 'zh' | 'en' | 'ja' | 'ko'
 
 export interface QuizQuestion {
   id: string

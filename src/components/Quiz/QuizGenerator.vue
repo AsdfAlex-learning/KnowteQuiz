@@ -158,6 +158,7 @@ watch(() => explorerStore.selectedPath, (path) => {
 }, { immediate: true })
 
 watch(() => settingsStore.settings.quiz, (defaults) => {
+  mode.value = defaults.default_mode === 'advanced' ? 'advanced' : 'basic'
   selectedTypes.value = [...defaults.default_types] as QuestionType[]
   count.value = defaults.default_count
   lang.value = defaults.default_language as QuizLanguage
