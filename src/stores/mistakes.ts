@@ -10,6 +10,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
   const loading = ref(false)
   const listError = ref<string | null>(null)
   const modeFilter = ref<MistakeMode | undefined>(undefined)
+  const searchText = ref<string | undefined>(undefined)
   const hasMore = ref(false)
   const savingIds = ref(new Set<string>())
   const savedIds = ref(new Set<string>())
@@ -66,6 +67,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
     try {
       const page = await loadMistakes({
         mode: modeFilter.value,
+        search_text: searchText.value,
         offset,
         limit: PAGE_SIZE,
       })
@@ -85,6 +87,11 @@ export const useMistakeStore = defineStore('mistakes', () => {
 
   async function setModeFilter(mode: MistakeMode | undefined): Promise<void> {
     modeFilter.value = mode
+    await loadPage(0)
+  }
+
+  async function setSearchText(text: string): Promise<void> {
+    searchText.value = text.trim() || undefined
     await loadPage(0)
   }
 
@@ -122,6 +129,8 @@ export const useMistakeStore = defineStore('mistakes', () => {
     loadPage,
     loadNextPage,
     setModeFilter,
+    setSearchText,
+    searchText,
     exportMistakes,
     isExporting,
     exportError,

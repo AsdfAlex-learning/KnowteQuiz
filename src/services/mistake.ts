@@ -34,6 +34,7 @@ function mistakeFilterQuery(filter?: MistakeFilter): string {
   const params = new URLSearchParams()
   if (filter.mode) params.set('mode', filter.mode)
   if (filter.note_path) params.set('note_path', filter.note_path)
+  if (filter.search_text) params.set('search_text', filter.search_text)
   if (filter.offset !== undefined) params.set('offset', String(filter.offset))
   if (filter.limit !== undefined) params.set('limit', String(filter.limit))
   const query = params.toString()

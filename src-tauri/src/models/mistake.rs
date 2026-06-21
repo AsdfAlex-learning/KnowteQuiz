@@ -39,6 +39,8 @@ pub struct MistakeFilter {
     pub mode: Option<MistakeMode>,
     pub note_path: Option<String>,
     #[serde(default)]
+    pub search_text: Option<String>,
+    #[serde(default)]
     pub offset: Option<u32>,
     pub limit: Option<u32>,
 }

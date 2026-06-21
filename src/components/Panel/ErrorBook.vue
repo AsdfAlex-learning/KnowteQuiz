@@ -45,6 +45,17 @@
       </div>
     </div>
 
+    <!-- Search bar -->
+    <div class="px-3 pt-2">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Search mistakes..."
+        class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
+        @input="handleSearch"
+      />
+    </div>
+
     <!-- Detail view -->
     <div v-if="selectedId" class="flex-1 overflow-y-auto p-3">
       <MistakeDetail
@@ -112,6 +123,7 @@ const filters: { value: FilterValue; label: string }[] = [
 ]
 
 const selectedId = ref<string | null>(null)
+const searchQuery = ref('')
 const mistakeStore = useMistakeStore()
 const navigationStore = useNavigationStore()
 
@@ -134,6 +146,16 @@ function handleOpenNote(path: string) {
 
 async function handleExport(format: 'json' | 'markdown') {
   await mistakeStore.exportMistakes(format)
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+function handleSearch() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    selectedId.value = null
+    await mistakeStore.setSearchText(searchQuery.value)
+  }, 250)
 }
 
 onMounted(async () => {

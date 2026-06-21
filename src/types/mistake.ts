@@ -26,6 +26,7 @@ export interface MistakeEntry {
 export interface MistakeFilter {
   mode?: MistakeMode
   note_path?: string
+  search_text?: string
   offset?: number
   limit?: number
 }

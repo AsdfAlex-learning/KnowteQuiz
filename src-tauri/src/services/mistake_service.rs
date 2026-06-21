@@ -37,6 +37,7 @@ pub fn upsert_mistake(existing: Vec<MistakeEntry>, incoming: MistakeEntry) -> Ve
 pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec<MistakeEntry> {
     let offset = filter.offset.unwrap_or(0) as usize;
     let limit = filter.limit.map(|value| value as usize);
+    let search_lower = filter.search_text.as_ref().map(|s| s.to_lowercase());
     let mut filtered = mistakes
         .iter()
         .filter(|entry| {
@@ -49,6 +50,15 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
                 .note_path
                 .as_ref()
                 .map_or(true, |note_path| entry.note_path == *note_path)
+        })
+        .filter(|entry| {
+            search_lower.as_ref().map_or(true, |needle| {
+                entry.question.to_lowercase().contains(needle.as_str())
+                    || entry.user_answer.to_lowercase().contains(needle.as_str())
+                    || entry.correct_answer.to_lowercase().contains(needle.as_str())
+                    || entry.explanation.to_lowercase().contains(needle.as_str())
+                    || entry.note_title.to_lowercase().contains(needle.as_str())
+            })
         })
         .cloned()
         .collect::<Vec<_>>();
@@ -181,6 +191,7 @@ mod tests {
         let filter = MistakeFilter {
             mode: Some(MistakeMode::Advanced),
             note_path: Some("/notes/rust.md".to_string()),
+            search_text: None,
             offset: Some(1),
             limit: Some(1),
         };
@@ -211,5 +222,42 @@ mod tests {
             .expect_err("corrupt mistakes file should not be treated as empty");
 
         assert!(error.contains("Failed to parse"));
+    }
+
+    #[test]
+    fn filter_mistakes_searches_across_question_answer_explanation_and_title() {
+        let mistakes = vec![
+            mistake(
+                "a",
+                "/notes/rust.md",
+                "What is ownership?",
+                MistakeMode::Basic,
+                "2026-01-03T00:00:00Z",
+            ),
+            mistake(
+                "b",
+                "/notes/vue.md",
+                "Explain reactivity",
+                MistakeMode::Basic,
+                "2026-01-02T00:00:00Z",
+            ),
+        ];
+        // Set explanation on first entry
+        let mut m1 = mistakes[0].clone();
+        m1.explanation = "Ownership is a key Rust concept".to_string();
+        let m2 = mistakes[1].clone();
+        let all = vec![m1, m2];
+
+        let filter = MistakeFilter {
+            mode: None,
+            note_path: None,
+            search_text: Some("owner".to_string()),
+            offset: None,
+            limit: None,
+        };
+
+        let filtered = filter_mistakes(&all, &filter);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id, "a");
     }
 }
