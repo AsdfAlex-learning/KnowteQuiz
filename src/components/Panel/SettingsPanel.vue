@@ -32,7 +32,7 @@
         v-if="connectionResult !== null"
         class="flex items-center gap-2 text-xs px-3 py-2 rounded-md"
         :class="
-          connectionResult
+          connectionResult.ok
             ? 'bg-[var(--accent-green)]/10 text-[var(--accent-green)]'
             : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'
         "
@@ -53,7 +53,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
-import { testConnection } from '@/services/settings'
 import LLMConfigForm from './LLMConfigForm.vue'
 import QuizDefaultsForm from './QuizDefaultsForm.vue'
 import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/settings'
@@ -75,7 +74,7 @@ async function handleTestConnection() {
   testing.value = true
   connectionResult.value = null
   try {
-    connectionResult.value = await testConnection()
+    connectionResult.value = await settingsStore.testConnection()
   } catch {
     connectionResult.value = {
       ok: false,
