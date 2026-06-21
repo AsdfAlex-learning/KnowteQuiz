@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    name: Frontend (type-check + test + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check
+        run: npx vue-tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend (Rust test + check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - name: Cargo test
+        working-directory: src-tauri
+        run: cargo test
+
+      - name: Cargo check (release)
+        working-directory: src-tauri
+        run: cargo check --release
+
+  smoke-web:
+    name: Smoke test (web mode)
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Start web server & smoke test
+        run: |
+          cd src-tauri
+          cargo run -- --mode=web --port=14201 &
+          SERVER_PID=$!
+          sleep 5
+
+          # Verify server is running
+          curl -sSf http://127.0.0.1:14201/api/data/status || { kill $SERVER_PID; exit 1; }
+
+          # Verify settings endpoint
+          curl -sSf http://127.0.0.1:14201/api/settings || { kill $SERVER_PID; exit 1; }
+
+          echo "Smoke test passed"
+          kill $SERVER_PID
