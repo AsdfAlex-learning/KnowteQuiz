@@ -36,7 +36,7 @@ describe('markdown asset URL resolution', () => {
     )
 
     expect(toAssetUrl).toHaveBeenCalledWith('/home/me/notes/attachments/image 1.webp')
-    expect(result).toBe('/api/notes/asset?path=%2Fhome%2Fme%2Fnotes%2Fattachments%2Fimage%201.webp?raw=true')
+    expect(result).toBe('/api/notes/asset?path=%2Fhome%2Fme%2Fnotes%2Fattachments%2Fimage%201.webp&raw=true')
   })
 
   it('rewrites relative image tokens when registered with MarkdownIt', () => {

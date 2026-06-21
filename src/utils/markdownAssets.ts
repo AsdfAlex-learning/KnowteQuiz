@@ -16,7 +16,7 @@ export function resolveMarkdownAssetUrl(
   const { path, suffix } = splitUrlSuffix(src)
   const noteDir = dirname(notePath)
   const absolutePath = normalizePath(joinPath(noteDir, decodeURIPath(path)))
-  return `${toAssetUrl(absolutePath)}${suffix}`
+  return appendUrlSuffix(toAssetUrl(absolutePath), suffix)
 }
 
 export function markdownWebAssetUrl(absolutePath: string): string {
@@ -67,6 +67,14 @@ function splitUrlSuffix(src: string): { path: string; suffix: string } {
     path: src.slice(0, queryIndex),
     suffix: src.slice(queryIndex),
   }
+}
+
+function appendUrlSuffix(url: string, suffix: string): string {
+  if (!suffix) return url
+  if (suffix.startsWith('?')) {
+    return `${url}${url.includes('?') ? '&' : '?'}${suffix.slice(1)}`
+  }
+  return `${url}${suffix}`
 }
 
 function decodeURIPath(path: string): string {
