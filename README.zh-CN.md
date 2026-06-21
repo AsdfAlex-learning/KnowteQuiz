@@ -74,8 +74,10 @@ node start.cjs --build
 | 启动发行版二进制文件 | `node start.cjs` |
 | Web 服务器模式 | `npm run web` |
 | Web + 桌面同时运行 | `npm run web:both` |
+| 前端单元测试 | `npm run test:unit` |
+| Rust 单元测试 | `cd src-tauri && cargo test` |
 
-> **注意**：本项目尚未配置测试运行器、代码检查器或格式化工具。
+> **注意**：本项目尚未配置代码检查器或格式化工具。
 
 ---
 

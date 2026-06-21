@@ -74,8 +74,10 @@ node start.cjs --build
 | Start release binary | `node start.cjs` |
 | Web server mode | `npm run web` |
 | Web + Desktop simultaneously | `npm run web:both` |
+| Frontend unit tests | `npm run test:unit` |
+| Rust unit tests | `cd src-tauri && cargo test` |
 
-> **Note**: There is no test runner, linter, or formatter configured yet.
+> **Note**: There is no linter or formatter configured yet.
 
 ---
 
