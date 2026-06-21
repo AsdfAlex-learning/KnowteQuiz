@@ -109,6 +109,36 @@ export function splitByParagraph(content: string): string[] {
   return content.split(/\n\n+/).filter(Boolean)
 }
 
+export interface TocHeading {
+  level: number
+  text: string
+  id: string
+}
+
+export function extractHeadings(content: string): TocHeading[] {
+  const headingRegex = /^(#{1,6})\s+(.+)$/gm
+  const headings: TocHeading[] = []
+  let match: RegExpExecArray | null
+
+  while ((match = headingRegex.exec(content)) !== null) {
+    const level = match[1].length
+    const text = match[2].trim()
+    const id = headingId(text)
+    headings.push({ level, text, id })
+  }
+
+  return headings
+}
+
+function headingId(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 function escapeHtml(content: string): string {
   return content
     .replace(/&/g, '&amp;')
