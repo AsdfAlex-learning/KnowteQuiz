@@ -9,6 +9,7 @@ vi.mock('../services/settings', () => ({
   testConnection: vi.fn(),
   backupData: vi.fn(),
   getDataStatus: vi.fn(),
+  restoreLatestBackup: vi.fn(),
 }))
 
 describe('settings store', () => {
@@ -69,5 +70,21 @@ describe('settings store', () => {
     expect(settingsService.getDataStatus).toHaveBeenCalledOnce()
     expect(store.dataStatus?.files[0].name).toBe('settings.json')
     expect(store.dataStatusError).toBeNull()
+  })
+
+  it('stores restore results for the settings panel', async () => {
+    vi.mocked(settingsService.restoreLatestBackup).mockResolvedValue({
+      backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+      pre_restore_backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-130000',
+      files: ['settings.json', 'mistakes.json'],
+    })
+    const store = useSettingsStore()
+
+    const result = await store.restoreLatestBackupNow()
+
+    expect(settingsService.restoreLatestBackup).toHaveBeenCalledOnce()
+    expect(result.files).toEqual(['settings.json', 'mistakes.json'])
+    expect(store.lastRestoreResult?.backup_dir).toContain('20260621-120000')
+    expect(store.error).toBeNull()
   })
 })

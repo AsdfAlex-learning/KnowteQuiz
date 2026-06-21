@@ -55,6 +55,12 @@ export interface DataBackupResult {
   files: string[]
 }
 
+export interface DataRestoreResult {
+  backup_dir: string
+  pre_restore_backup_dir: string
+  files: string[]
+}
+
 export interface DataFileStatus {
   name: string
   exists: boolean

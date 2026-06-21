@@ -29,6 +29,7 @@ pub fn run_desktop() {
             settings::test_connection,
             settings::backup_data,
             settings::get_data_status,
+            settings::restore_latest_backup,
             settings::save_mistake,
             settings::load_mistakes,
         ])

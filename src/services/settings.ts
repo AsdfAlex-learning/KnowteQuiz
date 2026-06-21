@@ -1,4 +1,4 @@
-import type { ConnectionTestResult, DataBackupResult, DataStatus, Settings } from '../types/settings'
+import type { ConnectionTestResult, DataBackupResult, DataRestoreResult, DataStatus, Settings } from '../types/settings'
 import { invoke, isTauri } from './tauri'
 
 async function throwHttpError(res: Response): Promise<never> {
@@ -51,6 +51,15 @@ export async function getDataStatus(): Promise<DataStatus> {
     return invoke<DataStatus>('get_data_status')
   }
   const res = await fetch('/api/data/status')
+  if (!res.ok) await throwHttpError(res)
+  return res.json()
+}
+
+export async function restoreLatestBackup(): Promise<DataRestoreResult> {
+  if (isTauri()) {
+    return invoke<DataRestoreResult>('restore_latest_backup')
+  }
+  const res = await fetch('/api/data/restore-latest', { method: 'POST' })
   if (!res.ok) await throwHttpError(res)
   return res.json()
 }

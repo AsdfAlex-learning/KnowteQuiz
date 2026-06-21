@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ConnectionTestResult, DataBackupResult, DataStatus, Settings } from '../types/settings'
+import type { ConnectionTestResult, DataBackupResult, DataRestoreResult, DataStatus, Settings } from '../types/settings'
 import {
   backupData,
   getDataStatus,
   getSettings,
+  restoreLatestBackup,
   saveSettings,
   testConnection as testSettingsConnection,
 } from '../services/settings'
@@ -17,6 +18,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const llmConnected = ref(false)
   const llmConnectionResult = ref<ConnectionTestResult | null>(null)
   const lastBackupResult = ref<DataBackupResult | null>(null)
+  const lastRestoreResult = ref<DataRestoreResult | null>(null)
   const dataStatus = ref<DataStatus | null>(null)
   const dataStatusError = ref<string | null>(null)
 
@@ -91,6 +93,23 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  async function restoreLatestBackupNow(): Promise<DataRestoreResult> {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await restoreLatestBackup()
+      lastRestoreResult.value = result
+      await loadDataStatus()
+      return result
+    } catch (e) {
+      error.value = String(e)
+      lastRestoreResult.value = null
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     settings,
     loading,
@@ -98,6 +117,7 @@ export const useSettingsStore = defineStore('settings', () => {
     llmConnected,
     llmConnectionResult,
     lastBackupResult,
+    lastRestoreResult,
     dataStatus,
     dataStatusError,
     loadSettings,
@@ -105,5 +125,6 @@ export const useSettingsStore = defineStore('settings', () => {
     testConnection,
     backupDataNow,
     loadDataStatus,
+    restoreLatestBackupNow,
   }
 })

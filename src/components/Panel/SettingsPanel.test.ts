@@ -13,6 +13,7 @@ vi.mock('@/services/settings', () => ({
   testConnection: vi.fn(),
   backupData: vi.fn(),
   getDataStatus: vi.fn(),
+  restoreLatestBackup: vi.fn(),
 }))
 
 vi.mock('@/services/mistake', () => ({
@@ -79,6 +80,25 @@ describe('SettingsPanel', () => {
     await vi.dynamicImportSettled()
 
     expect(wrapper.text()).toContain('Backed up 2 files')
+    expect(wrapper.text()).toContain('20260621-120000')
+  })
+
+  it('shows restore results after restoring the latest backup', async () => {
+    vi.mocked(settingsService.restoreLatestBackup).mockResolvedValue({
+      backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+      pre_restore_backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-130000',
+      files: ['settings.json', 'mistakes.json'],
+    })
+    const wrapper = mount(SettingsPanel, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Restore Latest Backup')?.trigger('click')
+    await vi.dynamicImportSettled()
+
+    expect(wrapper.text()).toContain('Restored 2 files')
     expect(wrapper.text()).toContain('20260621-120000')
   })
 

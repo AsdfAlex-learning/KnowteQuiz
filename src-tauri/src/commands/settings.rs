@@ -1,7 +1,7 @@
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::settings::Settings;
 use crate::services::llm_service::ConnectionTestResult;
-use crate::services::storage::{DataBackupResult, DataStatus};
+use crate::services::storage::{DataBackupResult, DataRestoreResult, DataStatus};
 use crate::services::{config, llm_service, mistake_service, storage};
 use tauri::AppHandle;
 
@@ -36,6 +36,11 @@ pub async fn backup_data(app: AppHandle) -> Result<DataBackupResult, String> {
 #[tauri::command]
 pub async fn get_data_status(app: AppHandle) -> Result<DataStatus, String> {
     storage::data_status(&app)
+}
+
+#[tauri::command]
+pub async fn restore_latest_backup(app: AppHandle) -> Result<DataRestoreResult, String> {
+    storage::restore_latest_backup(&app)
 }
 
 #[tauri::command]

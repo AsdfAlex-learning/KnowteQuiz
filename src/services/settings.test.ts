@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { backupData, getDataStatus, getSettings, saveSettings, testConnection } from './settings'
+import { backupData, getDataStatus, getSettings, restoreLatestBackup, saveSettings, testConnection } from './settings'
 
 describe('settings service', () => {
   afterEach(() => {
@@ -96,5 +96,23 @@ describe('settings service', () => {
     expect(fetch).toHaveBeenCalledWith('/api/data/status')
     expect(result.data_dir).toContain('knowtequiz')
     expect(result.files[0].size_bytes).toBe(2048)
+  })
+
+  it('posts to the web restore latest backup endpoint and returns restored files', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+        pre_restore_backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-130000',
+        files: ['settings.json', 'mistakes.json'],
+      }),
+    }))
+    vi.stubGlobal('fetch', fetch)
+
+    const result = await restoreLatestBackup()
+
+    expect(fetch).toHaveBeenCalledWith('/api/data/restore-latest', { method: 'POST' })
+    expect(result.files).toEqual(['settings.json', 'mistakes.json'])
+    expect(result.pre_restore_backup_dir).toContain('backups')
   })
 })

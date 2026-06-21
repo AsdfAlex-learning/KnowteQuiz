@@ -18,6 +18,13 @@ pub struct DataBackupResult {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct DataRestoreResult {
+    pub backup_dir: String,
+    pub pre_restore_backup_dir: String,
+    pub files: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct DataFileStatus {
     pub name: String,
     pub exists: bool,
@@ -135,6 +142,65 @@ pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, Strin
 pub fn backup_data_files(app: &AppHandle) -> Result<DataBackupResult, String> {
     let dir = get_data_dir(app)?;
     backup_data_files_path(&dir)
+}
+
+pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, String> {
+    let backup_dir = latest_backup_dir(data_dir)?;
+    let pre_restore = backup_data_files_path(data_dir)?;
+
+    let mut files = Vec::new();
+    for filename in MANAGED_DATA_FILES {
+        let source = backup_dir.join(filename);
+        if source.exists() {
+            fs::copy(&source, data_dir.join(filename))
+                .map_err(|e| format!("Failed to restore {}: {}", filename, e))?;
+            files.push(filename.to_string());
+        }
+    }
+    files.sort();
+
+    if files.is_empty() {
+        return Err(format!(
+            "No managed data files found in backup: {}",
+            backup_dir.to_string_lossy()
+        ));
+    }
+
+    Ok(DataRestoreResult {
+        backup_dir: backup_dir.to_string_lossy().to_string(),
+        pre_restore_backup_dir: pre_restore.backup_dir,
+        files,
+    })
+}
+
+pub fn restore_latest_backup(app: &AppHandle) -> Result<DataRestoreResult, String> {
+    let dir = get_data_dir(app)?;
+    restore_latest_backup_path(&dir)
+}
+
+fn latest_backup_dir(data_dir: &Path) -> Result<PathBuf, String> {
+    let backups_dir = data_dir.join("backups");
+    let mut candidates = Vec::new();
+    if !backups_dir.exists() {
+        return Err("No backup directory found".to_string());
+    }
+
+    for entry in
+        fs::read_dir(&backups_dir).map_err(|e| format!("Failed to read backup directory: {}", e))?
+    {
+        let entry = entry.map_err(|e| format!("Failed to inspect backup directory: {}", e))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|e| format!("Failed to inspect backup entry: {}", e))?;
+        if file_type.is_dir() {
+            candidates.push(entry.path());
+        }
+    }
+
+    candidates.sort_by_key(|path| path.file_name().map(|name| name.to_os_string()));
+    candidates
+        .pop()
+        .ok_or_else(|| "No backup snapshots found".to_string())
 }
 
 pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, String> {
@@ -309,5 +375,52 @@ mod tests {
         assert!(!settings_backup.exists);
         assert_eq!(settings_backup.size_bytes, 0);
         assert!(settings_backup.modified_at.is_none());
+    }
+
+    #[test]
+    fn restore_latest_backup_path_restores_newest_backup_and_preserves_current_files() {
+        let dir = temp_data_dir(
+            "restore_latest_backup_path_restores_newest_backup_and_preserves_current_files",
+        );
+        fs::write(dir.join("settings.json"), "current-settings")
+            .expect("current settings should be written");
+        fs::write(dir.join("mistakes.json"), "current-mistakes")
+            .expect("current mistakes should be written");
+
+        let older = dir.join("backups").join("20260101-010000-old");
+        let newer = dir.join("backups").join("20260201-010000-new");
+        fs::create_dir_all(&older).expect("older backup should be created");
+        fs::create_dir_all(&newer).expect("newer backup should be created");
+        fs::write(older.join("settings.json"), "old-settings")
+            .expect("older settings backup should be written");
+        fs::write(newer.join("settings.json"), "new-settings")
+            .expect("newer settings backup should be written");
+        fs::write(newer.join("mistakes.json"), "new-mistakes")
+            .expect("newer mistakes backup should be written");
+
+        let result = restore_latest_backup_path(&dir).expect("latest backup should restore");
+
+        assert_eq!(result.backup_dir, newer.to_string_lossy());
+        assert_eq!(result.files, vec!["mistakes.json", "settings.json"]);
+        assert_eq!(
+            fs::read_to_string(dir.join("settings.json")).expect("settings should be restored"),
+            "new-settings"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join("mistakes.json")).expect("mistakes should be restored"),
+            "new-mistakes"
+        );
+
+        let pre_restore_dir = PathBuf::from(result.pre_restore_backup_dir);
+        assert_eq!(
+            fs::read_to_string(pre_restore_dir.join("settings.json"))
+                .expect("pre-restore settings backup should exist"),
+            "current-settings"
+        );
+        assert_eq!(
+            fs::read_to_string(pre_restore_dir.join("mistakes.json"))
+                .expect("pre-restore mistakes backup should exist"),
+            "current-mistakes"
+        );
     }
 }

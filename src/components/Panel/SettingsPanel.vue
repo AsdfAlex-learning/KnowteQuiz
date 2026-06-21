@@ -60,6 +60,19 @@
         {{ backingUp ? 'Backing up...' : 'Backup Data Now' }}
       </button>
 
+      <button
+        class="w-full py-2 rounded-md text-sm font-medium transition-colors btn-press"
+        :class="
+          restoring
+            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
+        "
+        :disabled="restoring"
+        @click="handleRestore"
+      >
+        {{ restoring ? 'Restoring...' : 'Restore Latest Backup' }}
+      </button>
+
       <div
         v-if="settingsStore.lastBackupResult"
         class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
@@ -69,6 +82,18 @@
         </p>
         <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
           {{ backupFolderName(settingsStore.lastBackupResult.backup_dir) }}
+        </p>
+      </div>
+
+      <div
+        v-if="settingsStore.lastRestoreResult"
+        class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
+      >
+        <p class="text-xs font-medium text-[var(--accent-green)]">
+          Restored {{ settingsStore.lastRestoreResult.files.length }} files
+        </p>
+        <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
+          {{ backupFolderName(settingsStore.lastRestoreResult.backup_dir) }}
         </p>
       </div>
 
@@ -145,6 +170,7 @@ const settingsStore = useSettingsStore()
 const settings = settingsStore.settings
 const testing = ref(false)
 const backingUp = ref(false)
+const restoring = ref(false)
 const connectionResult = ref<ConnectionTestResult | null>(null)
 
 function updateLLM(llm: SettingsLLM) {
@@ -184,6 +210,17 @@ async function handleBackup() {
     // The store owns the user-visible error state.
   } finally {
     backingUp.value = false
+  }
+}
+
+async function handleRestore() {
+  restoring.value = true
+  try {
+    await settingsStore.restoreLatestBackupNow()
+  } catch {
+    // The store owns the user-visible error state.
+  } finally {
+    restoring.value = false
   }
 }
 
