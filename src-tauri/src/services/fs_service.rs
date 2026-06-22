@@ -13,7 +13,7 @@ pub fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, String> {
     scan_recursive(root, root)
 }
 
-fn scan_recursive(dir: &Path, root: &Path) -> Result<Vec<NoteTreeNode>, String> {
+fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, String> {
     let mut entries: Vec<NoteTreeNode> = Vec::new();
     let mut dirs: Vec<NoteTreeNode> = Vec::new();
     let mut files: Vec<NoteTreeNode> = Vec::new();
@@ -37,14 +37,14 @@ fn scan_recursive(dir: &Path, root: &Path) -> Result<Vec<NoteTreeNode>, String> 
         let full_path = path.to_string_lossy().to_string();
 
         if path.is_dir() {
-            let children = scan_recursive(&path, root)?;
+            let children = scan_recursive(&path, _root)?;
             dirs.push(NoteTreeNode {
                 name,
                 path: full_path,
                 is_dir: true,
                 children,
             });
-        } else if path.extension().map_or(false, |ext| ext == "md") {
+        } else if path.extension().is_some_and(|ext| ext == "md") {
             files.push(NoteTreeNode {
                 name,
                 path: full_path,

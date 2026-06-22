@@ -197,19 +197,19 @@ function doSearch() {
     return
   }
   // window.find() highlights and scrolls to the first match
-  const found = window.find(searchQuery.value, false, false, true, false, true, false)
+  const found = (window as any).find(searchQuery.value, false, false, true, false, true, false)
   matchInfo.value = found ? '?' : '0/0'
 }
 
 function findNext() {
   if (!searchQuery.value.trim()) return
-  const found = window.find(searchQuery.value, false, false, true, false, false, true)
+  const found = (window as any).find(searchQuery.value, false, false, true, false, false, true)
   matchInfo.value = found ? '?' : '0/0'
 }
 
 function findPrev() {
   if (!searchQuery.value.trim()) return
-  const found = window.find(searchQuery.value, false, true, true, false, false, true)
+  const found = (window as any).find(searchQuery.value, false, true, true, false, false, true)
   matchInfo.value = found ? '?' : '0/0'
 }
 

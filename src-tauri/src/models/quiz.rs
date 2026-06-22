@@ -28,6 +28,7 @@ pub struct QuizStreamParams {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct QuizResult {
     pub total: u32,
     pub questions: Vec<QuizQuestion>,

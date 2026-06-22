@@ -59,7 +59,7 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
     let mut filtered = mistakes
         .iter()
         .filter(|entry| {
-            filter.mode.as_ref().map_or(true, |mode| {
+            filter.mode.as_ref().is_none_or(|mode| {
                 std::mem::discriminant(&entry.mode) == std::mem::discriminant(mode)
             })
         })
@@ -67,10 +67,10 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
             filter
                 .note_path
                 .as_ref()
-                .map_or(true, |note_path| entry.note_path == *note_path)
+                .is_none_or(|note_path| entry.note_path == *note_path)
         })
         .filter(|entry| {
-            search_lower.as_ref().map_or(true, |needle| {
+            search_lower.as_ref().is_none_or(|needle| {
                 entry.question.to_lowercase().contains(needle.as_str())
                     || entry.user_answer.to_lowercase().contains(needle.as_str())
                     || entry.correct_answer.to_lowercase().contains(needle.as_str())

@@ -126,8 +126,7 @@ pub async fn generate_quiz_stream(
             Ok(bytes) => {
                 if let Ok(text) = String::from_utf8(bytes.to_vec()) {
                     for line in text.lines() {
-                        if line.starts_with("data: ") {
-                            let data = &line[6..];
+                        if let Some(data) = line.strip_prefix("data: ") {
                             if data.trim() == "[DONE]" {
                                 continue;
                             }
@@ -374,7 +373,7 @@ fn normalize_answer_text(value: &str) -> String {
 
 fn split_answer_text(answer: &str) -> Vec<String> {
     let parts = answer
-        .split(|c| matches!(c, ',' | ';' | '，' | '；' | '、'))
+        .split([',', ';', '，', '；', '、'])
         .map(normalize_answer_text)
         .filter(|value| !value.is_empty())
         .collect::<Vec<_>>();
@@ -829,7 +828,7 @@ fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String
 
 fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
     let debug_dir = data_dir.join("debug");
-    if let Err(_) = std::fs::create_dir_all(&debug_dir) {
+    if std::fs::create_dir_all(&debug_dir).is_err() {
         return;
     }
 

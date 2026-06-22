@@ -14,8 +14,8 @@ pub fn extract_metadata(content: &str, path: &str) -> NoteContent {
 fn extract_title(content: &str, path: &str) -> String {
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("# ") {
-            return trimmed[2..].trim().to_string();
+        if let Some(stripped) = trimmed.strip_prefix("# ") {
+            return stripped.trim().to_string();
         }
     }
     std::path::Path::new(path)
@@ -27,8 +27,8 @@ fn extract_title(content: &str, path: &str) -> String {
 
 fn extract_frontmatter(content: &str) -> std::collections::HashMap<String, String> {
     let mut metadata = std::collections::HashMap::new();
-    if content.starts_with("---") {
-        let end = content[3..].find("---");
+    if let Some(stripped) = content.strip_prefix("---") {
+        let end = stripped.find("---");
         if let Some(pos) = end {
             let frontmatter = &content[3..pos + 3];
             for line in frontmatter.lines() {

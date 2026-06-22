@@ -48,6 +48,7 @@ pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+#[allow(dead_code)]
 pub fn get_data_dir_path(base: &Path) -> Result<PathBuf, String> {
     let dir = base.join(APP_DATA_SUBDIR);
     fs::create_dir_all(&dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
@@ -109,6 +110,7 @@ fn read_json_backup_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -
     serde_json::from_str(&content).ok()
 }
 
+#[allow(dead_code)]
 pub fn file_exists_path(data_dir: &Path, filename: &str) -> Result<bool, String> {
     Ok(data_dir.join(filename).exists())
 }
@@ -118,7 +120,7 @@ pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, Strin
     let backup_dir = data_dir.join("backups").join(format!(
         "{}-{}",
         chrono::Utc::now().format("%Y%m%d-%H%M%S"),
-        uuid::Uuid::new_v4().simple().to_string()[..8].to_string()
+        &uuid::Uuid::new_v4().simple().to_string()[..8]
     ));
     fs::create_dir_all(&backup_dir).map_err(|e| format!("Failed to create backup dir: {}", e))?;
 
@@ -244,16 +246,19 @@ pub fn data_status(app: &AppHandle) -> Result<DataStatus, String> {
 }
 
 // Backward-compatible wrappers for Tauri commands
+#[allow(dead_code)]
 pub fn read_json<T: DeserializeOwned>(app: &AppHandle, filename: &str) -> Result<T, String> {
     let dir = get_data_dir(app)?;
     read_json_path(&dir, filename)
 }
 
+#[allow(dead_code)]
 pub fn write_json<T: Serialize>(app: &AppHandle, filename: &str, data: &T) -> Result<(), String> {
     let dir = get_data_dir(app)?;
     write_json_path(&dir, filename, data)
 }
 
+#[allow(dead_code)]
 pub fn file_exists(app: &AppHandle, filename: &str) -> Result<bool, String> {
     let dir = get_data_dir(app)?;
     file_exists_path(&dir, filename)
