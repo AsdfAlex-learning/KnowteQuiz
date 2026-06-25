@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import QuizSession from './QuizSession.vue'
 import { useQuizStore } from '@/stores/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
@@ -67,5 +68,43 @@ describe('QuizSession', () => {
 
     expect(quizStore.showResults).toBe(true)
     expect(quizStore.diagnosisReport).toEqual(report)
+  })
+
+  it('lets the user retry after advanced diagnosis fails', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const quizStore = useQuizStore()
+    quizStore.questions = [{
+      id: 'q1',
+      question_type: 'single',
+      question: 'Which claim is true?',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'B',
+      explanation: 'Beta is true.',
+    }]
+    quizStore.quizState = 'answering'
+    quizStore.startDiagnosis = vi.fn(async () => {
+      quizStore.quizState = 'answering'
+      quizStore.generatingError = 'Diagnosis failed'
+    })
+
+    const wrapper = mount(QuizSession, {
+      props: { mode: 'advanced' },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    const alphaOption = wrapper.findAll('button').find((button) => button.text().includes('Alpha'))
+    expect(alphaOption).toBeDefined()
+    await alphaOption!.trigger('click')
+    await wrapper.get('textarea').setValue('I think Alpha is right.')
+    await wrapper.findAll('button').find((button) => button.text() === 'Submit & Diagnose')!.trigger('click')
+    await Promise.resolve()
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Diagnosis failed')
+    expect(wrapper.text()).toContain('Submit & Diagnose')
+    expect(wrapper.get('textarea').attributes('disabled')).toBeUndefined()
   })
 })

@@ -239,6 +239,9 @@ async function startDiagnosis(answer: string) {
     reasoning.value,
     notePath,
   )
+  if (quizStore.quizState === 'answering' && quizStore.generatingError) {
+    submitted.value = false
+  }
 }
 
 async function handleDiagnosisReply(text: string) {
