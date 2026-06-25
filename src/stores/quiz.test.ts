@@ -157,6 +157,17 @@ describe('quiz store answer evaluation', () => {
     expect(store.quizState).toBe('report')
   })
 
+  it('clears stale diagnosis errors before starting a new diagnosis', async () => {
+    vi.mocked(submitAnswerAdvanced).mockResolvedValue('session-2')
+    const store = useQuizStore()
+    store.generatingError = 'Previous diagnosis failed'
+
+    await store.startDiagnosis('Next question?', 'C', 'B', 'Because B', '/notes/rust.md')
+
+    expect(store.generatingError).toBeNull()
+    expect(store.sessionId).toBe('session-2')
+  })
+
   it('returns to answering when initial diagnosis streaming reports an error', async () => {
     vi.mocked(submitAnswerAdvanced).mockImplementation(async (_question, _correctAnswer, _answer, _reasoning, _notePath, _onInitial, _onFollowUp, _onReport, onError) => {
       onError('Failed to parse diagnosis: missing answer_analysis')
@@ -182,6 +193,19 @@ describe('quiz store answer evaluation', () => {
     expect(generateDiagnosisReport).toHaveBeenCalledWith('session-1')
     expect(store.diagnosisReport).toEqual(report)
     expect(store.quizState).toBe('report')
+  })
+
+  it('clears stale diagnosis errors when generating a report succeeds', async () => {
+    vi.mocked(generateDiagnosisReport).mockResolvedValue(report)
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.quizState = 'diagnosing'
+    store.generatingError = 'Previous follow-up failed'
+
+    await store.finishDiagnosis()
+
+    expect(store.generatingError).toBeNull()
+    expect(store.diagnosisReport).toEqual(report)
   })
 
   it('stores user replies and follow-up questions during diagnosis', async () => {
@@ -213,6 +237,29 @@ describe('quiz store answer evaluation', () => {
         follow_up: 'How does the definition change your answer?',
       },
     ])
+  })
+
+  it('clears stale diagnosis errors when a follow-up succeeds', async () => {
+    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, onFollowUp) => {
+      onFollowUp({
+        question: 'What changes now?',
+        blind_spots: [],
+      })
+    })
+    const store = useQuizStore()
+    store.sessionId = 'session-1'
+    store.quizState = 'diagnosing'
+    store.generatingError = 'Previous follow-up failed'
+
+    await store.continueDiagnosis('I found the definition.')
+
+    expect(store.generatingError).toBeNull()
+    expect(store.diagnosisMessages).toContainEqual({
+      role: 'ai',
+      content: 'What changes now?',
+      blind_spots: [],
+      follow_up: 'What changes now?',
+    })
   })
 
   it('records follow-up errors without appending failed replies', async () => {

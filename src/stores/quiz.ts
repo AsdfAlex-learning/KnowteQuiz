@@ -140,6 +140,10 @@ export const useQuizStore = defineStore('quiz', () => {
 
   async function startDiagnosis(question: string, correctAnswer: string, userAnswer: string, userReasoning: string, notePath: string) {
     quizState.value = 'diagnosing'
+    generatingError.value = null
+    sessionId.value = null
+    diagnosisMessages.value = []
+    diagnosisReport.value = null
     try {
       const sid = await submitAnswerAdvanced(
         question, correctAnswer, userAnswer, userReasoning, notePath,
@@ -160,6 +164,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
   async function continueDiagnosis(userReply: string) {
     if (!sessionId.value) return
+    generatingError.value = null
     try {
       await diagnoseFollowUp(
         sessionId.value, userReply,
@@ -177,6 +182,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
   async function finishDiagnosis() {
     if (!sessionId.value) return
+    generatingError.value = null
     try {
       const report = await generateDiagnosisReport(sessionId.value)
       setDiagnosisReport(report)
