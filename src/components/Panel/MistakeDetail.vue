@@ -160,9 +160,11 @@ function formatLastReviewed(dateStr: string): string {
 const parsedDiagnosis = computed<DiagnosisReport | null>(() => {
   if (!props.mistake.diagnosis) return null
   try {
-    return typeof props.mistake.diagnosis === 'string'
+    const diagnosis = typeof props.mistake.diagnosis === 'string'
       ? JSON.parse(props.mistake.diagnosis)
       : props.mistake.diagnosis
+
+    return diagnosis.final_report ?? diagnosis
   } catch {
     return null
   }

@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn filter_mistakes_searches_across_question_answer_explanation_and_title() {
-        let mistakes = vec![
+        let mistakes = [
             mistake(
                 "a",
                 "/notes/rust.md",
