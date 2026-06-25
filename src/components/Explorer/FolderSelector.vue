@@ -14,7 +14,7 @@
       v-if="explorerStore.rootPath"
       class="folder-btn"
       :title="explorerStore.rootPath"
-      @click="explorerStore.chooseFolder()"
+      @click="navigationStore.chooseFolder()"
     >
       <svg class="w-4 h-4 flex-shrink-0 text-[var(--accent-yellow)]" viewBox="0 0 16 16" fill="currentColor">
         <path d="M1 3.5A1.5 1.5 0 012.5 2h3.172a1.5 1.5 0 011.06.44l.708.707a.5.5 0 00.353.146H13.5A1.5 1.5 0 0115 4.793v7.707a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z" />
@@ -28,7 +28,7 @@
     <button
       v-else
       class="open-folder-btn"
-      @click="explorerStore.chooseFolder()"
+      @click="navigationStore.chooseFolder()"
     >
       <svg class="w-5 h-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M8 2v6m0 0v6m0-6h6m-6 0H2" />
@@ -41,9 +41,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useExplorerStore } from '@/stores/explorer'
+import { useNavigationStore } from '@/stores/navigation'
 import { isTauri } from '@/services/tauri'
 
 const explorerStore = useExplorerStore()
+const navigationStore = useNavigationStore()
 const manualPath = ref('')
 
 const shortPath = computed(() => {
@@ -56,7 +58,7 @@ const shortPath = computed(() => {
 async function setManualPath() {
   const path = manualPath.value.trim()
   if (path) {
-    await explorerStore.openRootPath(path)
+    await navigationStore.openRootPath(path)
     manualPath.value = ''
   }
 }

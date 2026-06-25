@@ -32,7 +32,12 @@ export const useExplorerStore = defineStore('explorer', () => {
     try {
       const nextTree = await scanNotes(path)
       if (!isLatestScan(requestId)) return
+      const rootChanged = rootPath.value !== path
       rootPath.value = path
+      if (rootChanged) {
+        expandedDirs.value = new Set()
+        selectedPath.value = null
+      }
       tree.value = nextTree
       await persistWorkspace()
     } catch (e) {

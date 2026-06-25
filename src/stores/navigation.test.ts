@@ -58,4 +58,57 @@ describe('navigation store', () => {
       },
     })
   })
+
+  it('opens a new root path and clears the note from the previous workspace', async () => {
+    const settings = defaultSettings()
+    settings.workspace = {
+      ...settings.workspace,
+      root_path: '/old',
+      selected_path: '/old/topic.md',
+    }
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    vi.mocked(noteService.scanNotes).mockResolvedValue([
+      { name: 'new.md', path: '/new/new.md', is_dir: false, children: [] },
+    ])
+    const navigationStore = useNavigationStore()
+    const explorerStore = useExplorerStore()
+    const readerStore = useReaderStore()
+    explorerStore.rootPath = '/old'
+    explorerStore.selectedPath = '/old/topic.md'
+    readerStore.currentNote = {
+      path: '/old/topic.md',
+      title: 'Old Topic',
+      content: '# Old Topic',
+      metadata: {},
+    }
+    readerStore.scrollTop = 240
+
+    await navigationStore.openRootPath('/new')
+
+    expect(explorerStore.rootPath).toBe('/new')
+    expect(explorerStore.selectedPath).toBeNull()
+    expect(readerStore.currentNote).toBeNull()
+    expect(readerStore.scrollTop).toBe(0)
+  })
+
+  it('chooses a folder through the picker and opens it as a workspace root', async () => {
+    const settings = defaultSettings()
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    vi.mocked(noteService.selectFolder).mockResolvedValue('/picked')
+    vi.mocked(noteService.scanNotes).mockResolvedValue([
+      { name: 'picked.md', path: '/picked/picked.md', is_dir: false, children: [] },
+    ])
+    const navigationStore = useNavigationStore()
+    const explorerStore = useExplorerStore()
+
+    await navigationStore.chooseFolder()
+
+    expect(noteService.selectFolder).toHaveBeenCalled()
+    expect(explorerStore.rootPath).toBe('/picked')
+    expect(explorerStore.tree).toEqual([
+      { name: 'picked.md', path: '/picked/picked.md', is_dir: false, children: [] },
+    ])
+  })
 })

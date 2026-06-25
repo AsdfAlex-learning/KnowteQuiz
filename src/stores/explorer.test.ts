@@ -92,6 +92,39 @@ describe('explorer store workspace persistence', () => {
     })
   })
 
+  it('clears the selected note when opening a different root path', async () => {
+    const settings = defaultSettings()
+    settings.workspace = {
+      ...settings.workspace,
+      root_path: '/old',
+      selected_path: '/old/topic.md',
+    }
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    vi.mocked(noteService.scanNotes).mockResolvedValue([
+      { name: 'new.md', path: '/new/new.md', is_dir: false, children: [] },
+    ])
+    const store = useExplorerStore()
+    store.rootPath = '/old'
+    store.selectedPath = '/old/topic.md'
+    store.expandedDirs = new Set(['/old'])
+
+    await store.openRootPath('/new')
+
+    expect(store.rootPath).toBe('/new')
+    expect(store.selectedPath).toBeNull()
+    expect(Array.from(store.expandedDirs)).toEqual([])
+    expect(settingsService.saveSettings).toHaveBeenCalledWith({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        root_path: '/new',
+        expanded_dirs: [],
+        selected_path: null,
+      },
+    })
+  })
+
   it('does not persist a manually entered root path when scanning fails', async () => {
     vi.mocked(noteService.scanNotes).mockRejectedValue(new Error('Directory does not exist'))
     const store = useExplorerStore()

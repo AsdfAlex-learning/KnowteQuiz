@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useExplorerStore } from './explorer'
 import { useReaderStore } from './reader'
+import { selectFolder } from '../services/note'
 
 export const useNavigationStore = defineStore('navigation', () => {
   const opening = ref(false)
@@ -22,9 +23,40 @@ export const useNavigationStore = defineStore('navigation', () => {
     }
   }
 
+  async function openRootPath(path: string) {
+    opening.value = true
+    error.value = null
+    const explorerStore = useExplorerStore()
+    const readerStore = useReaderStore()
+    const previousRoot = explorerStore.rootPath
+    try {
+      await explorerStore.openRootPath(path)
+      if (previousRoot !== explorerStore.rootPath) {
+        readerStore.clearNote()
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      opening.value = false
+    }
+  }
+
+  async function chooseFolder() {
+    try {
+      const path = await selectFolder()
+      if (path) {
+        await openRootPath(path)
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   return {
     opening,
     error,
     openNote,
+    openRootPath,
+    chooseFolder,
   }
 })
