@@ -16,6 +16,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
   const listError = ref<string | null>(null)
   const modeFilter = ref<MistakeMode | undefined>(undefined)
   const searchText = ref<string | undefined>(undefined)
+  const blindSpotTag = ref<string | undefined>(undefined)
   const hasMore = ref(false)
   const savingIds = ref(new Set<string>())
   const savedIds = ref(new Set<string>())
@@ -83,6 +84,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
       const page = await loadMistakes({
         mode: modeFilter.value,
         search_text: searchText.value,
+        blind_spot_tag: blindSpotTag.value,
         offset,
         limit: PAGE_SIZE,
       })
@@ -107,6 +109,11 @@ export const useMistakeStore = defineStore('mistakes', () => {
 
   async function setSearchText(text: string): Promise<void> {
     searchText.value = text.trim() || undefined
+    await loadPage(0)
+  }
+
+  async function setBlindSpotTag(tag: string): Promise<void> {
+    blindSpotTag.value = tag.trim() || undefined
     await loadPage(0)
   }
 
@@ -179,8 +186,10 @@ export const useMistakeStore = defineStore('mistakes', () => {
     loadNextPage,
     setModeFilter,
     setSearchText,
+    setBlindSpotTag,
     markReviewed,
     searchText,
+    blindSpotTag,
     exportMistakes,
     isExporting,
     exportError,

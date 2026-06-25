@@ -43,6 +43,8 @@ pub struct MistakeFilter {
     #[serde(default)]
     pub search_text: Option<String>,
     #[serde(default)]
+    pub blind_spot_tag: Option<String>,
+    #[serde(default)]
     pub offset: Option<u32>,
     pub limit: Option<u32>,
 }

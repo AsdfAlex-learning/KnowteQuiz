@@ -56,6 +56,7 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
     let offset = filter.offset.unwrap_or(0) as usize;
     let limit = filter.limit.map(|value| value as usize);
     let search_lower = filter.search_text.as_ref().map(|s| s.to_lowercase());
+    let blind_spot_tag_lower = filter.blind_spot_tag.as_ref().map(|s| s.to_lowercase());
     let mut filtered = mistakes
         .iter()
         .filter(|entry| {
@@ -76,6 +77,18 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
                     || entry.correct_answer.to_lowercase().contains(needle.as_str())
                     || entry.explanation.to_lowercase().contains(needle.as_str())
                     || entry.note_title.to_lowercase().contains(needle.as_str())
+            })
+        })
+        .filter(|entry| {
+            blind_spot_tag_lower.as_ref().is_none_or(|needle| {
+                entry
+                    .diagnosis
+                    .as_ref()
+                    .is_some_and(|diagnosis| {
+                        diagnosis.final_report.blind_spots.iter().any(|spot| {
+                            spot.tag.to_lowercase().contains(needle.as_str())
+                        })
+                    })
             })
         })
         .cloned()
@@ -211,6 +224,7 @@ mod tests {
             mode: Some(MistakeMode::Advanced),
             note_path: Some("/notes/rust.md".to_string()),
             search_text: None,
+            blind_spot_tag: None,
             offset: Some(1),
             limit: Some(1),
         };
@@ -271,6 +285,7 @@ mod tests {
             mode: None,
             note_path: None,
             search_text: Some("owner".to_string()),
+            blind_spot_tag: None,
             offset: None,
             limit: None,
         };
@@ -278,5 +293,53 @@ mod tests {
         let filtered = filter_mistakes(&all, &filter);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].id, "a");
+    }
+
+    #[test]
+    fn filter_mistakes_filters_by_blind_spot_tag() {
+        let mut ownership = mistake(
+            "ownership",
+            "/notes/rust.md",
+            "What moves a String?",
+            MistakeMode::Advanced,
+            "2026-01-03T00:00:00Z",
+        );
+        ownership.diagnosis = Some(crate::models::mistake::DiagnosisContext {
+            rounds: 1,
+            conversation: vec![],
+            final_report: crate::models::diagnosis::DiagnosisReport {
+                summary: "Needs ownership review".to_string(),
+                blind_spots: vec![crate::models::diagnosis::BlindSpot {
+                    tag: "Ownership transfer".to_string(),
+                    severity: "high".to_string(),
+                    description: "Confuses move and copy".to_string(),
+                    note_reference: "Ownership chapter".to_string(),
+                    suggestion: "Review move semantics".to_string(),
+                }],
+                overall_level: "beginner".to_string(),
+                next_steps: vec![],
+            },
+        });
+        let borrowing = mistake(
+            "borrowing",
+            "/notes/rust.md",
+            "What is a reference?",
+            MistakeMode::Advanced,
+            "2026-01-02T00:00:00Z",
+        );
+
+        let filter = MistakeFilter {
+            mode: None,
+            note_path: None,
+            search_text: None,
+            blind_spot_tag: Some("ownership".to_string()),
+            offset: None,
+            limit: None,
+        };
+
+        let filtered = filter_mistakes(&[ownership, borrowing], &filter);
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].id, "ownership");
     }
 }

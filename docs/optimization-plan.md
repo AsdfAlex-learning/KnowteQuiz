@@ -219,7 +219,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 按笔记过滤（`MistakeFilter.note_path`）
 - ✅ 按模式过滤：Basic / Advanced（`ErrorBook.vue` 中的 filter bar）
 - ✅ 按时间排序（降序排列）
-- ❌ 按知识盲区标签过滤
+- ✅ 按知识盲区标签过滤（`MistakeFilter.blind_spot_tag`，覆盖 Rust 服务、前端服务、Pinia store 和 ErrorBook UI）
 - ✅ 标记已复习（`feat: mistake review flow`）
 - ✅ 复习次数（`MistakeEntry.review_count` + "Mark Reviewed" 按钮）
 - ✅ 最近复习时间（`MistakeEntry.last_reviewed_at`）
@@ -235,7 +235,7 @@ KnowteQuiz 的方向是正确的：
 
 ### 1. Rust 单元测试 ✅
 
-已添加 47 个 `#[test]` 测试，重点覆盖：
+已添加 48 个 `#[test]` 测试，重点覆盖：
 
 - ✅ JSON 原子写入
 - ✅ `.bak` 恢复
@@ -247,16 +247,18 @@ KnowteQuiz 的方向是正确的：
 - ✅ session 清理
 - ✅ debug 日志
 - ✅ 错题搜索过滤
+- ✅ 错题按知识盲区标签过滤
 
 ### 2. 前端服务测试 ✅
 
-已添加 21 个测试文件，共 121 个测试用例：
+已添加 22 个测试文件，共 123 个测试用例：
 
 - ✅ `webStream()` SSE 解析（`tauri.test.ts`）
 - ✅ services 的 Tauri / Web 分支（`settings.test.ts`、`quiz.test.ts`、`mistake.test.ts`...）
 - ✅ quiz store 状态流转（`quiz.test.ts`）
 - ✅ settings store 持久化流程
 - ✅ 错题导出测试
+- ✅ 错题盲区标签过滤测试
 - ✅ heading 提取测试
 
 ### 3. 冒烟流程 ✅
@@ -348,8 +350,8 @@ KnowteQuiz 的方向是正确的：
 | P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
 | P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ ~95% | schema 校验、多题型支持、raw 日志、阶段进度、自动修复、能力探测 | — |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~95% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、复习、扫描取消、工作区切换清理 | index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 47 Rust + 121 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~98% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、复习、盲区标签过滤、扫描取消、工作区切换清理 | index.json |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 48 Rust + 123 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
 
 ### 最推荐下一步
 
@@ -373,4 +375,3 @@ KnowteQuiz 的方向是正确的：
 
 后续可选方向：
 - 轻量索引 index.json
-- 按知识盲区标签过滤错题

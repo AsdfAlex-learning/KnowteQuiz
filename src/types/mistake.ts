@@ -28,6 +28,7 @@ export interface MistakeFilter {
   mode?: MistakeMode
   note_path?: string
   search_text?: string
+  blind_spot_tag?: string
   offset?: number
   limit?: number
 }

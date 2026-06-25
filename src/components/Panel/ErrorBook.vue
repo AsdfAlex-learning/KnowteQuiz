@@ -46,13 +46,20 @@
     </div>
 
     <!-- Search bar -->
-    <div class="px-3 pt-2">
+    <div class="px-3 pt-2 grid grid-cols-1 gap-2">
       <input
         v-model="searchQuery"
         type="text"
         placeholder="Search mistakes..."
         class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
         @input="handleSearch"
+      />
+      <input
+        v-model="blindSpotQuery"
+        type="text"
+        placeholder="Filter blind spot tag..."
+        class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
+        @input="handleBlindSpotFilter"
       />
     </div>
 
@@ -124,6 +131,7 @@ const filters: { value: FilterValue; label: string }[] = [
 
 const selectedId = ref<string | null>(null)
 const searchQuery = ref('')
+const blindSpotQuery = ref('')
 const mistakeStore = useMistakeStore()
 const navigationStore = useNavigationStore()
 
@@ -149,12 +157,21 @@ async function handleExport(format: 'json' | 'markdown') {
 }
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+let blindSpotTimer: ReturnType<typeof setTimeout> | null = null
 
 function handleSearch() {
   if (searchTimer) clearTimeout(searchTimer)
   searchTimer = setTimeout(async () => {
     selectedId.value = null
     await mistakeStore.setSearchText(searchQuery.value)
+  }, 250)
+}
+
+function handleBlindSpotFilter() {
+  if (blindSpotTimer) clearTimeout(blindSpotTimer)
+  blindSpotTimer = setTimeout(async () => {
+    selectedId.value = null
+    await mistakeStore.setBlindSpotTag(blindSpotQuery.value)
   }, 250)
 }
 

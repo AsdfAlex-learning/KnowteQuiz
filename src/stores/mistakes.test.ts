@@ -145,6 +145,32 @@ describe('mistake store save state', () => {
     expect(store.hasMore).toBe(false)
   })
 
+  it('loads pages with the active blind spot tag filter', async () => {
+    vi.mocked(mistakeService.loadMistakes)
+      .mockResolvedValueOnce(Array.from({ length: 20 }, (_, i) => mistake(`m${i + 1}`, 'advanced')))
+      .mockResolvedValueOnce([mistake('m21', 'advanced')])
+    const store = useMistakeStore()
+
+    await store.setBlindSpotTag('ownership')
+    await store.loadNextPage()
+
+    expect(mistakeService.loadMistakes).toHaveBeenNthCalledWith(1, {
+      mode: undefined,
+      search_text: undefined,
+      blind_spot_tag: 'ownership',
+      offset: 0,
+      limit: 20,
+    })
+    expect(mistakeService.loadMistakes).toHaveBeenNthCalledWith(2, {
+      mode: undefined,
+      search_text: undefined,
+      blind_spot_tag: 'ownership',
+      offset: 20,
+      limit: 20,
+    })
+    expect(store.items).toHaveLength(21)
+  })
+
   it('records detailed list load errors from the service', async () => {
     vi.mocked(mistakeService.loadMistakes).mockRejectedValue(new Error('HTTP 500: Failed to parse mistakes.json'))
     const store = useMistakeStore()

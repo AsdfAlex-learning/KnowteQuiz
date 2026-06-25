@@ -33,12 +33,13 @@ describe('mistake service', () => {
       mode: 'advanced',
       note_path: '/notes/rust.md',
       search_text: 'owner',
+      blind_spot_tag: 'ownership transfer',
       offset: 20,
       limit: 10,
-    } as any)
+    })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/mistakes?mode=advanced&note_path=%2Fnotes%2Frust.md&search_text=owner&offset=20&limit=10',
+      '/api/mistakes?mode=advanced&note_path=%2Fnotes%2Frust.md&search_text=owner&blind_spot_tag=ownership+transfer&offset=20&limit=10',
     )
   })
 
