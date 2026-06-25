@@ -98,6 +98,16 @@ fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Resul
     Ok(())
 }
 
+fn discard_diagnosis_session(state: &AppState, session_id: &str) -> Result<(), String> {
+    diagnosis_session_service::delete_session(&state.data_dir, session_id)?;
+    let mut sessions = state
+        .diagnosis_sessions
+        .lock()
+        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+    sessions.remove(session_id);
+    Ok(())
+}
+
 fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
     if session.final_report.is_some() {
         diagnosis_session_service::delete_session(&state.data_dir, &session.session_id)?;
@@ -401,6 +411,7 @@ async fn submit_diagnosis_handler(
                 }
             }
             Err(err) => {
+                let _ = discard_diagnosis_session(&app_state, &session_id);
                 let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
             }
         }
@@ -535,6 +546,23 @@ mod tests {
 
         assert_eq!(loaded.session_id, "session-from-disk");
         assert_eq!(loaded.question, "What is ownership?");
+    }
+
+    #[test]
+    fn discard_diagnosis_session_removes_memory_and_disk_state() {
+        let data_dir = temp_data_dir("discard_diagnosis_session_removes_memory_and_disk_state");
+        let session = diagnosis_session("discard-me");
+        let state = AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        };
+        cache_diagnosis_session(&state, session).expect("session should be cached");
+
+        discard_diagnosis_session(&state, "discard-me").expect("session should discard");
+
+        let load_error = load_diagnosis_session(&state, "discard-me")
+            .expect_err("discarded session should not load");
+        assert!(load_error.contains("File not found"));
     }
 
     #[test]
