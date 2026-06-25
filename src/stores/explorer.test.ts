@@ -4,6 +4,7 @@ import { useExplorerStore } from './explorer'
 import * as noteService from '../services/note'
 import * as settingsService from '../services/settings'
 import { defaultSettings } from '../utils/defaults'
+import type { NoteTreeNode } from '../types/note'
 
 vi.mock('../services/note', () => ({
   selectFolder: vi.fn(),
@@ -101,4 +102,55 @@ describe('explorer store workspace persistence', () => {
     expect(store.error).toContain('Directory does not exist')
     expect(settingsService.saveSettings).not.toHaveBeenCalled()
   })
+
+  it('ignores stale root scans when a newer root path finishes first', async () => {
+    const settings = defaultSettings()
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    const firstScan = deferredTree()
+    const secondScan = deferredTree()
+    const newTree = [
+      { name: 'new.md', path: '/new/new.md', is_dir: false, children: [] },
+    ]
+    vi.mocked(noteService.scanNotes)
+      .mockReturnValueOnce(firstScan.promise)
+      .mockReturnValueOnce(secondScan.promise)
+    const store = useExplorerStore()
+
+    const firstOpen = store.openRootPath('/old')
+    const secondOpen = store.openRootPath('/new')
+
+    secondScan.resolve(newTree)
+    await secondOpen
+    expect(store.rootPath).toBe('/new')
+    expect(store.tree).toEqual(newTree)
+
+    firstScan.resolve([
+      { name: 'old.md', path: '/old/old.md', is_dir: false, children: [] },
+    ])
+    await firstOpen
+
+    expect(store.rootPath).toBe('/new')
+    expect(store.tree).toEqual(newTree)
+    expect(settingsService.saveSettings).toHaveBeenCalledTimes(1)
+    expect(settingsService.saveSettings).toHaveBeenCalledWith({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        root_path: '/new',
+        expanded_dirs: [],
+        selected_path: null,
+      },
+    })
+  })
 })
+
+function deferredTree() {
+  let resolve!: (value: NoteTreeNode[]) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<NoteTreeNode[]>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}

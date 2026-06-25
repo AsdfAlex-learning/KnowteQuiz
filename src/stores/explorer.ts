@@ -12,6 +12,7 @@ export const useExplorerStore = defineStore('explorer', () => {
   const loading = ref(false)
   const isLoading = loading
   const error = ref<string | null>(null)
+  let scanRequestId = 0
 
   async function chooseFolder() {
     try {
@@ -25,30 +26,38 @@ export const useExplorerStore = defineStore('explorer', () => {
   }
 
   async function openRootPath(path: string) {
+    const requestId = nextScanRequest()
     loading.value = true
     error.value = null
     try {
       const nextTree = await scanNotes(path)
+      if (!isLatestScan(requestId)) return
       rootPath.value = path
       tree.value = nextTree
       await persistWorkspace()
     } catch (e) {
+      if (!isLatestScan(requestId)) return
       error.value = String(e)
     } finally {
-      loading.value = false
+      finishScan(requestId)
     }
   }
 
   async function loadTree() {
     if (!rootPath.value) return
+    const requestId = nextScanRequest()
+    const path = rootPath.value
     loading.value = true
     error.value = null
     try {
-      tree.value = await scanNotes(rootPath.value)
+      const nextTree = await scanNotes(path)
+      if (!isLatestScan(requestId)) return
+      tree.value = nextTree
     } catch (e) {
+      if (!isLatestScan(requestId)) return
       error.value = String(e)
     } finally {
-      loading.value = false
+      finishScan(requestId)
     }
   }
 
@@ -67,20 +76,25 @@ export const useExplorerStore = defineStore('explorer', () => {
   }
 
   async function restoreWorkspace() {
+    const requestId = nextScanRequest()
     loading.value = true
     error.value = null
     try {
       const settings = await getSettings()
+      if (!isLatestScan(requestId)) return
       rootPath.value = settings.workspace.root_path ?? null
       expandedDirs.value = new Set(settings.workspace.expanded_dirs ?? [])
       selectedPath.value = settings.workspace.selected_path ?? null
       if (rootPath.value) {
-        tree.value = await scanNotes(rootPath.value)
+        const nextTree = await scanNotes(rootPath.value)
+        if (!isLatestScan(requestId)) return
+        tree.value = nextTree
       }
     } catch (e) {
+      if (!isLatestScan(requestId)) return
       error.value = String(e)
     } finally {
-      loading.value = false
+      finishScan(requestId)
     }
   }
 
@@ -98,6 +112,21 @@ export const useExplorerStore = defineStore('explorer', () => {
       })
     } catch (e) {
       error.value = String(e)
+    }
+  }
+
+  function nextScanRequest() {
+    scanRequestId += 1
+    return scanRequestId
+  }
+
+  function isLatestScan(requestId: number) {
+    return requestId === scanRequestId
+  }
+
+  function finishScan(requestId: number) {
+    if (isLatestScan(requestId)) {
+      loading.value = false
     }
   }
 
