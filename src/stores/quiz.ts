@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { QuizQuestion, DiagnosisRound, DiagnosisReport } from '../types'
 import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz'
 import type { QuizStreamParams } from '../types/quiz'
+import type { DiagnosisContext } from '../types/mistake'
 import { isQuizAnswerCorrect } from '../utils/answer'
 
 export type QuizMode = 'basic' | 'advanced'
@@ -18,6 +19,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const sessionId = ref<string | null>(null)
   const diagnosisMessages = ref<DiagnosisRound[]>([])
   const diagnosisReport = ref<DiagnosisReport | null>(null)
+  const advancedReasoning = ref<Map<string, string>>(new Map())
+  const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map())
   const generatingError = ref<string | null>(null)
   const generatingPhase = ref<string | null>(null)
 
@@ -53,6 +56,8 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionId.value = null
     diagnosisMessages.value = []
     diagnosisReport.value = null
+    advancedReasoning.value = new Map()
+    diagnosisContexts.value = new Map()
     generatingError.value = null
   }
 
@@ -85,6 +90,31 @@ export const useQuizStore = defineStore('quiz', () => {
   function setDiagnosisReport(report: DiagnosisReport) {
     diagnosisReport.value = report
     quizState.value = 'report'
+  }
+
+  function recordAdvancedContext(
+    questionId: string,
+    reasoning: string,
+    conversation: DiagnosisRound[],
+    report: DiagnosisReport,
+  ) {
+    const trimmedReasoning = reasoning.trim()
+    if (trimmedReasoning) {
+      advancedReasoning.value.set(questionId, trimmedReasoning)
+    }
+    diagnosisContexts.value.set(questionId, {
+      rounds: conversation.length,
+      conversation: [...conversation],
+      final_report: report,
+    })
+  }
+
+  function advancedReasoningFor(questionId: string): string | undefined {
+    return advancedReasoning.value.get(questionId)
+  }
+
+  function diagnosisContextFor(questionId: string): DiagnosisContext | undefined {
+    return diagnosisContexts.value.get(questionId)
   }
 
   function clearDiagnosis() {
@@ -195,11 +225,13 @@ export const useQuizStore = defineStore('quiz', () => {
 
   return {
     mode, quizState, questions, currentIndex, answers, userReasoning,
-    sessionId, diagnosisMessages, diagnosisReport, generatingError, generatingPhase,
+    sessionId, diagnosisMessages, diagnosisReport, advancedReasoning, diagnosisContexts,
+    generatingError, generatingPhase,
     currentQuestion, totalQuestions, isGenerating, hasSession, hasQuestions,
     showResults, isLastQuestion, userAnswers, progress, score,
     setMode, reset, resetQuiz, addQuestion, setAnswer, submitAnswer, nextQuestion,
-    finishQuiz, addDiagnosisMessage, setDiagnosisReport, clearDiagnosis,
+    finishQuiz, addDiagnosisMessage, setDiagnosisReport, recordAdvancedContext,
+    advancedReasoningFor, diagnosisContextFor, clearDiagnosis,
     startQuiz, startDiagnosis, continueDiagnosis, finishDiagnosis,
   }
 })

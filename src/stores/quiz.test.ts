@@ -296,6 +296,28 @@ describe('quiz store answer evaluation', () => {
     expect(store.diagnosisReport).toBeNull()
     expect(store.quizState).toBe('answering')
   })
+
+  it('stores advanced diagnosis context per question and clears it on reset', () => {
+    const store = useQuizStore()
+    const conversation = [
+      { role: 'ai' as const, content: 'Review the definition.', blind_spots: [] },
+      { role: 'user' as const, content: 'I mixed up two terms.', blind_spots: [] },
+    ]
+
+    store.recordAdvancedContext('q1', 'I chose A because...', conversation, report)
+
+    expect(store.advancedReasoningFor('q1')).toBe('I chose A because...')
+    expect(store.diagnosisContextFor('q1')).toEqual({
+      rounds: 2,
+      conversation,
+      final_report: report,
+    })
+
+    store.reset()
+
+    expect(store.advancedReasoningFor('q1')).toBeUndefined()
+    expect(store.diagnosisContextFor('q1')).toBeUndefined()
+  })
 })
 
 describe('quiz store generation phase', () => {

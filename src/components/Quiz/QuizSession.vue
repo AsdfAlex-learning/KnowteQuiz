@@ -268,6 +268,15 @@ function handleNext() {
 }
 
 function handleNextAfterReport() {
+  if (currentQuestion.value && quizStore.diagnosisReport) {
+    quizStore.recordAdvancedContext(
+      currentQuestion.value.id,
+      reasoning.value,
+      quizStore.diagnosisMessages,
+      quizStore.diagnosisReport,
+    )
+  }
+
   if (quizStore.isLastQuestion) {
     quizStore.finishQuiz()
   } else {

@@ -86,7 +86,7 @@ import { isQuizAnswerCorrect } from '@/utils/answer'
 import type { QuizQuestion } from '@/types/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
 import type { QuizMode } from '@/stores/quiz'
-import type { MistakeEntry } from '@/types/mistake'
+import type { DiagnosisContext, MistakeEntry } from '@/types/mistake'
 
 const props = defineProps<{
   mode: QuizMode
@@ -134,6 +134,10 @@ async function handleSaveMistake(q: QuizQuestion) {
   const userAnswer = answers.value.get(q.id) || ''
   const notePath = explorerStore.selectedPath || ''
   const noteTitle = readerStore.currentNote?.title || ''
+  const questionReasoning = props.mode === 'advanced'
+    ? quizStore.advancedReasoningFor(q.id) ?? props.reasoning
+    : props.reasoning
+  const questionDiagnosis = diagnosisFor(q.id)
 
   const entry: MistakeEntry = {
     id: crypto.randomUUID(),
@@ -144,16 +148,24 @@ async function handleSaveMistake(q: QuizQuestion) {
     correct_answer: q.answer,
     explanation: q.explanation,
     mode: props.mode,
-    user_reasoning: props.reasoning || undefined,
-    diagnosis: props.diagnosisReport ? {
-      rounds: 1,
-      conversation: [],
-      final_report: props.diagnosisReport,
-    } : undefined,
+    user_reasoning: questionReasoning || undefined,
+    diagnosis: questionDiagnosis,
     created_at: new Date().toISOString(),
     review_count: 0,
   }
 
   await mistakeStore.saveEntry(q.id, entry)
+}
+
+function diagnosisFor(questionId: string): DiagnosisContext | undefined {
+  if (props.mode !== 'advanced') return undefined
+  return quizStore.diagnosisContextFor(questionId)
+    ?? (props.diagnosisReport
+      ? {
+          rounds: 1,
+          conversation: [],
+          final_report: props.diagnosisReport,
+        }
+      : undefined)
 }
 </script>
