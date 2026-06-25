@@ -268,15 +268,14 @@ function handleNext() {
 }
 
 function handleNextAfterReport() {
-  submitted.value = false
-  selectedOptions.value = []
-  shortAnswer.value = ''
-  reasoning.value = ''
-  quizStore.clearDiagnosis()
-
   if (quizStore.isLastQuestion) {
     quizStore.finishQuiz()
   } else {
+    submitted.value = false
+    selectedOptions.value = []
+    shortAnswer.value = ''
+    reasoning.value = ''
+    quizStore.clearDiagnosis()
     quizStore.nextQuestion()
   }
 }
