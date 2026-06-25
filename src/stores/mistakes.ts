@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { exportMistakes as exportMistakesService, loadMistakes, saveMistake } from '../services/mistake'
+import {
+  exportMistakes as exportMistakesService,
+  loadMistakes,
+  markMistakeReviewed,
+  saveMistake,
+} from '../services/mistake'
 import type { MistakeEntry, MistakeMode } from '../types/mistake'
 
 const PAGE_SIZE = 20
@@ -15,6 +20,8 @@ export const useMistakeStore = defineStore('mistakes', () => {
   const savingIds = ref(new Set<string>())
   const savedIds = ref(new Set<string>())
   const errors = ref(new Map<string, string>())
+  const reviewingIds = ref(new Set<string>())
+  const reviewErrors = ref(new Map<string, string>())
 
   function isSaving(key: string): boolean {
     return savingIds.value.has(key)
@@ -26,6 +33,14 @@ export const useMistakeStore = defineStore('mistakes', () => {
 
   function errorFor(key: string): string | null {
     return errors.value.get(key) ?? null
+  }
+
+  function isReviewing(id: string): boolean {
+    return reviewingIds.value.has(id)
+  }
+
+  function reviewErrorFor(id: string): string | null {
+    return reviewErrors.value.get(id) ?? null
   }
 
   function clearSaveState(): void {
@@ -95,6 +110,36 @@ export const useMistakeStore = defineStore('mistakes', () => {
     await loadPage(0)
   }
 
+  async function markReviewed(mistakeId: string): Promise<boolean> {
+    if (isReviewing(mistakeId)) return false
+
+    reviewingIds.value.add(mistakeId)
+    reviewErrors.value.delete(mistakeId)
+    try {
+      const reviewed = await markMistakeReviewed(mistakeId)
+      if (!reviewed) {
+        reviewErrors.value.set(mistakeId, 'Mistake was not marked reviewed')
+        return false
+      }
+
+      const reviewedAt = new Date().toISOString()
+      items.value = items.value.map((item) => {
+        if (item.id !== mistakeId) return item
+        return {
+          ...item,
+          review_count: item.review_count + 1,
+          last_reviewed_at: reviewedAt,
+        }
+      })
+      return true
+    } catch (e) {
+      reviewErrors.value.set(mistakeId, e instanceof Error ? e.message : String(e))
+      return false
+    } finally {
+      reviewingIds.value.delete(mistakeId)
+    }
+  }
+
   const exportError = ref<string | null>(null)
   const isExporting = ref(false)
 
@@ -120,16 +165,21 @@ export const useMistakeStore = defineStore('mistakes', () => {
     hasMore,
     savingIds,
     savedIds,
+    reviewingIds,
     errors,
+    reviewErrors,
     isSaving,
     isSaved,
     errorFor,
+    isReviewing,
+    reviewErrorFor,
     clearSaveState,
     saveEntry,
     loadPage,
     loadNextPage,
     setModeFilter,
     setSearchText,
+    markReviewed,
     searchText,
     exportMistakes,
     isExporting,

@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MistakeDetail from './MistakeDetail.vue'
+import { useMistakeStore } from '@/stores/mistakes'
 import type { MistakeEntry } from '@/types/mistake'
-
-vi.mock('@/services/mistake', () => ({
-  markMistakeReviewed: vi.fn(),
-}))
 
 function advancedMistake(): MistakeEntry {
   return {
@@ -44,6 +42,11 @@ function advancedMistake(): MistakeEntry {
 }
 
 describe('MistakeDetail', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
   it('renders diagnosis final report from advanced mistake context', () => {
     const wrapper = mount(MistakeDetail, {
       props: {
@@ -55,5 +58,22 @@ describe('MistakeDetail', () => {
     expect(wrapper.text()).toContain('Ownership transfer')
     expect(wrapper.text()).toContain('Needs review')
     expect(wrapper.text()).toContain('Re-read ownership notes')
+  })
+
+  it('marks the visible mistake as reviewed through the mistake store', async () => {
+    const wrapper = mount(MistakeDetail, {
+      global: {
+        plugins: [createPinia()],
+      },
+      props: {
+        mistake: advancedMistake(),
+      },
+    })
+    const store = useMistakeStore()
+    store.markReviewed = vi.fn().mockResolvedValue(true)
+
+    await wrapper.get('button:last-of-type').trigger('click')
+
+    expect(store.markReviewed).toHaveBeenCalledWith('m1')
   })
 })

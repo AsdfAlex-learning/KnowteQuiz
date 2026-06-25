@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMistakeStore } from './mistakes'
 import * as mistakeService from '../services/mistake'
 import type { MistakeEntry, MistakeMode } from '../types/mistake'
@@ -7,6 +7,7 @@ import type { MistakeEntry, MistakeMode } from '../types/mistake'
 vi.mock('../services/mistake', () => ({
   loadMistakes: vi.fn(),
   saveMistake: vi.fn(),
+  markMistakeReviewed: vi.fn(),
   exportMistakes: vi.fn(),
 }))
 
@@ -29,6 +30,10 @@ describe('mistake store save state', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('prevents duplicate saves while a mistake is already saving', async () => {
@@ -148,6 +153,22 @@ describe('mistake store save state', () => {
 
     expect(store.listError).toContain('Failed to parse mistakes.json')
     expect(store.loading).toBe(false)
+  })
+
+  it('updates a listed mistake after marking it reviewed', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-26T12:30:00.000Z'))
+    vi.mocked(mistakeService.markMistakeReviewed).mockResolvedValue(true)
+    const store = useMistakeStore()
+    store.items = [mistake('m1'), mistake('m2')]
+
+    const result = await store.markReviewed('m1')
+
+    expect(result).toBe(true)
+    expect(mistakeService.markMistakeReviewed).toHaveBeenCalledWith('m1')
+    expect(store.items[0].review_count).toBe(1)
+    expect(store.items[0].last_reviewed_at).toBe('2026-06-26T12:30:00.000Z')
+    expect(store.items[1].review_count).toBe(0)
   })
 })
 

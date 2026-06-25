@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { exportMistakes, loadMistakes } from './mistake'
+import { exportMistakes, loadMistakes, markMistakeReviewed } from './mistake'
 import type { MistakeEntry } from '../types/mistake'
 
 function mockMistake(id = 'm1'): MistakeEntry {
@@ -50,6 +50,23 @@ describe('mistake service', () => {
     })))
 
     await expect(loadMistakes()).rejects.toThrow('Failed to parse mistakes.json')
+  })
+
+  it('marks a mistake reviewed through the web endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => true,
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await markMistakeReviewed('m1')
+
+    expect(result).toBe(true)
+    expect(fetchMock).toHaveBeenCalledWith('/api/mistakes/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mistake_id: 'm1' }),
+    })
   })
 })
 

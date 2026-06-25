@@ -125,7 +125,7 @@
 import { computed, ref } from 'vue'
 import type { MistakeEntry } from '@/types/mistake'
 import type { DiagnosisReport } from '@/types/diagnosis'
-import { markMistakeReviewed } from '@/services/mistake'
+import { useMistakeStore } from '@/stores/mistakes'
 
 const props = defineProps<{
   mistake: MistakeEntry
@@ -137,11 +137,12 @@ defineEmits<{
 }>()
 
 const marking = ref(false)
+const mistakeStore = useMistakeStore()
 
 async function handleMarkReviewed() {
   marking.value = true
   try {
-    await markMistakeReviewed(props.mistake.id)
+    await mistakeStore.markReviewed(props.mistake.id)
   } catch {
     // silently fail - the button state is cosmetic
   } finally {
