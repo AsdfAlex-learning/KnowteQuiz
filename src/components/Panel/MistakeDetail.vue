@@ -103,15 +103,21 @@
     <button
       class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
       :class="
-        marking
+        isReviewing
           ? 'border-[var(--border-default)] text-[var(--text-muted)] cursor-wait'
           : 'border-[var(--accent-green)]/30 text-[var(--accent-green)] hover:bg-[var(--accent-green)]/10'
       "
-      :disabled="marking"
+      :disabled="isReviewing"
       @click="handleMarkReviewed"
     >
-      {{ marking ? 'Marking...' : (mistake.review_count > 0 ? `Reviewed ${mistake.review_count}x` : 'Mark Reviewed') }}
+      {{ isReviewing ? 'Marking...' : (mistake.review_count > 0 ? `Reviewed ${mistake.review_count}x` : 'Mark Reviewed') }}
     </button>
+    <p
+      v-if="reviewError"
+      class="text-[11px] text-[var(--color-error)]"
+    >
+      {{ reviewError }}
+    </p>
     <span
       v-if="mistake.last_reviewed_at"
       class="text-[11px] text-[var(--text-faint)]"
@@ -122,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import type { MistakeEntry } from '@/types/mistake'
 import type { DiagnosisReport } from '@/types/diagnosis'
 import { useMistakeStore } from '@/stores/mistakes'
@@ -136,18 +142,12 @@ defineEmits<{
   openNote: [path: string]
 }>()
 
-const marking = ref(false)
 const mistakeStore = useMistakeStore()
+const isReviewing = computed(() => mistakeStore.isReviewing(props.mistake.id))
+const reviewError = computed(() => mistakeStore.reviewErrorFor(props.mistake.id))
 
 async function handleMarkReviewed() {
-  marking.value = true
-  try {
-    await mistakeStore.markReviewed(props.mistake.id)
-  } catch {
-    // silently fail - the button state is cosmetic
-  } finally {
-    marking.value = false
-  }
+  await mistakeStore.markReviewed(props.mistake.id)
 }
 
 function formatLastReviewed(dateStr: string): string {

@@ -170,6 +170,17 @@ describe('mistake store save state', () => {
     expect(store.items[0].last_reviewed_at).toBe('2026-06-26T12:30:00.000Z')
     expect(store.items[1].review_count).toBe(0)
   })
+
+  it('records review errors and clears the reviewing state', async () => {
+    vi.mocked(mistakeService.markMistakeReviewed).mockRejectedValue(new Error('disk full'))
+    const store = useMistakeStore()
+
+    const result = await store.markReviewed('m1')
+
+    expect(result).toBe(false)
+    expect(store.isReviewing('m1')).toBe(false)
+    expect(store.reviewErrorFor('m1')).toBe('disk full')
+  })
 })
 
 describe('mistake store export', () => {

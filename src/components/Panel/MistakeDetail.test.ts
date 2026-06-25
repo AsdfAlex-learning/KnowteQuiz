@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, type Pinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import MistakeDetail from './MistakeDetail.vue'
 import { useMistakeStore } from '@/stores/mistakes'
@@ -42,8 +42,11 @@ function advancedMistake(): MistakeEntry {
 }
 
 describe('MistakeDetail', () => {
+  let pinia: Pinia
+
   beforeEach(() => {
-    setActivePinia(createPinia())
+    pinia = createPinia()
+    setActivePinia(pinia)
     vi.clearAllMocks()
   })
 
@@ -63,7 +66,7 @@ describe('MistakeDetail', () => {
   it('marks the visible mistake as reviewed through the mistake store', async () => {
     const wrapper = mount(MistakeDetail, {
       global: {
-        plugins: [createPinia()],
+        plugins: [pinia],
       },
       props: {
         mistake: advancedMistake(),
@@ -75,5 +78,39 @@ describe('MistakeDetail', () => {
     await wrapper.get('button:last-of-type').trigger('click')
 
     expect(store.markReviewed).toHaveBeenCalledWith('m1')
+  })
+
+  it('disables the review button while the mistake is being reviewed', () => {
+    const store = useMistakeStore()
+    store.isReviewing = vi.fn(() => true)
+
+    const wrapper = mount(MistakeDetail, {
+      global: {
+        plugins: [pinia],
+      },
+      props: {
+        mistake: advancedMistake(),
+      },
+    })
+
+    const button = wrapper.get('button:last-of-type')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.text()).toBe('Marking...')
+  })
+
+  it('shows the review error for the visible mistake', () => {
+    const store = useMistakeStore()
+    store.reviewErrorFor = vi.fn(() => 'Could not write mistakes.json')
+
+    const wrapper = mount(MistakeDetail, {
+      global: {
+        plugins: [pinia],
+      },
+      props: {
+        mistake: advancedMistake(),
+      },
+    })
+
+    expect(wrapper.text()).toContain('Could not write mistakes.json')
   })
 })
