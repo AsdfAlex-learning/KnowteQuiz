@@ -44,7 +44,7 @@ fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, String>
                 is_dir: true,
                 children,
             });
-        } else if path.extension().is_some_and(|ext| ext == "md") {
+        } else if is_markdown_file(&path) {
             files.push(NoteTreeNode {
                 name,
                 path: full_path,
@@ -74,6 +74,16 @@ fn should_ignore_entry(name: &str) -> bool {
             | "build"
             | ".sisyphus"
     ) || name.starts_with('.')
+}
+
+fn is_markdown_file(path: &Path) -> bool {
+    matches!(
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_ascii_lowercase())
+            .as_deref(),
+        Some("md" | "markdown")
+    )
 }
 
 pub fn read_file_content(path: &str) -> Result<String, String> {
@@ -112,5 +122,20 @@ mod tests {
 
         assert_eq!(tree.len(), 1);
         assert_eq!(tree[0].name, "real.md");
+    }
+
+    #[test]
+    fn scan_directory_accepts_markdown_extensions_case_insensitively() {
+        let root =
+            temp_notes_dir("scan_directory_accepts_markdown_extensions_case_insensitively");
+        fs::write(root.join("README.MD"), "# Readme").expect("uppercase note should be written");
+        fs::write(root.join("longform.Markdown"), "# Longform")
+            .expect("markdown note should be written");
+        fs::write(root.join("draft.mdx"), "# Draft").expect("mdx file should be written");
+
+        let tree = scan_directory(root.to_string_lossy().as_ref()).expect("scan should succeed");
+        let names = tree.iter().map(|node| node.name.as_str()).collect::<Vec<_>>();
+
+        assert_eq!(names, vec!["README.MD", "longform.Markdown"]);
     }
 }

@@ -78,8 +78,7 @@ const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path
 const isSelected = computed(() => explorerStore.selectedPath === props.node.path)
 
 const displayName = computed(() => {
-  // Strip .md extension for display
-  return props.node.name.replace(/\.md$/i, '')
+  return props.node.name.replace(/\.(md|markdown)$/i, '')
 })
 </script>
 
