@@ -80,6 +80,35 @@ describe('navigation store', () => {
     expect(settingsService.saveSettings).not.toHaveBeenCalled()
   })
 
+  it('clears a saved selected path when workspace restore cannot read it', async () => {
+    const settings = defaultSettings()
+    settings.workspace.root_path = '/notes'
+    settings.workspace.selected_path = '/notes/deleted.md'
+    vi.mocked(settingsService.getSettings).mockResolvedValue(settings)
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true)
+    vi.mocked(noteService.readNote).mockRejectedValue(new Error('File not found'))
+    const navigationStore = useNavigationStore()
+    const explorerStore = useExplorerStore()
+    const readerStore = useReaderStore()
+    explorerStore.rootPath = '/notes'
+    explorerStore.selectedPath = '/notes/deleted.md'
+
+    await navigationStore.restoreSelectedNote()
+
+    expect(readerStore.currentNote).toBeNull()
+    expect(explorerStore.selectedPath).toBeNull()
+    expect(navigationStore.error).toContain('File not found')
+    expect(settingsService.saveSettings).toHaveBeenCalledWith({
+      ...settings,
+      workspace: {
+        ...settings.workspace,
+        root_path: '/notes',
+        expanded_dirs: [],
+        selected_path: null,
+      },
+    })
+  })
+
   it('opens a new root path and clears the note from the previous workspace', async () => {
     const settings = defaultSettings()
     settings.workspace = {

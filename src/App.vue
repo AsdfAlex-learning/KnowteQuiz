@@ -55,6 +55,7 @@ import { useLayoutStore } from './stores/layout'
 import { useReaderStore } from './stores/reader'
 import { useExplorerStore } from './stores/explorer'
 import { useSettingsStore } from './stores/settings'
+import { useNavigationStore } from './stores/navigation'
 import TitleBar from './components/Layout/TitleBar.vue'
 import StatusBar from './components/Layout/StatusBar.vue'
 import FolderSelector from './components/Explorer/FolderSelector.vue'
@@ -67,6 +68,7 @@ const layoutStore = useLayoutStore()
 const readerStore = useReaderStore()
 const explorerStore = useExplorerStore()
 const settingsStore = useSettingsStore()
+const navigationStore = useNavigationStore()
 const readerMain = ref<HTMLElement | null>(null)
 
 let pendingScrollSave: { path: string; top: number } | null = null
@@ -161,9 +163,7 @@ onMounted(async () => {
   layoutStore.loadLayout()
   await settingsStore.loadSettings()
   await explorerStore.restoreWorkspace()
-  if (explorerStore.selectedPath) {
-    await readerStore.loadNote(explorerStore.selectedPath)
-  }
+  await navigationStore.restoreSelectedNote()
   document.addEventListener('keydown', onKeyDown)
 })
 

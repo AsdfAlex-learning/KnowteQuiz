@@ -80,6 +80,11 @@ export const useExplorerStore = defineStore('explorer', () => {
     await persistWorkspace()
   }
 
+  async function clearSelectedPath() {
+    selectedPath.value = null
+    await persistWorkspace()
+  }
+
   async function restoreWorkspace() {
     const requestId = nextScanRequest()
     loading.value = true
@@ -137,6 +142,6 @@ export const useExplorerStore = defineStore('explorer', () => {
 
   return {
     rootPath, tree, expandedDirs, selectedPath, loading, isLoading, error,
-    chooseFolder, openRootPath, loadTree, toggleDir, selectPath, restoreWorkspace, persistWorkspace,
+    chooseFolder, openRootPath, loadTree, toggleDir, selectPath, clearSelectedPath, restoreWorkspace, persistWorkspace,
   }
 })

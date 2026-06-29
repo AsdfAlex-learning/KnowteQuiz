@@ -45,6 +45,26 @@ export const useNavigationStore = defineStore('navigation', () => {
     }
   }
 
+  async function restoreSelectedNote() {
+    const explorerStore = useExplorerStore()
+    const readerStore = useReaderStore()
+    if (!explorerStore.selectedPath) return
+
+    opening.value = true
+    error.value = null
+    try {
+      const loaded = await readerStore.loadNote(explorerStore.selectedPath)
+      if (!loaded) {
+        error.value = readerStore.error
+        await explorerStore.clearSelectedPath()
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      opening.value = false
+    }
+  }
+
   async function chooseFolder() {
     try {
       const path = await selectFolder()
@@ -61,6 +81,7 @@ export const useNavigationStore = defineStore('navigation', () => {
     error,
     openNote,
     openRootPath,
+    restoreSelectedNote,
     chooseFolder,
   }
 })
