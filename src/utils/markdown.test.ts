@@ -61,4 +61,34 @@ describe('extract headings for TOC', () => {
 
     expect(headings[0].id).toBe('what-is-rust')
   })
+
+  it('ignores heading-like lines inside fenced code blocks', () => {
+    const content = [
+      '# Real Title',
+      '```python',
+      '# Not a heading',
+      'print("hello")',
+      '```',
+      '## Real Section',
+      '~~~sh',
+      '### Also not a heading',
+      '~~~',
+    ].join('\n')
+
+    expect(extractHeadings(content)).toEqual([
+      { level: 1, text: 'Real Title', id: 'real-title' },
+      { level: 2, text: 'Real Section', id: 'real-section' },
+    ])
+  })
+
+  it('allows up to three leading spaces for headings but ignores indented code', () => {
+    const content = [
+      '   ## Valid Heading',
+      '    # Indented code',
+    ].join('\n')
+
+    expect(extractHeadings(content)).toEqual([
+      { level: 2, text: 'Valid Heading', id: 'valid-heading' },
+    ])
+  })
 })

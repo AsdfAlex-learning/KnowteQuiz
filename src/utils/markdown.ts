@@ -116,11 +116,25 @@ export interface TocHeading {
 }
 
 export function extractHeadings(content: string): TocHeading[] {
-  const headingRegex = /^(#{1,6})\s+(.+)$/gm
   const headings: TocHeading[] = []
-  let match: RegExpExecArray | null
+  const headingRegex = /^ {0,3}(#{1,6})\s+(.+)$/
+  let fenceMarker: string | null = null
 
-  while ((match = headingRegex.exec(content)) !== null) {
+  for (const line of content.split(/\r?\n/)) {
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})/)
+    if (fence) {
+      const marker = fence[1][0]
+      if (!fenceMarker) {
+        fenceMarker = marker
+      } else if (fenceMarker === marker) {
+        fenceMarker = null
+      }
+      continue
+    }
+    if (fenceMarker) continue
+
+    const match = line.match(headingRegex)
+    if (!match) continue
     const level = match[1].length
     const text = match[2].trim()
     const id = headingId(text)
