@@ -16,7 +16,7 @@ export const useReaderStore = defineStore('reader', () => {
     return currentNote.value.content.split(/\s+/).length
   })
 
-  async function loadNote(path: string) {
+  async function loadNote(path: string): Promise<boolean> {
     loading.value = true
     error.value = null
     try {
@@ -28,10 +28,12 @@ export const useReaderStore = defineStore('reader', () => {
         scrollTop.value = 0
       }
       currentNote.value = note
+      return true
     } catch (e) {
       error.value = String(e)
       currentNote.value = null
       scrollTop.value = 0
+      return false
     } finally {
       loading.value = false
     }

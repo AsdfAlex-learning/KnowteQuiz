@@ -14,8 +14,12 @@ export const useNavigationStore = defineStore('navigation', () => {
     const explorerStore = useExplorerStore()
     const readerStore = useReaderStore()
     try {
+      const loaded = await readerStore.loadNote(path)
+      if (!loaded) {
+        error.value = readerStore.error
+        return
+      }
       await explorerStore.selectPath(path)
-      await readerStore.loadNote(path)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
