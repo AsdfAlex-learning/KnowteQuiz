@@ -107,6 +107,50 @@ describe('mistake store save state', () => {
     expect(store.items[0].user_answer).toBe('C')
   })
 
+  it('does not prepend a saved mistake that does not match the active search filter', async () => {
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+    store.searchText = 'borrowing'
+    store.items = [mistake('visible')]
+    const entry = mistake('ownership')
+    entry.question = 'What moves a String?'
+    entry.explanation = 'Ownership transfer moves the value.'
+
+    const result = await store.saveEntry('q1', entry)
+
+    expect(result).toBe(true)
+    expect(store.items.map((item) => item.id)).toEqual(['visible'])
+  })
+
+  it('does not prepend a saved mistake that does not match the active blind spot tag filter', async () => {
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+    store.blindSpotTag = 'borrowing'
+    store.items = [mistake('visible')]
+    const entry = mistake('ownership', 'advanced')
+    entry.diagnosis = {
+      rounds: 1,
+      conversation: [],
+      final_report: {
+        summary: 'Ownership issue',
+        blind_spots: [{
+          tag: 'Ownership transfer',
+          severity: 'high',
+          description: 'Move semantics are confused.',
+          note_reference: 'Ownership notes',
+          suggestion: 'Review moves.',
+        }],
+        overall_level: 'Needs review',
+        next_steps: [],
+      },
+    }
+
+    const result = await store.saveEntry('q1', entry)
+
+    expect(result).toBe(true)
+    expect(store.items.map((item) => item.id)).toEqual(['visible'])
+  })
+
   it('loads the first page with server-side mode filters', async () => {
     vi.mocked(mistakeService.loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
     const store = useMistakeStore()

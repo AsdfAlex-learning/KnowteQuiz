@@ -63,7 +63,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
         return false
       }
       savedIds.value.add(key)
-      if (!modeFilter.value || entry.mode === modeFilter.value) {
+      if (matchesActiveFilters(entry)) {
         items.value = [
           entry,
           ...items.value.filter((item) => item.id !== entry.id),
@@ -181,6 +181,32 @@ export const useMistakeStore = defineStore('mistakes', () => {
     if (isLatestListRequest(requestId)) {
       loading.value = false
     }
+  }
+
+  function matchesActiveFilters(entry: MistakeEntry): boolean {
+    if (modeFilter.value && entry.mode !== modeFilter.value) return false
+
+    const search = searchText.value?.toLowerCase()
+    if (search && !searchableText(entry).includes(search)) return false
+
+    const tag = blindSpotTag.value?.toLowerCase()
+    if (tag && !blindSpotTags(entry).some((value) => value.includes(tag))) return false
+
+    return true
+  }
+
+  function searchableText(entry: MistakeEntry): string {
+    return [
+      entry.question,
+      entry.user_answer,
+      entry.correct_answer,
+      entry.explanation,
+      entry.note_title,
+    ].join('\n').toLowerCase()
+  }
+
+  function blindSpotTags(entry: MistakeEntry): string[] {
+    return entry.diagnosis?.final_report.blind_spots.map((spot) => spot.tag.toLowerCase()) ?? []
   }
 
   return {
