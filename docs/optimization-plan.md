@@ -221,7 +221,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 按时间排序（降序排列）
 - ✅ 按知识盲区标签过滤（`MistakeFilter.blind_spot_tag`，覆盖 Rust 服务、前端服务、Pinia store 和 ErrorBook UI）
 - ✅ 错题本搜索/筛选加载增加竞态保护，避免旧请求晚返回覆盖新结果
-- ✅ 当前筛选状态下保存错题时只更新匹配当前筛选条件的列表项，避免本地插入污染筛选结果
+- ✅ 当前筛选状态下保存错题时只更新匹配当前筛选条件的列表项；同 ID 替换后不再匹配时会移出当前列表，避免本地插入污染筛选结果
 - ✅ 标记已复习（`feat: mistake review flow`）
 - ✅ 复习次数（`MistakeEntry.review_count` + "Mark Reviewed" 按钮）
 - ✅ 最近复习时间（`MistakeEntry.last_reviewed_at`）
@@ -253,7 +253,7 @@ KnowteQuiz 的方向是正确的：
 
 ### 2. 前端服务测试 ✅
 
-已添加 22 个测试文件，共 126 个测试用例：
+已添加 22 个测试文件，共 127 个测试用例：
 
 - ✅ `webStream()` SSE 解析（`tauri.test.ts`）
 - ✅ services 的 Tauri / Web 分支（`settings.test.ts`、`quiz.test.ts`、`mistake.test.ts`...）
@@ -353,7 +353,7 @@ KnowteQuiz 的方向是正确的：
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
 | P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ ~95% | schema 校验、多题型支持、raw 日志、阶段进度、自动修复、能力探测 | — |
 | P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~98% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、复习、盲区标签过滤、扫描取消、工作区切换清理、错题筛选竞态保护、保存筛选一致性 | index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 48 Rust + 126 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 48 Rust + 127 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
 
 ### 最推荐下一步
 

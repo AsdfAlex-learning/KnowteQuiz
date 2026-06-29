@@ -151,6 +151,23 @@ describe('mistake store save state', () => {
     expect(store.items.map((item) => item.id)).toEqual(['visible'])
   })
 
+  it('removes an existing listed mistake when a saved replacement no longer matches the active search filter', async () => {
+    vi.mocked(mistakeService.saveMistake).mockResolvedValue(true)
+    const store = useMistakeStore()
+    store.searchText = 'borrowing'
+    const older = mistake('same')
+    older.question = 'What is borrowing?'
+    const newer = mistake('same')
+    newer.question = 'What moves a String?'
+    newer.explanation = 'Ownership transfer moves the value.'
+    store.items = [older, mistake('other')]
+
+    const result = await store.saveEntry('q1', newer)
+
+    expect(result).toBe(true)
+    expect(store.items.map((item) => item.id)).toEqual(['other'])
+  })
+
   it('loads the first page with server-side mode filters', async () => {
     vi.mocked(mistakeService.loadMistakes).mockResolvedValue([mistake('m2', 'advanced')])
     const store = useMistakeStore()

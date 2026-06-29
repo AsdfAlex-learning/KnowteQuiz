@@ -63,11 +63,14 @@ export const useMistakeStore = defineStore('mistakes', () => {
         return false
       }
       savedIds.value.add(key)
+      const itemsWithoutEntry = items.value.filter((item) => item.id !== entry.id)
       if (matchesActiveFilters(entry)) {
         items.value = [
           entry,
-          ...items.value.filter((item) => item.id !== entry.id),
+          ...itemsWithoutEntry,
         ]
+      } else {
+        items.value = itemsWithoutEntry
       }
       return true
     } catch (e) {
