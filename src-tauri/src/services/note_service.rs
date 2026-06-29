@@ -1,8 +1,8 @@
 use crate::models::note::NoteContent;
 
 pub fn extract_metadata(content: &str, path: &str) -> NoteContent {
-    let title = extract_title(content, path);
     let metadata = extract_frontmatter(content);
+    let title = extract_title(content, path, &metadata);
     NoteContent {
         path: path.to_string(),
         title,
@@ -11,12 +11,19 @@ pub fn extract_metadata(content: &str, path: &str) -> NoteContent {
     }
 }
 
-fn extract_title(content: &str, path: &str) -> String {
+fn extract_title(
+    content: &str,
+    path: &str,
+    metadata: &std::collections::HashMap<String, String>,
+) -> String {
     for line in content.lines() {
         let trimmed = line.trim();
         if let Some(stripped) = trimmed.strip_prefix("# ") {
             return stripped.trim().to_string();
         }
+    }
+    if let Some(title) = metadata.get("title").filter(|title| !title.trim().is_empty()) {
+        return title.trim().to_string();
     }
     std::path::Path::new(path)
         .file_stem()
@@ -33,10 +40,56 @@ fn extract_frontmatter(content: &str) -> std::collections::HashMap<String, Strin
             let frontmatter = &content[3..pos + 3];
             for line in frontmatter.lines() {
                 if let Some((key, value)) = line.split_once(':') {
-                    metadata.insert(key.trim().to_string(), value.trim().to_string());
+                    metadata.insert(key.trim().to_string(), normalize_frontmatter_value(value));
                 }
             }
         }
     }
     metadata
+}
+
+fn normalize_frontmatter_value(value: &str) -> String {
+    let value = value.trim();
+    if value.len() >= 2 {
+        let mut chars = value.chars();
+        let first = chars.next();
+        let last = chars.next_back();
+        if matches!((first, last), (Some('"'), Some('"')) | (Some('\''), Some('\''))) {
+            return chars.as_str().to_string();
+        }
+    }
+    value.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_metadata_uses_frontmatter_title_when_note_has_no_heading() {
+        let note = extract_metadata(
+            "---\ntitle: Rust Ownership\nsource: book\n---\n\nOwnership notes.",
+            "/notes/ownership.md",
+        );
+
+        assert_eq!(note.title, "Rust Ownership");
+        assert_eq!(
+            note.metadata.get("source").map(String::as_str),
+            Some("book")
+        );
+    }
+
+    #[test]
+    fn extract_metadata_unquotes_frontmatter_scalar_values() {
+        let note = extract_metadata(
+            "---\ntitle: \"Rust Ownership\"\nsource: 'book'\n---\n\nOwnership notes.",
+            "/notes/ownership.md",
+        );
+
+        assert_eq!(note.title, "Rust Ownership");
+        assert_eq!(
+            note.metadata.get("source").map(String::as_str),
+            Some("book")
+        );
+    }
 }
