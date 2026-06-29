@@ -23,6 +23,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
   const errors = ref(new Map<string, string>())
   const reviewingIds = ref(new Set<string>())
   const reviewErrors = ref(new Map<string, string>())
+  let listRequestId = 0
 
   function isSaving(key: string): boolean {
     return savingIds.value.has(key)
@@ -78,6 +79,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
   }
 
   async function loadPage(offset = 0): Promise<void> {
+    const requestId = nextListRequest()
     loading.value = true
     listError.value = null
     try {
@@ -88,12 +90,14 @@ export const useMistakeStore = defineStore('mistakes', () => {
         offset,
         limit: PAGE_SIZE,
       })
+      if (!isLatestListRequest(requestId)) return
       items.value = offset === 0 ? page : [...items.value, ...page]
       hasMore.value = page.length === PAGE_SIZE
     } catch (e) {
+      if (!isLatestListRequest(requestId)) return
       listError.value = e instanceof Error ? e.message : String(e)
     } finally {
-      loading.value = false
+      finishListRequest(requestId)
     }
   }
 
@@ -161,6 +165,21 @@ export const useMistakeStore = defineStore('mistakes', () => {
       return false
     } finally {
       isExporting.value = false
+    }
+  }
+
+  function nextListRequest(): number {
+    listRequestId += 1
+    return listRequestId
+  }
+
+  function isLatestListRequest(requestId: number): boolean {
+    return requestId === listRequestId
+  }
+
+  function finishListRequest(requestId: number): void {
+    if (isLatestListRequest(requestId)) {
+      loading.value = false
     }
   }
 

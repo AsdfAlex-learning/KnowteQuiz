@@ -171,6 +171,31 @@ describe('mistake store save state', () => {
     expect(store.items).toHaveLength(21)
   })
 
+  it('ignores stale first-page loads when a newer filter finishes first', async () => {
+    const firstLoad = deferredMistakes()
+    const secondLoad = deferredMistakes()
+    vi.mocked(mistakeService.loadMistakes)
+      .mockReturnValueOnce(firstLoad.promise)
+      .mockReturnValueOnce(secondLoad.promise)
+    const store = useMistakeStore()
+
+    const oldSearch = store.setSearchText('ownership')
+    const newSearch = store.setSearchText('borrowing')
+
+    secondLoad.resolve([mistake('new')])
+    await newSearch
+    expect(store.items.map((item) => item.id)).toEqual(['new'])
+    expect(store.searchText).toBe('borrowing')
+    expect(store.loading).toBe(false)
+
+    firstLoad.resolve([mistake('old')])
+    await oldSearch
+
+    expect(store.items.map((item) => item.id)).toEqual(['new'])
+    expect(store.searchText).toBe('borrowing')
+    expect(store.loading).toBe(false)
+  })
+
   it('records detailed list load errors from the service', async () => {
     vi.mocked(mistakeService.loadMistakes).mockRejectedValue(new Error('HTTP 500: Failed to parse mistakes.json'))
     const store = useMistakeStore()
@@ -208,6 +233,16 @@ describe('mistake store save state', () => {
     expect(store.reviewErrorFor('m1')).toBe('disk full')
   })
 })
+
+function deferredMistakes() {
+  let resolve!: (value: MistakeEntry[]) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<MistakeEntry[]>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, resolve, reject }
+}
 
 describe('mistake store export', () => {
   beforeEach(() => {
