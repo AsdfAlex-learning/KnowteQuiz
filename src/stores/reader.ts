@@ -9,6 +9,7 @@ export const useReaderStore = defineStore('reader', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const scrollTop = ref(0)
+  let activeLoadId = 0
 
   const isLoading = computed(() => loading.value)
   const wordCount = computed(() => {
@@ -17,25 +18,32 @@ export const useReaderStore = defineStore('reader', () => {
   })
 
   async function loadNote(path: string): Promise<boolean> {
+    const loadId = ++activeLoadId
     loading.value = true
     error.value = null
     try {
       const note = await readNote(path)
+      if (loadId !== activeLoadId) return false
       try {
         const settings = await getSettings()
+        if (loadId !== activeLoadId) return false
         scrollTop.value = settings.workspace.scroll_positions?.[path] ?? 0
       } catch {
+        if (loadId !== activeLoadId) return false
         scrollTop.value = 0
       }
       currentNote.value = note
       return true
     } catch (e) {
+      if (loadId !== activeLoadId) return false
       error.value = String(e)
       currentNote.value = null
       scrollTop.value = 0
       return false
     } finally {
-      loading.value = false
+      if (loadId === activeLoadId) {
+        loading.value = false
+      }
     }
   }
 
@@ -58,8 +66,10 @@ export const useReaderStore = defineStore('reader', () => {
   }
 
   function clearNote() {
+    activeLoadId += 1
     currentNote.value = null
     scrollTop.value = 0
+    loading.value = false
   }
 
   return {
