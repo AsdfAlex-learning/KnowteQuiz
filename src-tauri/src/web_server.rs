@@ -364,6 +364,7 @@ async fn submit_diagnosis_handler(
 
     // Create session upfront so follow_up can find it
     if let Ok(note_content) = fs_service::read_file_content(&note_path) {
+        let note_body = note_service::extract_body_content(&note_content);
         if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
             let session = DiagnosisSession {
                 session_id: session_id.clone(),
@@ -371,7 +372,7 @@ async fn submit_diagnosis_handler(
                 user_answer: user_answer.clone(),
                 user_reasoning: user_reasoning.clone(),
                 note_path: note_path.clone(),
-                note_content: note_content.chars().take(8000).collect(),
+                note_content: note_body.chars().take(8000).collect(),
                 conversation: vec![],
                 current_round: 0,
                 max_rounds: settings.quiz.advanced.max_diagnosis_rounds,

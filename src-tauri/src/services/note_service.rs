@@ -6,7 +6,7 @@ pub fn extract_metadata(content: &str, path: &str) -> NoteContent {
     NoteContent {
         path: path.to_string(),
         title,
-        content: content.to_string(),
+        content: extract_body_content(content),
         metadata,
     }
 }
@@ -46,6 +46,16 @@ fn extract_frontmatter(content: &str) -> std::collections::HashMap<String, Strin
         }
     }
     metadata
+}
+
+pub fn extract_body_content(content: &str) -> String {
+    let Some(stripped) = content.strip_prefix("---") else {
+        return content.to_string();
+    };
+    let Some(pos) = stripped.find("---") else {
+        return content.to_string();
+    };
+    stripped[pos + 3..].trim_start().to_string()
 }
 
 fn normalize_frontmatter_value(value: &str) -> String {
@@ -91,5 +101,26 @@ mod tests {
             note.metadata.get("source").map(String::as_str),
             Some("book")
         );
+    }
+
+    #[test]
+    fn extract_metadata_returns_body_without_frontmatter() {
+        let note = extract_metadata(
+            "---\ntitle: Rust Ownership\ntags: rust\n---\n\n# Ownership\n\nMoves transfer values.",
+            "/notes/ownership.md",
+        );
+
+        assert_eq!(note.content, "# Ownership\n\nMoves transfer values.");
+        assert!(!note.content.contains("tags: rust"));
+    }
+
+    #[test]
+    fn extract_metadata_prefers_heading_over_frontmatter_title() {
+        let note = extract_metadata(
+            "---\ntitle: Frontmatter Title\n---\n\n# Heading Title\n\nBody.",
+            "/notes/ownership.md",
+        );
+
+        assert_eq!(note.title, "Heading Title");
     }
 }

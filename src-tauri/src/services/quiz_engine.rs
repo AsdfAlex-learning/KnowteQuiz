@@ -60,7 +60,7 @@ pub async fn generate_quiz_stream(
     tx: UnboundedSender<QuizStreamEvent>,
 ) -> Result<(), String> {
     let note_content = crate::services::fs_service::read_file_content(&params.path)?;
-    let truncated_content: String = note_content.chars().take(8000).collect();
+    let truncated_content = note_content_for_prompt(&note_content);
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let llm = &settings.llm;
 
@@ -485,7 +485,7 @@ pub async fn submit_diagnosis_initial(
     tx: UnboundedSender<DiagnosisStreamEvent>,
 ) -> Result<DiagnosisRound, String> {
     let note_content = crate::services::fs_service::read_file_content(note_path)?;
-    let truncated_content: String = note_content.chars().take(8000).collect();
+    let truncated_content = note_content_for_prompt(&note_content);
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let template_set =
@@ -529,6 +529,13 @@ fn build_diagnosis_initial_prompt(
     vars.insert("user_answer", user_answer.to_string());
     vars.insert("user_reasoning", user_reasoning.to_string());
     crate::utils::prompt_templates::fill_template(template, &vars)
+}
+
+fn note_content_for_prompt(raw_content: &str) -> String {
+    crate::services::note_service::extract_body_content(raw_content)
+        .chars()
+        .take(8000)
+        .collect()
 }
 
 pub async fn diagnose_follow_up(
@@ -596,7 +603,7 @@ pub async fn generate_diagnosis_report(
     session: &DiagnosisSession,
 ) -> Result<DiagnosisReport, String> {
     let note_content = crate::services::fs_service::read_file_content(&session.note_path)?;
-    let truncated_content: String = note_content.chars().take(8000).collect();
+    let truncated_content = note_content_for_prompt(&note_content);
 
     let conversation_json = serde_json::to_string(&session.conversation)
         .map_err(|e| format!("Failed to serialize conversation: {}", e))?;
@@ -1075,6 +1082,16 @@ Good luck."#;
 
         assert!(prompt.contains("Correct=B. Borrowing keeps ownership with the original variable."));
         assert!(!prompt.contains("to be determined"));
+    }
+
+    #[test]
+    fn note_content_for_prompt_strips_frontmatter_before_prompting() {
+        let content = note_content_for_prompt(
+            "---\ntitle: Rust Ownership\ntags: rust\n---\n\n# Ownership\n\nMoves transfer values.",
+        );
+
+        assert_eq!(content, "# Ownership\n\nMoves transfer values.");
+        assert!(!content.contains("tags: rust"));
     }
 
     #[test]

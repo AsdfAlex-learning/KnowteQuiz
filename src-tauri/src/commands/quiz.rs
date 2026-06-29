@@ -105,6 +105,7 @@ pub async fn submit_answer_advanced(
     .await?;
 
     let note_content = crate::services::fs_service::read_file_content(&note_path)?;
+    let note_body = crate::services::note_service::extract_body_content(&note_content);
     let settings = crate::services::config::get_settings_path(&data_dir)?;
     let session = DiagnosisSession {
         session_id: session_id.clone(),
@@ -112,7 +113,7 @@ pub async fn submit_answer_advanced(
         user_answer,
         user_reasoning,
         note_path,
-        note_content: note_content.chars().take(8000).collect(),
+        note_content: note_body.chars().take(8000).collect(),
         conversation: vec![initial_round],
         current_round: 0,
         max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
