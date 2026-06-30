@@ -125,6 +125,44 @@ describe('QuizGenerator', () => {
     )
   })
 
+  it('falls back to supported quiz defaults when saved defaults are invalid', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const explorerStore = useExplorerStore()
+    explorerStore.selectedPath = '/notes/rust.md'
+    const settingsStore = useSettingsStore()
+    mockGeneratedQuiz()
+
+    const wrapper = mount(QuizGenerator, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await nextTick()
+
+    settingsStore.settings.quiz = {
+      ...settingsStore.settings.quiz,
+      default_types: [],
+      default_language: 'fr',
+      default_difficulty: 'wild' as never,
+    }
+    await nextTick()
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Start Quiz')?.trigger('click')
+
+    expect(generateQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({
+        types: ['single', 'short'],
+        difficulty: 'medium',
+        lang: 'zh',
+      }),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+    )
+  })
+
   it('uses the loaded default quiz mode when starting a quiz', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)

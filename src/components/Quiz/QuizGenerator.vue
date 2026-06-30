@@ -120,6 +120,10 @@ const difficulty = ref<QuizDifficulty>('medium')
 const lang = ref<QuizLanguage>('zh')
 
 const notePath = ref<string | null>(null)
+const fallbackQuestionTypes: QuestionType[] = ['single', 'short']
+const supportedQuestionTypes: QuestionType[] = ['single', 'multiple', 'short']
+const supportedLanguages: QuizLanguage[] = ['zh', 'en', 'ja', 'ko']
+const supportedDifficulties: QuizDifficulty[] = ['easy', 'medium', 'hard']
 
 const generatingLabel = computed(() => {
   if (!quizStore.isGenerating) return 'Start Quiz'
@@ -167,9 +171,25 @@ watch(() => explorerStore.selectedPath, (path) => {
 
 watch(() => settingsStore.settings.quiz, (defaults) => {
   mode.value = defaults.default_mode === 'advanced' ? 'advanced' : 'basic'
-  selectedTypes.value = [...defaults.default_types] as QuestionType[]
+  selectedTypes.value = normalizeQuestionTypes(defaults.default_types)
   count.value = defaults.default_count
-  lang.value = defaults.default_language as QuizLanguage
-  difficulty.value = defaults.default_difficulty as QuizDifficulty
+  lang.value = normalizeLanguage(defaults.default_language)
+  difficulty.value = normalizeDifficulty(defaults.default_difficulty)
 }, { immediate: true, deep: true })
+
+function normalizeQuestionTypes(types: unknown): QuestionType[] {
+  if (!Array.isArray(types)) return [...fallbackQuestionTypes]
+  const filtered = types.filter((type): type is QuestionType =>
+    supportedQuestionTypes.includes(type as QuestionType)
+  )
+  return filtered.length > 0 ? filtered : [...fallbackQuestionTypes]
+}
+
+function normalizeLanguage(value: string): QuizLanguage {
+  return supportedLanguages.includes(value as QuizLanguage) ? value as QuizLanguage : 'zh'
+}
+
+function normalizeDifficulty(value: string): QuizDifficulty {
+  return supportedDifficulties.includes(value as QuizDifficulty) ? value as QuizDifficulty : 'medium'
+}
 </script>
