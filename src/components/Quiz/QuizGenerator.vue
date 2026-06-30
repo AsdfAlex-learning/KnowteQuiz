@@ -124,6 +124,9 @@ const fallbackQuestionTypes: QuestionType[] = ['single', 'short']
 const supportedQuestionTypes: QuestionType[] = ['single', 'multiple', 'short']
 const supportedLanguages: QuizLanguage[] = ['zh', 'en', 'ja', 'ko']
 const supportedDifficulties: QuizDifficulty[] = ['easy', 'medium', 'hard']
+const fallbackQuestionCount = 5
+const minQuestionCount = 1
+const maxQuestionCount = 20
 
 const generatingLabel = computed(() => {
   if (!quizStore.isGenerating) return 'Start Quiz'
@@ -172,7 +175,7 @@ watch(() => explorerStore.selectedPath, (path) => {
 watch(() => settingsStore.settings.quiz, (defaults) => {
   mode.value = defaults.default_mode === 'advanced' ? 'advanced' : 'basic'
   selectedTypes.value = normalizeQuestionTypes(defaults.default_types)
-  count.value = defaults.default_count
+  count.value = normalizeCount(defaults.default_count)
   lang.value = normalizeLanguage(defaults.default_language)
   difficulty.value = normalizeDifficulty(defaults.default_difficulty)
 }, { immediate: true, deep: true })
@@ -191,5 +194,11 @@ function normalizeLanguage(value: string): QuizLanguage {
 
 function normalizeDifficulty(value: string): QuizDifficulty {
   return supportedDifficulties.includes(value as QuizDifficulty) ? value as QuizDifficulty : 'medium'
+}
+
+function normalizeCount(value: number): number {
+  return Number.isInteger(value) && value >= minQuestionCount && value <= maxQuestionCount
+    ? value
+    : fallbackQuestionCount
 }
 </script>

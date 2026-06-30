@@ -163,6 +163,40 @@ describe('QuizGenerator', () => {
     )
   })
 
+  it('falls back to a supported quiz count when the saved default count is out of range', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const explorerStore = useExplorerStore()
+    explorerStore.selectedPath = '/notes/rust.md'
+    const settingsStore = useSettingsStore()
+    mockGeneratedQuiz()
+
+    const wrapper = mount(QuizGenerator, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+    await nextTick()
+
+    settingsStore.settings.quiz = {
+      ...settingsStore.settings.quiz,
+      default_count: 0,
+    }
+    await nextTick()
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Start Quiz')?.trigger('click')
+
+    expect(generateQuiz).toHaveBeenCalledWith(
+      expect.objectContaining({
+        count: 5,
+      }),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+    )
+  })
+
   it('uses the loaded default quiz mode when starting a quiz', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
