@@ -32,7 +32,7 @@
         v-for="(opt, i) in question.options"
         :key="i"
         :letter="String.fromCharCode(65 + i)"
-        :text="opt"
+        :text="optionText(opt)"
         :state="getOptionState(i)"
         :disabled="submitted"
         @select="$emit('selectOption', i)"
@@ -87,5 +87,9 @@ function getOptionState(index: number): OptionState {
   if (isCorrect) return 'correct'
   if (props.selectedOptions.includes(index)) return 'incorrect'
   return 'default'
+}
+
+function optionText(option: string): string {
+  return option.trim().replace(/^[A-Z]\s*[.)\]:\uFF1A\u3001]\s*/i, '')
 }
 </script>
