@@ -1048,6 +1048,28 @@ Good luck."#;
     }
 
     #[test]
+    fn parse_quiz_response_accepts_single_choice_answer_text_with_and() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "Which department owns this?",
+                    "options": ["A. Research and Development", "B. Operations"],
+                    "answer": "Research and Development",
+                    "explanation": "R&D owns this."
+                }
+            ]
+        }"#;
+
+        let questions =
+            parse_quiz_response(raw).expect("single choice option text with and should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].answer, "Research and Development");
+    }
+
+    #[test]
     fn parse_quiz_response_accepts_multiple_choice_answer_text_list() {
         let raw = r#"{
             "questions": [

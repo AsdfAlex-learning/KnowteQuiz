@@ -73,6 +73,20 @@ describe('answer utilities', () => {
     expect(isQuizAnswerCorrect(question, 'A,C')).toBe(true)
   })
 
+  it('does not split a single option text answer that contains and', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'single' as const,
+      question: 'Pick one.',
+      options: ['A. Research and Development', 'B. Operations'],
+      answer: 'Research and Development',
+      explanation: '',
+    }
+
+    expect(correctChoiceLetters(question)).toEqual(['A'])
+    expect(isQuizAnswerCorrect(question, 'A')).toBe(true)
+  })
+
   it('falls back to normalized text comparison for short answers', () => {
     expect(isQuizAnswerCorrect({
       id: 'q1',

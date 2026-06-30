@@ -37,12 +37,22 @@ export function isChoiceLetterCorrect(correctAnswer: string, letter: string): bo
 }
 
 function choiceLettersFromOptionText(correctAnswer: string, options: string[]): string[] {
+  const normalizedFullAnswer = normalizeTextAnswer(correctAnswer)
+  const fullAnswerMatches = choiceLettersMatchingOptionTexts(new Set([normalizedFullAnswer]), options)
+  if (fullAnswerMatches.length > 0) {
+    return fullAnswerMatches
+  }
+
   const normalizedAnswers = correctAnswer
     .split(/(?:[,;\uFF0C\uFF1B\u3001]|\s+and\s+)/i)
     .map(normalizeTextAnswer)
     .filter(Boolean)
   const answerSet = new Set(normalizedAnswers.length > 0 ? normalizedAnswers : [normalizeTextAnswer(correctAnswer)])
 
+  return choiceLettersMatchingOptionTexts(answerSet, options)
+}
+
+function choiceLettersMatchingOptionTexts(answerSet: Set<string>, options: string[]): string[] {
   return options
     .map((option, index) => ({
       letter: String.fromCharCode(65 + index),
