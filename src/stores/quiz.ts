@@ -59,6 +59,7 @@ export const useQuizStore = defineStore('quiz', () => {
     advancedReasoning.value = new Map()
     diagnosisContexts.value = new Map()
     generatingError.value = null
+    generatingPhase.value = null
   }
 
   function addQuestion(q: QuizQuestion) {

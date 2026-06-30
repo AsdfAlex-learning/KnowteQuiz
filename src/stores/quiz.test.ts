@@ -297,6 +297,16 @@ describe('quiz store answer evaluation', () => {
     expect(store.quizState).toBe('answering')
   })
 
+  it('clears stale generation phase when resetting a quiz session', () => {
+    const store = useQuizStore()
+    store.quizState = 'generating'
+    store.generatingPhase = 'requesting_model'
+
+    store.reset()
+
+    expect(store.generatingPhase).toBeNull()
+  })
+
   it('stores advanced diagnosis context per question and clears it on reset', () => {
     const store = useQuizStore()
     const conversation = [
