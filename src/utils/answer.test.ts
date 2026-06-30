@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canSubmitQuizAnswer,
   choiceLettersFromAnswer,
+  correctChoiceLetters,
   isChoiceLetterCorrect,
   isQuizAnswerCorrect,
 } from './answer'
@@ -29,6 +30,19 @@ describe('answer utilities', () => {
     }
 
     expect(isQuizAnswerCorrect(question, 'A')).toBe(true)
+  })
+
+  it('maps option text answers back to their choice letters for highlighting', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'single' as const,
+      question: 'Pick one.',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'Alpha',
+      explanation: '',
+    }
+
+    expect(correctChoiceLetters(question)).toEqual(['A'])
   })
 
   it('falls back to normalized text comparison for short answers', () => {

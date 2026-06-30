@@ -53,6 +53,19 @@ function choiceLettersFromOptionText(correctAnswer: string, options: string[]): 
     .map(({ letter }) => letter)
 }
 
+export function correctChoiceLetters(question: QuizQuestion): string[] {
+  if (
+    (question.question_type !== 'single' && question.question_type !== 'multiple')
+    || question.options.length === 0
+  ) {
+    return []
+  }
+  const expected = choiceLettersFromAnswer(question.answer)
+  return expected.length > 0
+    ? expected
+    : choiceLettersFromOptionText(question.answer, question.options)
+}
+
 export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string | undefined): boolean {
   if (!userAnswer) return false
 
@@ -60,10 +73,7 @@ export function isQuizAnswerCorrect(question: QuizQuestion, userAnswer: string |
     (question.question_type === 'single' || question.question_type === 'multiple')
     && question.options.length > 0
   ) {
-    const expected = choiceLettersFromAnswer(question.answer)
-    const expectedFromOptionText = expected.length > 0
-      ? expected
-      : choiceLettersFromOptionText(question.answer, question.options)
+    const expectedFromOptionText = correctChoiceLetters(question)
     const actual = choiceLettersFromAnswer(userAnswer)
     if (expectedFromOptionText.length > 0 && actual.length > 0) {
       return sameLetterSet(expectedFromOptionText, actual)
