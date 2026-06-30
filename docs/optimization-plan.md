@@ -210,6 +210,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 当前笔记搜索（`feat: add in-reader note search with Ctrl+F`）
 - ✅ 大纲目录（`feat: add TOC outline from markdown headings`）
 - ✅ 大纲提取会跳过 fenced code block，并兼容最多 3 个前导空格的 Markdown 标题
+- ✅ 重复标题会生成稳定唯一 id，避免 TOC key 冲突和点击跳转歧义
 - ✅ frontmatter `title` 可作为笔记标题，并归一简单引号标量，避免标题栏和错题来源标题退回文件名
 - ✅ 阅读器正文、quiz 生成和诊断 prompt 会剥离 YAML frontmatter，避免元数据污染阅读和出题上下文
 - ✅ 图片相对路径解析（`fix: resolve markdown image assets`）
@@ -263,7 +264,7 @@ KnowteQuiz 的方向是正确的：
 
 ### 2. 前端服务测试 ✅
 
-已添加 23 个测试文件，共 134 个测试用例：
+已添加 24 个测试文件，共 136 个测试用例：
 
 - ✅ `webStream()` SSE 解析（`tauri.test.ts`）
 - ✅ services 的 Tauri / Web 分支（`settings.test.ts`、`quiz.test.ts`、`mistake.test.ts`...）
@@ -271,7 +272,8 @@ KnowteQuiz 的方向是正确的：
 - ✅ settings store 持久化流程
 - ✅ 错题导出测试
 - ✅ 错题盲区标签过滤测试
-- ✅ heading 提取测试（含代码块和前导空格边界）
+- ✅ heading 提取测试（含代码块、前导空格和重复标题边界）
+- ✅ Reader 渲染器重复标题 id 与大纲一致性测试
 - ✅ 文件树 Markdown 扩展名显示测试
 
 ### 3. 冒烟流程 ✅
@@ -363,8 +365,8 @@ KnowteQuiz 的方向是正确的：
 | P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
 | P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ ~95% | schema 校验、多题型支持、raw 日志、阶段进度、自动修复、能力探测 | — |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~98% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲代码块边界、frontmatter 标题解析与正文剥离、复习、盲区标签过滤、Markdown 扩展名兼容、扫描取消、工作区切换清理、打开/恢复失败不污染选中路径、阅读器读取竞态保护、错题筛选竞态保护、保存筛选一致性 | index.json |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 54 Rust + 134 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~98% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲代码块边界与重复标题 id、frontmatter 标题解析与正文剥离、复习、盲区标签过滤、Markdown 扩展名兼容、扫描取消、工作区切换清理、打开/恢复失败不污染选中路径、阅读器读取竞态保护、错题筛选竞态保护、保存筛选一致性 | index.json |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 54 Rust + 136 前端测试、冒烟脚本、CI/CD、README 备份文档、发布检查清单 | — |
 
 ### 最推荐下一步
 

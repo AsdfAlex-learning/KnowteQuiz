@@ -119,6 +119,7 @@ export function extractHeadings(content: string): TocHeading[] {
   const headings: TocHeading[] = []
   const headingRegex = /^ {0,3}(#{1,6})\s+(.+)$/
   let fenceMarker: string | null = null
+  const headingCounts = new Map<string, number>()
 
   for (const line of content.split(/\r?\n/)) {
     const fence = line.match(/^ {0,3}(`{3,}|~{3,})/)
@@ -137,20 +138,27 @@ export function extractHeadings(content: string): TocHeading[] {
     if (!match) continue
     const level = match[1].length
     const text = match[2].trim()
-    const id = headingId(text)
+    const id = uniqueHeadingId(text, headingCounts)
     headings.push({ level, text, id })
   }
 
   return headings
 }
 
-function headingId(text: string): string {
+export function baseHeadingId(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
+}
+
+export function uniqueHeadingId(text: string, headingCounts: Map<string, number>): string {
+  const baseId = baseHeadingId(text) || 'heading'
+  const nextCount = (headingCounts.get(baseId) ?? 0) + 1
+  headingCounts.set(baseId, nextCount)
+  return nextCount === 1 ? baseId : `${baseId}-${nextCount}`
 }
 
 function escapeHtml(content: string): string {

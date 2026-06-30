@@ -112,7 +112,7 @@ import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
 import { useReaderStore } from '@/stores/reader'
 import { convertFileSrc, isTauri } from '@/services/tauri'
-import { renderMarkdownWithFallback } from '@/utils/markdown'
+import { renderMarkdownWithFallback, uniqueHeadingId } from '@/utils/markdown'
 import { extractHeadings, type TocHeading } from '@/utils/markdown'
 import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets'
 import EmptyState from './EmptyState.vue'
@@ -143,24 +143,22 @@ configureMarkdownAssetRenderer(
   (path) => isTauri() ? convertFileSrc(path) : markdownWebAssetUrl(path),
 )
 
-// Add heading IDs for TOC navigation
+let renderHeadingCounts = new Map<string, number>()
 md.renderer.rules.heading_open = function (tokens, idx) {
   const token = tokens[idx]
   const level = token.tag
   const nextToken = tokens[idx + 1]
   const text = nextToken?.type === 'inline' ? nextToken.content || '' : ''
-  const id = text
-    .toLowerCase()
-    .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+  const id = uniqueHeadingId(text, renderHeadingCounts)
   return `<${level} id="${id}">`
 }
 
 const renderedHtml = computed(() => {
   if (!readerStore.currentNote?.content) return ''
-  return renderMarkdownWithFallback(readerStore.currentNote.content, (source) => md.render(source))
+  return renderMarkdownWithFallback(readerStore.currentNote.content, (source) => {
+    renderHeadingCounts = new Map<string, number>()
+    return md.render(source)
+  })
 })
 
 // TOC outline

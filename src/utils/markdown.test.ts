@@ -91,4 +91,19 @@ describe('extract headings for TOC', () => {
       { level: 2, text: 'Valid Heading', id: 'valid-heading' },
     ])
   })
+
+  it('generates stable unique ids for duplicate headings', () => {
+    const content = [
+      '## Overview',
+      'Some text',
+      '## Overview',
+      '### Overview',
+    ].join('\n')
+
+    expect(extractHeadings(content)).toEqual([
+      { level: 2, text: 'Overview', id: 'overview' },
+      { level: 2, text: 'Overview', id: 'overview-2' },
+      { level: 3, text: 'Overview', id: 'overview-3' },
+    ])
+  })
 })
