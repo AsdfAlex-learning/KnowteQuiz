@@ -7,7 +7,7 @@ function normalizeTextAnswer(answer: string): string {
 }
 
 function stripOptionLabel(option: string): string {
-  return option.trim().replace(/^[A-Z]\s*[.)\]:：、]\s*/i, '')
+  return option.trim().replace(/^[A-Z]\s*[.)\]:\uFF1A\u3001]\s*/i, '')
 }
 
 export function choiceLettersFromAnswer(answer: string): string[] {
@@ -38,7 +38,7 @@ export function isChoiceLetterCorrect(correctAnswer: string, letter: string): bo
 
 function choiceLettersFromOptionText(correctAnswer: string, options: string[]): string[] {
   const normalizedAnswers = correctAnswer
-    .split(/[,;，；、]/)
+    .split(/(?:[,;\uFF0C\uFF1B\u3001]|\s+and\s+)/i)
     .map(normalizeTextAnswer)
     .filter(Boolean)
   const answerSet = new Set(normalizedAnswers.length > 0 ? normalizedAnswers : [normalizeTextAnswer(correctAnswer)])

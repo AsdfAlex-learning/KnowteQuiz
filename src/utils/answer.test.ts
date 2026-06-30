@@ -45,6 +45,34 @@ describe('answer utilities', () => {
     expect(correctChoiceLetters(question)).toEqual(['A'])
   })
 
+  it('maps localized option text answers back to choice letters', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'multiple' as const,
+      question: 'Pick all true claims.',
+      options: ['A\uff1aAlpha', 'B\uff1aBeta', 'C\uff1aGamma'],
+      answer: 'Alpha\u3001Gamma',
+      explanation: '',
+    }
+
+    expect(correctChoiceLetters(question)).toEqual(['A', 'C'])
+    expect(isQuizAnswerCorrect(question, 'C,A')).toBe(true)
+  })
+
+  it('maps option text answers joined by words back to choice letters', () => {
+    const question = {
+      id: 'q1',
+      question_type: 'multiple' as const,
+      question: 'Pick all true claims.',
+      options: ['A. Alpha', 'B. Beta', 'C. Gamma'],
+      answer: 'Alpha and Gamma',
+      explanation: '',
+    }
+
+    expect(correctChoiceLetters(question)).toEqual(['A', 'C'])
+    expect(isQuizAnswerCorrect(question, 'A,C')).toBe(true)
+  })
+
   it('falls back to normalized text comparison for short answers', () => {
     expect(isQuizAnswerCorrect({
       id: 'q1',
