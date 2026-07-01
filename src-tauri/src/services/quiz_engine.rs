@@ -320,6 +320,11 @@ fn validate_choice_answer(
         return Ok(());
     }
 
+    let normalized_answer = normalize_answer_text(answer);
+    if option_text_matches(options, &normalized_answer) {
+        return Ok(());
+    }
+
     let normalized_answers = split_answer_text(answer);
     if matches!(question_type, QuestionType::Single) && normalized_answers.len() != 1 {
         return Err(format!(
@@ -328,12 +333,10 @@ fn validate_choice_answer(
         ));
     }
 
-    if normalized_answers.iter().all(|normalized_answer| {
-        options.iter().any(|option| {
-            normalize_answer_text(option) == *normalized_answer
-                || normalize_answer_text(&strip_option_label(option)) == *normalized_answer
-        })
-    }) {
+    if normalized_answers
+        .iter()
+        .all(|normalized_answer| option_text_matches(options, normalized_answer))
+    {
         return Ok(());
     }
 
@@ -342,6 +345,13 @@ fn validate_choice_answer(
         index + 1,
         answer
     ))
+}
+
+fn option_text_matches(options: &[String], normalized_answer: &str) -> bool {
+    options.iter().any(|option| {
+        normalize_answer_text(option) == normalized_answer
+            || normalize_answer_text(&strip_option_label(option)) == normalized_answer
+    })
 }
 
 fn choice_letters_from_answer(answer: &str) -> Vec<char> {
@@ -1067,6 +1077,28 @@ Good luck."#;
 
         assert_eq!(questions.len(), 1);
         assert_eq!(questions[0].answer, "Research and Development");
+    }
+
+    #[test]
+    fn parse_quiz_response_accepts_single_choice_answer_text_with_comma() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "single",
+                    "question": "Which label is correct?",
+                    "options": ["A. Research, Development", "B. Operations"],
+                    "answer": "Research, Development",
+                    "explanation": "The comma is part of the label."
+                }
+            ]
+        }"#;
+
+        let questions =
+            parse_quiz_response(raw).expect("single choice option text with comma should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].answer, "Research, Development");
     }
 
     #[test]
