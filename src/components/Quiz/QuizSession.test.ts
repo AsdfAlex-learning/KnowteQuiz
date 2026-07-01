@@ -3,9 +3,10 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import QuizSession from './QuizSession.vue'
 import { useQuizStore } from '@/stores/quiz'
+import { useMistakeStore } from '@/stores/mistakes'
 import type { DiagnosisReport } from '@/types/diagnosis'
 
 const report: DiagnosisReport = {
@@ -16,6 +17,10 @@ const report: DiagnosisReport = {
 }
 
 describe('QuizSession', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('shows diagnosis errors inside an active quiz session', () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -106,5 +111,42 @@ describe('QuizSession', () => {
     expect(wrapper.text()).toContain('Diagnosis failed')
     expect(wrapper.text()).toContain('Submit & Diagnose')
     expect(wrapper.get('textarea').attributes('disabled')).toBeUndefined()
+  })
+
+  it('falls back to a local mistake id when saving a diagnosis report without crypto', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const quizStore = useQuizStore()
+    const mistakeStore = useMistakeStore()
+    mistakeStore.saveEntry = vi.fn().mockResolvedValue(true)
+    vi.stubGlobal('crypto', undefined)
+
+    quizStore.questions = [{
+      id: 'q1',
+      question_type: 'single',
+      question: 'Which claim is true?',
+      options: ['A. Alpha', 'B. Beta'],
+      answer: 'B',
+      explanation: 'Beta is true.',
+    }]
+    quizStore.answers = new Map([['q1', 'A']])
+    quizStore.quizState = 'report'
+    quizStore.diagnosisReport = report
+
+    const wrapper = mount(QuizSession, {
+      props: { mode: 'advanced' },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Save to Mistake Book')!.trigger('click')
+
+    expect(mistakeStore.saveEntry).toHaveBeenCalledWith(
+      'q1',
+      expect.objectContaining({
+        id: expect.stringMatching(/^mistake-\d+-[a-z0-9]+$/),
+      }),
+    )
   })
 })

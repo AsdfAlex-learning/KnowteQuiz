@@ -1,5 +1,6 @@
 import type { QuizStreamParams, QuizQuestion, QuizEvent, DiagnosisEvent, DiagnosisReport, BlindSpot, DiagnosisRound } from '../types'
 import { invoke, isTauri, webStream } from './tauri'
+import { createLocalId } from '../utils/id'
 
 async function throwHttpError(res: Response): Promise<never> {
   const body = await res.text()
@@ -62,8 +63,7 @@ export async function submitAnswerAdvanced(
       onEvent: channel,
     })
   } else {
-    const sessionId = globalThis.crypto?.randomUUID?.()
-      ?? `web-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const sessionId = createLocalId('web')
     await webStream<DiagnosisEvent>('/api/quiz/diagnose', {
       session_id: sessionId,
       question,

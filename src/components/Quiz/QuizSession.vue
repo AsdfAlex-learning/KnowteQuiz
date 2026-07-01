@@ -170,6 +170,7 @@ import QuizResult from './QuizResult.vue'
 import type { QuizMode } from '@/stores/quiz'
 import type { MistakeEntry } from '@/types/mistake'
 import { canSubmitQuizAnswer } from '@/utils/answer'
+import { createLocalId } from '@/utils/id'
 
 const props = defineProps<{
   mode: QuizMode
@@ -300,7 +301,7 @@ async function handleSaveMistakeFromDiagnosis() {
   const noteTitle = readerStore.currentNote?.title || ''
 
   const entry: MistakeEntry = {
-    id: crypto.randomUUID(),
+    id: createLocalId('mistake'),
     note_path: notePath,
     note_title: noteTitle,
     question: currentQuestion.value.question,

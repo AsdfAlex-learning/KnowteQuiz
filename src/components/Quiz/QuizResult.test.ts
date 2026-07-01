@@ -2,7 +2,7 @@
 
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import QuizResult from './QuizResult.vue'
 import { useMistakeStore } from '@/stores/mistakes'
 import { useQuizStore } from '@/stores/quiz'
@@ -23,6 +23,10 @@ const lastReport: DiagnosisReport = {
 }
 
 describe('QuizResult', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('saves advanced mistakes with the diagnosis context for that question', async () => {
     const pinia = createPinia()
     setActivePinia(pinia)
@@ -81,6 +85,45 @@ describe('QuizResult', () => {
           ],
           final_report: firstReport,
         },
+      }),
+    )
+  })
+
+  it('falls back to a local mistake id when crypto is unavailable', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const quizStore = useQuizStore()
+    const mistakeStore = useMistakeStore()
+    mistakeStore.saveEntry = vi.fn().mockResolvedValue(true)
+    vi.stubGlobal('crypto', undefined)
+
+    quizStore.questions = [{
+      id: 'q1',
+      question_type: 'single',
+      question: 'Which ownership claim is true?',
+      options: ['A. Values always copy', 'B. Moves transfer ownership'],
+      answer: 'B',
+      explanation: 'Non-Copy values move by default.',
+    }]
+    quizStore.answers = new Map([['q1', 'A']])
+
+    const wrapper = mount(QuizResult, {
+      props: {
+        mode: 'basic',
+        reasoning: '',
+        diagnosisReport: null,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    await wrapper.get('button.text-\\[11px\\]').trigger('click')
+
+    expect(mistakeStore.saveEntry).toHaveBeenCalledWith(
+      'q1',
+      expect.objectContaining({
+        id: expect.stringMatching(/^mistake-\d+-[a-z0-9]+$/),
       }),
     )
   })

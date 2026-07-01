@@ -83,6 +83,7 @@ import { useExplorerStore } from '@/stores/explorer'
 import { useReaderStore } from '@/stores/reader'
 import { useMistakeStore } from '@/stores/mistakes'
 import { isQuizAnswerCorrect } from '@/utils/answer'
+import { createLocalId } from '@/utils/id'
 import type { QuizQuestion } from '@/types/quiz'
 import type { DiagnosisReport } from '@/types/diagnosis'
 import type { QuizMode } from '@/stores/quiz'
@@ -140,7 +141,7 @@ async function handleSaveMistake(q: QuizQuestion) {
   const questionDiagnosis = diagnosisFor(q.id)
 
   const entry: MistakeEntry = {
-    id: crypto.randomUUID(),
+    id: createLocalId('mistake'),
     note_path: notePath,
     note_title: noteTitle,
     question: q.question,
