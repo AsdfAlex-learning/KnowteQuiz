@@ -31,7 +31,7 @@ export async function webStream<T>(
     if (done) break
 
     buffer += decoder.decode(value, { stream: true })
-    const chunks = buffer.split('\n\n')
+    const chunks = buffer.split(/\r?\n\r?\n/)
     buffer = chunks.pop() || ''
 
     for (const chunk of chunks) {
@@ -45,7 +45,7 @@ export async function webStream<T>(
 }
 
 function emitSseChunk<T>(chunk: string, onMessage: (msg: T) => void): void {
-  const lines = chunk.split('\n')
+  const lines = chunk.split(/\r?\n/)
   let data = ''
   for (const line of lines) {
     if (line.startsWith('data:')) {
