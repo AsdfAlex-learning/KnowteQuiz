@@ -9,13 +9,15 @@ export function resolveMarkdownAssetUrl(
   notePath: string,
   toAssetUrl: AssetUrlFactory,
 ): string {
-  if (!src || isPassthroughUrl(src) || isAbsolutePath(src) || !notePath) {
+  if (!src || isPassthroughUrl(src) || !notePath) {
     return src
   }
 
   const { path, suffix } = splitUrlSuffix(src)
-  const noteDir = dirname(notePath)
-  const absolutePath = normalizePath(joinPath(noteDir, decodeURIPath(path)))
+  const decodedPath = decodeURIPath(path)
+  const absolutePath = normalizePath(isLocalAbsolutePath(decodedPath)
+    ? decodedPath
+    : joinPath(dirname(notePath), decodedPath))
   return appendUrlSuffix(toAssetUrl(absolutePath), suffix)
 }
 
@@ -49,13 +51,17 @@ export function configureMarkdownAssetRenderer(
 function isPassthroughUrl(src: string): boolean {
   return src.startsWith('#')
     || src.startsWith('//')
-    || EXTERNAL_URL_PATTERN.test(src)
+    || (!isWindowsDrivePath(src) && EXTERNAL_URL_PATTERN.test(src))
 }
 
-function isAbsolutePath(src: string): boolean {
+function isLocalAbsolutePath(src: string): boolean {
   return src.startsWith('/')
     || src.startsWith('\\')
-    || /^[a-zA-Z]:[\\/]/.test(src)
+    || isWindowsDrivePath(src)
+}
+
+function isWindowsDrivePath(src: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(src)
 }
 
 function splitUrlSuffix(src: string): { path: string; suffix: string } {
@@ -98,9 +104,10 @@ function joinPath(base: string, relative: string): string {
 }
 
 function normalizePath(path: string): string {
-  const usesWindowsDrive = /^[a-zA-Z]:\//.test(path)
-  const prefix = usesWindowsDrive ? path.slice(0, 2) : path.startsWith('/') ? '/' : ''
-  const rest = usesWindowsDrive ? path.slice(3) : path.replace(/^\/+/, '')
+  const normalized = path.replace(/\\/g, '/')
+  const usesWindowsDrive = /^[a-zA-Z]:\//.test(normalized)
+  const prefix = usesWindowsDrive ? normalized.slice(0, 2) : normalized.startsWith('/') ? '/' : ''
+  const rest = usesWindowsDrive ? normalized.slice(3) : normalized.replace(/^\/+/, '')
   const parts: string[] = []
 
   for (const part of rest.split('/')) {

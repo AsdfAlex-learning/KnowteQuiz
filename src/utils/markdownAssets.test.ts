@@ -16,14 +16,26 @@ describe('markdown asset URL resolution', () => {
     expect(result).toBe('asset://D:/notes/rust/assets/diagram.png')
   })
 
-  it('preserves external, data, anchor, and absolute image URLs', () => {
+  it('preserves external, data, and anchor image URLs', () => {
     const toAssetUrl = vi.fn((path: string) => `asset://${path}`)
 
     expect(resolveMarkdownAssetUrl('https://example.com/a.png', 'D:/notes/a.md', toAssetUrl)).toBe('https://example.com/a.png')
     expect(resolveMarkdownAssetUrl('data:image/png;base64,abc', 'D:/notes/a.md', toAssetUrl)).toBe('data:image/png;base64,abc')
     expect(resolveMarkdownAssetUrl('#figure-1', 'D:/notes/a.md', toAssetUrl)).toBe('#figure-1')
-    expect(resolveMarkdownAssetUrl('C:/images/a.png', 'D:/notes/a.md', toAssetUrl)).toBe('C:/images/a.png')
     expect(toAssetUrl).not.toHaveBeenCalled()
+  })
+
+  it('routes local absolute image paths through the asset URL factory', () => {
+    const toAssetUrl = vi.fn((path: string) => `/api/notes/asset?path=${encodeURIComponent(path)}`)
+
+    const result = resolveMarkdownAssetUrl(
+      'C:/images/diagram.png',
+      'D:/notes/rust/ownership.md',
+      toAssetUrl,
+    )
+
+    expect(toAssetUrl).toHaveBeenCalledWith('C:/images/diagram.png')
+    expect(result).toBe('/api/notes/asset?path=C%3A%2Fimages%2Fdiagram.png')
   })
 
   it('normalizes parent directory segments without changing markdown URL query text', () => {
