@@ -62,7 +62,8 @@ export async function submitAnswerAdvanced(
       onEvent: channel,
     })
   } else {
-    const sessionId = crypto.randomUUID ? crypto.randomUUID() : `web-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const sessionId = globalThis.crypto?.randomUUID?.()
+      ?? `web-${Date.now()}-${Math.random().toString(36).slice(2)}`
     await webStream<DiagnosisEvent>('/api/quiz/diagnose', {
       session_id: sessionId,
       question,

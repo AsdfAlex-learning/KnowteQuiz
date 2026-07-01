@@ -60,6 +60,31 @@ describe('quiz service', () => {
     )
   })
 
+  it('falls back to a local session id when crypto is unavailable in web mode', async () => {
+    vi.stubGlobal('crypto', undefined)
+    vi.mocked(webStream).mockResolvedValue(undefined)
+
+    await submitAnswerAdvanced(
+      'Which claim is true?',
+      'B',
+      'A',
+      'I guessed.',
+      '/notes/rust.md',
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(webStream).toHaveBeenCalledWith(
+      '/api/quiz/diagnose',
+      expect.objectContaining({
+        session_id: expect.stringMatching(/^web-\d+-[a-z0-9]+$/),
+      }),
+      expect.any(Function),
+    )
+  })
+
   it('includes the response body when web diagnosis report generation fails', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: false,
