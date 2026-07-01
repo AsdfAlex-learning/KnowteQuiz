@@ -1,6 +1,7 @@
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::services::fs_service;
 use crate::services::note_service;
+use crate::services::storage;
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -11,8 +12,9 @@ pub async fn select_folder(app: AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
-pub async fn scan_notes(root_path: String) -> Result<Vec<NoteTreeNode>, String> {
-    fs_service::scan_directory(&root_path)
+pub async fn scan_notes(app: AppHandle, root_path: String) -> Result<Vec<NoteTreeNode>, String> {
+    let data_dir = storage::get_data_dir(&app)?;
+    fs_service::scan_directory_with_index(&root_path, &data_dir)
 }
 
 #[tauri::command]

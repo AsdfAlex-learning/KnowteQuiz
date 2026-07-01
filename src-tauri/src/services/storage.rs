@@ -4,11 +4,13 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 const APP_DATA_SUBDIR: &str = "knowtequiz";
-const MANAGED_DATA_FILES: [&str; 4] = [
+const MANAGED_DATA_FILES: [&str; 6] = [
     "settings.json",
     "settings.json.bak",
     "mistakes.json",
     "mistakes.json.bak",
+    "index.json",
+    "index.json.bak",
 ];
 
 #[derive(Debug, Clone, Serialize)]
@@ -334,12 +336,16 @@ mod tests {
             .expect("settings should be written");
         fs::write(dir.join("mistakes.json"), r#"[{"id":"m1"}]"#)
             .expect("mistakes should be written");
+        fs::write(dir.join("index.json"), r#"{"notes":[]}"#).expect("index should be written");
         fs::write(dir.join("scratch.tmp"), "temporary").expect("unmanaged file should be written");
 
         let result = backup_data_files_path(&dir).expect("backup should succeed");
 
         assert!(result.backup_dir.contains("backups"));
-        assert_eq!(result.files, vec!["mistakes.json", "settings.json"]);
+        assert_eq!(
+            result.files,
+            vec!["index.json", "mistakes.json", "settings.json"]
+        );
         let backup_dir = PathBuf::from(&result.backup_dir);
         assert_eq!(
             fs::read_to_string(backup_dir.join("settings.json"))
@@ -351,6 +357,11 @@ mod tests {
                 .expect("mistakes backup should exist"),
             r#"[{"id":"m1"}]"#
         );
+        assert_eq!(
+            fs::read_to_string(backup_dir.join("index.json"))
+                .expect("index backup should exist"),
+            r#"{"notes":[]}"#
+        );
         assert!(!backup_dir.join("scratch.tmp").exists());
     }
 
@@ -359,6 +370,7 @@ mod tests {
         let dir = temp_data_dir("data_status_path_reports_managed_file_sizes_and_missing_files");
         fs::write(dir.join("settings.json"), "12345").expect("settings should be written");
         fs::write(dir.join("mistakes.json"), "[]").expect("mistakes should be written");
+        fs::write(dir.join("index.json"), "123").expect("index should be written");
 
         let status = data_status_path(&dir).expect("data status should load");
 
@@ -380,6 +392,15 @@ mod tests {
         assert!(!settings_backup.exists);
         assert_eq!(settings_backup.size_bytes, 0);
         assert!(settings_backup.modified_at.is_none());
+
+        let index = status
+            .files
+            .iter()
+            .find(|file| file.name == "index.json")
+            .expect("index status should exist");
+        assert!(index.exists);
+        assert_eq!(index.size_bytes, 3);
+        assert!(index.modified_at.is_some());
     }
 
     #[test]

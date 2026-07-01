@@ -195,10 +195,10 @@ struct ScanNotesQuery {
 }
 
 async fn scan_notes_handler(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<ScanNotesQuery>,
 ) -> Result<Json<Vec<NoteTreeNode>>, String> {
-    let result = fs_service::scan_directory(&query.root_path)?;
+    let result = fs_service::scan_directory_with_index(&query.root_path, &state.data_dir)?;
     Ok(Json(result))
 }
 
