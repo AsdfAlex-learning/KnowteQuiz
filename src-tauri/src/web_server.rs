@@ -245,6 +245,7 @@ fn asset_content_type(path: &Path) -> Option<&'static str> {
         Some("jpg") | Some("jpeg") => Some("image/jpeg"),
         Some("gif") => Some("image/gif"),
         Some("webp") => Some("image/webp"),
+        Some("avif") => Some("image/avif"),
         Some("bmp") => Some("image/bmp"),
         Some("svg") => Some("image/svg+xml"),
         _ => None,
@@ -581,6 +582,14 @@ mod tests {
             Some("image/webp")
         );
         assert_eq!(asset_content_type(Path::new("note.md")), None);
+    }
+
+    #[test]
+    fn asset_content_type_allows_avif_images() {
+        assert_eq!(
+            asset_content_type(Path::new("screenshot.avif")),
+            Some("image/avif")
+        );
     }
 
     #[tokio::test]
