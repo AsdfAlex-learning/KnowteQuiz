@@ -27,6 +27,18 @@ describe('webStream', () => {
     expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
   })
 
+  it('accepts SSE data lines without a space after the colon', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      body: streamFromText('data:{"event":"done","data":{"total":1}}'),
+    })))
+    const messages: unknown[] = []
+
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg))
+
+    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
+  })
+
   it('rejects malformed SSE data instead of silently ignoring it', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,

@@ -48,8 +48,8 @@ function emitSseChunk<T>(chunk: string, onMessage: (msg: T) => void): void {
   const lines = chunk.split('\n')
   let data = ''
   for (const line of lines) {
-    if (line.startsWith('data: ')) {
-      data = line.slice(6)
+    if (line.startsWith('data:')) {
+      data = line.slice(5).replace(/^ /, '')
       break
     }
   }
