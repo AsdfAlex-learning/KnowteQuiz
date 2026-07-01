@@ -325,7 +325,7 @@ fn validate_choice_answer(
         return Ok(());
     }
 
-    let normalized_answers = split_answer_text(answer);
+    let normalized_answers = split_answer_text(answer, options);
     if matches!(question_type, QuestionType::Single) && normalized_answers.len() != 1 {
         return Err(format!(
             "Question {} single choice answer must contain exactly one option",
@@ -381,11 +381,22 @@ fn normalize_answer_text(value: &str) -> String {
         .to_ascii_lowercase()
 }
 
-fn split_answer_text(answer: &str) -> Vec<String> {
-    let parts = answer
+fn split_answer_text(answer: &str, options: &[String]) -> Vec<String> {
+    let punctuation_parts = answer
         .split([',', ';', '，', '；', '、'])
         .map(normalize_answer_text)
         .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>();
+
+    let parts = punctuation_parts
+        .into_iter()
+        .flat_map(|part| {
+            if option_text_matches(options, &part) {
+                vec![part]
+            } else {
+                split_word_joined_answer_text(&part)
+            }
+        })
         .collect::<Vec<_>>();
 
     if parts.is_empty() {
@@ -393,6 +404,28 @@ fn split_answer_text(answer: &str) -> Vec<String> {
     } else {
         parts
     }
+}
+
+fn split_word_joined_answer_text(answer: &str) -> Vec<String> {
+    let mut parts = Vec::new();
+    let mut current = Vec::new();
+
+    for word in answer.split_whitespace() {
+        if word.eq_ignore_ascii_case("and") {
+            if !current.is_empty() {
+                parts.push(normalize_answer_text(&current.join(" ")));
+                current.clear();
+            }
+        } else {
+            current.push(word);
+        }
+    }
+
+    if !current.is_empty() {
+        parts.push(normalize_answer_text(&current.join(" ")));
+    }
+
+    parts
 }
 
 fn strip_option_label(option: &str) -> String {
@@ -1121,6 +1154,28 @@ Good luck."#;
 
         assert_eq!(questions.len(), 1);
         assert_eq!(questions[0].answer, "Alpha, Gamma");
+    }
+
+    #[test]
+    fn parse_quiz_response_accepts_multiple_choice_answer_text_joined_by_and() {
+        let raw = r#"{
+            "questions": [
+                {
+                    "id": "q1",
+                    "question_type": "multiple",
+                    "question": "Which claims are true?",
+                    "options": ["A. Alpha", "B. Beta", "C. Gamma"],
+                    "answer": "Alpha and Gamma",
+                    "explanation": "Alpha and Gamma are true."
+                }
+            ]
+        }"#;
+
+        let questions =
+            parse_quiz_response(raw).expect("multiple choice answer text joined by and should parse");
+
+        assert_eq!(questions.len(), 1);
+        assert_eq!(questions[0].answer, "Alpha and Gamma");
     }
 
     #[test]
