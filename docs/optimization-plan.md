@@ -1,6 +1,6 @@
 # KnowteQuiz 全面优化方案 — 进度追踪
 
-> 最后同步：2026-06-26 | 基于 git commit 历史自动标记
+> 最后同步：2026-07-01 | 基于 git commit 历史自动标记
 >
 > ✅ = 已完成 | ◐ = 部分完成 | ❌ = 未开始
 
@@ -69,7 +69,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 打开数据目录（`feat: add open data directory button to settings`）
 - ✅ 立即备份（`Backup Data Now` -> `settingsService.backupData()`）
 - ✅ 恢复备份（`Restore Latest Backup` -> `settingsService.restoreLatestBackup()`）
-- ❌ 导出错题
+- ✅ 导出错题（`feat: export mistakes as JSON or Markdown`）
 - ✅ 显示数据文件大小（`DataStatus.files[].size_bytes`）
 - ✅ 显示最近写入时间（`DataStatus.files[].modified_at`）
 
@@ -336,7 +336,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 增加错误分类（结构化返回）
 - ✅ 前端显示生成阶段
 
-### 第 3 周：长期使用体验 ◐（部分完成）
+### 第 3 周：长期使用体验 ✅（除规模化索引外已完成）
 
 目标：让它像真正日用工具。
 
@@ -346,12 +346,12 @@ KnowteQuiz 的方向是正确的：
 - ✅ 保存展开目录
 - ✅ 保存阅读位置
 - ✅ 错题本分页
-- ❌ 错题搜索
+- ✅ 错题搜索
 - ✅ 错题导出
 - ✅ 设置页增加数据备份/恢复
 - ✅ 设置页增加打开数据目录
 
-### 第 4 周：规模化和发布 ❌（基本未开始）
+### 第 4 周：规模化和发布 ◐（发布基础完成，规模化索引未开始）
 
 目标：让大笔记库和正式发布更稳。
 
