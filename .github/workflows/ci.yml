@@ -96,11 +96,35 @@ jobs:
           SERVER_PID=$!
           sleep 5
 
-          # Verify server is running
-          curl -sSf http://127.0.0.1:14201/api/data/status || { kill $SERVER_PID; exit 1; }
+          set -e
 
-          # Verify settings endpoint
-          curl -sSf http://127.0.0.1:14201/api/settings || { kill $SERVER_PID; exit 1; }
+          # 1. Server ready check
+          curl -sSf http://127.0.0.1:14201/api/data/status > /dev/null
+
+          # 2. Settings endpoint
+          curl -sSf http://127.0.0.1:14201/api/settings > /dev/null
+
+          # 3. Scan fixture notes
+          FIXTURE_PATH="$(pwd)/../fixture-notes"
+          curl -sSf "http://127.0.0.1:14201/api/notes/scan?root_path=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1],safe=""))' "$FIXTURE_PATH")" > /tmp/notes.json
+          NOTE_COUNT=$(python3 -c 'import json,sys; print(sum(1 for n in json.load(sys.stdin) if not n.get("is_dir")))' < /tmp/notes.json)
+          if [ "$NOTE_COUNT" -lt 1 ]; then echo "No markdown files found"; exit 1; fi
+          echo "Smoke: scanned $NOTE_COUNT markdown files"
+
+          # 4. Read a markdown note
+          NOTE_PATH=$(python3 -c 'import json,sys,urllib.parse; notes=json.load(sys.stdin); leaf=[n for n in notes if not n.get("is_dir")][0]; print(urllib.parse.quote(leaf["path"],safe=""))' < /tmp/notes.json)
+          curl -sSf "http://127.0.0.1:14201/api/notes/read?path=$NOTE_PATH" > /tmp/note.json
+
+          # 5. Save a mistake, then verify it persists
+          MISTAKE_ID="smoke-$(date +%s)"
+          curl -sSf -X POST http://127.0.0.1:14201/api/mistakes \
+            -H "Content-Type: application/json" \
+            -d "{\"id\":\"$MISTAKE_ID\",\"note_path\":\"/notes/smoke.md\",\"note_title\":\"Smoke\",\"question\":\"Q?\",\"user_answer\":\"A\",\"correct_answer\":\"B\",\"explanation\":\"smoke\",\"mode\":\"basic\",\"created_at\":\"2026-01-01T00:00:00.000Z\",\"review_count\":0}" > /dev/null
+
+          curl -sSf http://127.0.0.1:14201/api/mistakes > /tmp/mistakes.json
+          FOUND=$(python3 -c "import json,sys; data=json.load(sys.stdin); print(1 if any(m['id']=='$MISTAKE_ID' for m in data) else 0)" < /tmp/mistakes.json)
+          if [ "$FOUND" != "1" ]; then echo "Mistake did not persist"; exit 1; fi
+          echo "Smoke: mistake persisted"
 
           echo "Smoke test passed"
           kill $SERVER_PID

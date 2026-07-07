@@ -76,10 +76,16 @@
       </div>
 
       <button
-        class="w-full py-2 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
+        class="w-full py-2 rounded-md text-sm font-medium transition-colors btn-press"
+        :class="
+          saving
+            ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)]'
+        "
+        :disabled="saving"
         @click="handleSave"
       >
-        Save Settings
+        {{ saving ? 'Saving...' : 'Save Settings' }}
       </button>
 
       <button
@@ -254,6 +260,7 @@ const testing = ref(false)
 const backingUp = ref(false)
 const restoring = ref(false)
 const probing = ref(false)
+const saving = ref(false)
 const connectionResult = ref<ConnectionTestResult | null>(null)
 
 function updateLLM(llm: SettingsLLM) {
@@ -282,7 +289,14 @@ async function handleTestConnection() {
 }
 
 async function handleSave() {
-  await settingsStore.persistSettings()
+  saving.value = true
+  try {
+    await settingsStore.persistSettings()
+  } catch {
+    // The store owns the user-visible error state.
+  } finally {
+    saving.value = false
+  }
 }
 
 async function handleBackup() {
@@ -297,6 +311,9 @@ async function handleBackup() {
 }
 
 async function handleRestore() {
+  if (!window.confirm('Restore will overwrite current settings and mistakes from the latest backup. A pre-restore snapshot is taken automatically. Continue?')) {
+    return
+  }
   restoring.value = true
   try {
     await settingsStore.restoreLatestBackupNow()

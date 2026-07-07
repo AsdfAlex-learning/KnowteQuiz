@@ -29,6 +29,7 @@ describe('SettingsPanel', () => {
       data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
       files: [],
     })
+    vi.stubGlobal('confirm', vi.fn(() => true))
   })
 
   it('renders failed connection tests with the error state', async () => {

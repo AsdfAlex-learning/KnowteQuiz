@@ -9,7 +9,7 @@
         <span class="text-xs text-[var(--text-muted)] mb-1 block">Provider</span>
         <input
           :value="llm.provider"
-          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           placeholder="openai-compatible"
           @input="update('provider', ($event.target as HTMLInputElement).value)"
         />
@@ -19,7 +19,7 @@
         <span class="text-xs text-[var(--text-muted)] mb-1 block">API URL</span>
         <input
           :value="llm.base_url"
-          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
           placeholder="http://localhost:11434/v1"
           @input="update('base_url', ($event.target as HTMLInputElement).value)"
         />
@@ -30,7 +30,7 @@
         <input
           :value="llm.api_key"
           type="password"
-          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           placeholder="sk-..."
           @input="update('api_key', ($event.target as HTMLInputElement).value)"
         />
@@ -40,7 +40,7 @@
         <span class="text-xs text-[var(--text-muted)] mb-1 block">Model</span>
         <input
           :value="llm.model"
-          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
+          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
           placeholder="qwen2.5:7b"
           @input="update('model', ($event.target as HTMLInputElement).value)"
         />
@@ -55,7 +55,7 @@
             step="0.1"
             min="0"
             max="2"
-            class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
+            class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
             placeholder="0.7"
             @input="update('temperature', Number(($event.target as HTMLInputElement).value))"
           />
@@ -68,7 +68,7 @@
             type="number"
             min="1"
             max="128000"
-            class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
+            class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
             placeholder="4096"
             @input="update('max_tokens', Number(($event.target as HTMLInputElement).value))"
           />

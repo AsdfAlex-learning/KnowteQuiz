@@ -1,5 +1,5 @@
 <template>
-  <div class="flex-1 flex flex-col">
+  <div class="flex-1 flex flex-col relative">
     <!-- Search bar -->
     <div v-if="showSearch" class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border-default)] bg-[var(--bg-elevated)]">
       <input
@@ -92,10 +92,10 @@
       </div>
     </div>
 
-    <!-- TOC toggle button (fixed) -->
+    <!-- TOC toggle button -->
     <button
       v-if="tocHeadings.length > 0 && !showToc"
-      class="fixed right-4 bottom-4 w-8 h-8 rounded-full bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] flex items-center justify-center text-xs font-medium shadow hover:bg-[var(--accent-purple)]/30 transition-colors z-10"
+      class="absolute right-3 bottom-3 w-8 h-8 rounded-full bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] flex items-center justify-center text-xs font-medium shadow hover:bg-[var(--accent-purple)]/30 transition-colors z-10"
       title="Toggle outline"
       @click="showToc = true"
     >

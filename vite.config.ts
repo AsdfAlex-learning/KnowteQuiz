@@ -28,5 +28,16 @@ export default defineConfig({
     target: process.env.TAURI_ENV_PLATFORM == "windows" ? "chrome105" : "safari13",
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-vue": ["vue", "pinia"],
+          "vendor-markdown": ["markdown-it", "@traptitech/markdown-it-katex"],
+          "vendor-highlight": ["highlight.js"],
+          "vendor-tauri": ["@tauri-apps/api/core", "@tauri-apps/plugin-dialog", "@tauri-apps/plugin-fs"],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
   },
 });
