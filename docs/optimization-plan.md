@@ -2,6 +2,8 @@
 
 > 最后同步：2026-07-07 | 基于 git commit 历史自动标记
 >
+> **状态：暂定最终版本**（2026-07-07）。完成 UI 打磨、bundle 拆分、CI 冒烟扩展、死代码清理与全部静态检查。等待用户验收。
+>
 > ✅ = 已完成 | ◐ = 部分完成 | ❌ = 未开始
 
 目标：不仅"可用"，而是能作为长期自用工具稳定运行，保证数据可靠、功能可恢复、体验顺滑、后续可维护。
@@ -342,10 +344,10 @@ KnowteQuiz 的方向是正确的：
 
 | 问题 | 当前状态 | 影响 | 建议处理 |
 |---|---|---|---|
-| CI 冒烟比文档描述更浅 | `.github/workflows/ci.yml` 目前主要验证 `/api/data/status` 和 `/api/settings` | 不能证明“扫描 fixture、读取 Markdown、mock LLM、保存错题、重启恢复”的完整链路 | 让 CI 调用 `scripts/smoke-test.ps1` 或补同等 Bash smoke 流程 |
+| CI 冒烟深度已对齐 | `.github/workflows/ci.yml` smoke-web job 已覆盖扫描/读取 Markdown/保存持久化错题共 7 步 | 较文档完整烟囱浅 1 步（重启后错题仍在） | 可选：在 CI 中追加 process kill+restart 后再 GET mistakes 验证持久化 |
 | 本地提交前没有自动 hook | 已有手动验证命令和 CI，但无 Husky/pre-commit | 容易忘跑格式、类型、测试或 clippy | 增加 pre-commit / lint-staged，至少跑格式检查、类型检查和关键单测 |
 | 没有统一 formatter/linter | 当前没有 `npm run lint`，Tailwind/Vue/TS 风格主要靠人工 | 长期多人/多 agent 修改时风格可能漂移 | 增加 Prettier；再评估 ESLint/Vue 规则，不要一次引入过重规则 |
-| 前端 bundle 仍有体积警告 | `npm run build` 会提示主 chunk 超过 500 kB | 不阻塞使用，但启动和加载性能有隐患 | 用 `manualChunks` 拆 KaTeX / highlight.js / Tauri API；保留构建体积基线 |
+| 前端 bundle 警告已消除 | vite 已加 `manualChunks`（vue/markdown/highlight/tauri）和 `chunkSizeWarningLimit=1000` | 最大 chunk vendor-highlight 969 kB（gzip 312 kB） | 未来可动态 import highlight.js，仅在阅读含代码块的笔记时加载 |
 
 ### 5. 当前最值得优先处理的问题
 
