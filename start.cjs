@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 /**
  * KnowteQuiz 跨平台启动脚本
- * 支持 Windows & macOS
- * 用法: node start.js [--dev]
- *   --dev: 启动开发模式（npm run tauri:dev），支持热重载
+ * 支持 Windows & macOS & Linux
+ * 用法: node start.cjs [选项]
+ *   --dev, -d    启动开发模式（npm run tauri:dev），支持热重载
+ *   --build, -b  仅构建生产版本
+ *   --web, -w    启动 Web 服务模式（Axum，端口 14200）
+ *   --both       同时启动桌面 + Web 服务
  *   默认: 启动生产构建（release），如未构建则自动构建
  */
 
@@ -141,13 +144,45 @@ async function startRelease(extraArgs = []) {
     console.error('❌ 启动失败:', err.message);
     process.exit(1);
   });
+
+  return child;
+}
+
+async function startWeb() {
+  log('🌐 启动 Web 服务模式（端口 14200）...');
+  if (!checkCargo()) {
+    console.error('❌ 未找到 Cargo，请先安装 Rust (https://rustup.rs)');
+    process.exit(1);
+  }
+
+  const env = isWindows
+    ? { ...process.env, Path: `${process.env.Path};${process.env.USERPROFILE}\\.cargo\\bin` }
+    : { ...process.env, PATH: `${process.env.PATH}:${process.env.HOME}/.cargo/bin` };
+
+  await runCommand('cargo', ['run', '--', '--mode=web'], { cwd: tauriDir, env });
+}
+
+async function startBoth() {
+  log('🖥️🌐 同时启动桌面 + Web 服务...');
+  if (!checkCargo()) {
+    console.error('❌ 未找到 Cargo，请先安装 Rust (https://rustup.rs)');
+    process.exit(1);
+  }
+
+  const env = isWindows
+    ? { ...process.env, Path: `${process.env.Path};${process.env.USERPROFILE}\\.cargo\\bin` }
+    : { ...process.env, PATH: `${process.env.PATH}:${process.env.HOME}/.cargo/bin` };
+
+  await runCommand('cargo', ['run', '--', '--mode=both'], { cwd: tauriDir, env });
 }
 
 async function main() {
   const args = process.argv.slice(2);
   const isDev = args.includes('--dev') || args.includes('-d');
   const shouldBuild = args.includes('--build') || args.includes('-b');
-  const extraArgs = args.filter((a) => a !== '--dev' && a !== '-d' && a !== '--build' && a !== '-b');
+  const isWeb = args.includes('--web') || args.includes('-w');
+  const isBoth = args.includes('--both');
+  const extraArgs = args.filter((a) => !['--dev', '-d', '--build', '-b', '--web', '-w', '--both'].includes(a));
 
   log(`检测平台: ${process.platform} (${isWindows ? 'Windows' : isMac ? 'macOS' : 'Linux'})`);
 
@@ -156,7 +191,11 @@ async function main() {
     return;
   }
 
-  if (isDev) {
+  if (isWeb) {
+    await startWeb();
+  } else if (isBoth) {
+    await startBoth();
+  } else if (isDev) {
     await startDev();
   } else {
     await startRelease(extraArgs);
