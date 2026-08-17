@@ -11,7 +11,7 @@ export async function saveMistake(entry: MistakeEntry): Promise<boolean> {
     body: JSON.stringify(entry),
   });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<boolean>(res);
 }
 
 export async function loadMistakes(filter?: MistakeFilter): Promise<MistakeEntry[]> {
@@ -21,12 +21,21 @@ export async function loadMistakes(filter?: MistakeFilter): Promise<MistakeEntry
   const query = mistakeFilterQuery(filter);
   const res = await fetch(`/api/mistakes${query}`);
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<MistakeEntry[]>(res);
 }
 
 async function throwHttpError(res: Response): Promise<never> {
   const message = await res.text().catch(() => '');
   throw new Error(message ? `HTTP ${res.status}: ${message}` : `HTTP ${res.status}`);
+}
+
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
+  }
 }
 
 function mistakeFilterQuery(filter?: MistakeFilter): string {
@@ -49,7 +58,7 @@ export async function listPromptTemplates(): Promise<Array<{ name: string; label
   }
   const res = await fetch('/api/prompt-templates');
   if (!res.ok) await throwHttpError(res);
-  const result = (await res.json()) as Array<[string, string, string]>;
+  const result = await parseJsonResponse<Array<[string, string, string]>>(res);
   return result.map(([name, label, description]) => ({ name, label, description }));
 }
 
@@ -63,7 +72,7 @@ export async function markMistakeReviewed(mistakeId: string): Promise<boolean> {
     body: JSON.stringify({ mistake_id: mistakeId }),
   });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<boolean>(res);
 }
 
 function dateStamp(): string {

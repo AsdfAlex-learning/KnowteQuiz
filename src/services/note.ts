@@ -6,6 +6,15 @@ async function throwHttpError(res: Response): Promise<never> {
   throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
+  }
+}
+
 export async function selectFolder(): Promise<string | null> {
   if (isTauri()) {
     return invoke<string | null>('select_folder');
@@ -21,7 +30,7 @@ export async function scanNotes(rootPath: string): Promise<NoteTreeNode[]> {
   const params = new URLSearchParams({ root_path: rootPath });
   const res = await fetch(`/api/notes/scan?${params}`);
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<NoteTreeNode[]>(res);
 }
 
 export async function readNote(path: string): Promise<NoteContent> {
@@ -31,5 +40,5 @@ export async function readNote(path: string): Promise<NoteContent> {
   const params = new URLSearchParams({ path });
   const res = await fetch(`/api/notes/read?${params}`);
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<NoteContent>(res);
 }

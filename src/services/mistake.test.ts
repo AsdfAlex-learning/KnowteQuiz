@@ -25,7 +25,7 @@ describe('mistake service', () => {
   it('passes mistake filters as web query parameters', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
-      json: async () => [],
+      text: async () => JSON.stringify([]),
     }));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -59,7 +59,7 @@ describe('mistake service', () => {
   it('marks a mistake reviewed through the web endpoint', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
-      json: async () => true,
+      text: async () => JSON.stringify(true),
     }));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -109,7 +109,7 @@ describe('export mistakes service', () => {
   it('loads all mistakes without pagination when exporting as JSON', async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
-      json: async () => [mockMistake('m1'), mockMistake('m2')],
+      text: async () => JSON.stringify([mockMistake('m1'), mockMistake('m2')]),
     }));
     vi.stubGlobal('fetch', fetchMock);
 
@@ -130,7 +130,7 @@ describe('export mistakes service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => [mockMistake()],
+        text: async () => JSON.stringify([mockMistake()]),
       }))
     );
     vi.useFakeTimers();
@@ -147,7 +147,7 @@ describe('export mistakes service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => [mockMistake('m1')],
+        text: async () => JSON.stringify([mockMistake('m1')]),
       }))
     );
 
@@ -178,7 +178,7 @@ describe('export mistakes service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => [adv],
+        text: async () => JSON.stringify([adv]),
       }))
     );
 
@@ -195,7 +195,7 @@ describe('export mistakes service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => [],
+        text: async () => JSON.stringify([]),
       }))
     );
 

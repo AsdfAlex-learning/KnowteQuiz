@@ -12,13 +12,22 @@ async function throwHttpError(res: Response): Promise<never> {
   throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
+  }
+}
+
 export async function getSettings(): Promise<Settings> {
   if (isTauri()) {
     return invoke<Settings>('get_settings');
   }
   const res = await fetch('/api/settings');
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<Settings>(res);
 }
 
 export async function saveSettings(settings: Settings): Promise<boolean> {
@@ -31,7 +40,7 @@ export async function saveSettings(settings: Settings): Promise<boolean> {
     body: JSON.stringify(settings),
   });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<boolean>(res);
 }
 
 export async function testConnection(): Promise<ConnectionTestResult> {
@@ -40,7 +49,7 @@ export async function testConnection(): Promise<ConnectionTestResult> {
   }
   const res = await fetch('/api/test-connection', { method: 'POST' });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<ConnectionTestResult>(res);
 }
 
 export async function backupData(): Promise<DataBackupResult> {
@@ -49,7 +58,7 @@ export async function backupData(): Promise<DataBackupResult> {
   }
   const res = await fetch('/api/data/backup', { method: 'POST' });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<DataBackupResult>(res);
 }
 
 export async function getDataStatus(): Promise<DataStatus> {
@@ -58,7 +67,7 @@ export async function getDataStatus(): Promise<DataStatus> {
   }
   const res = await fetch('/api/data/status');
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<DataStatus>(res);
 }
 
 export async function restoreLatestBackup(): Promise<DataRestoreResult> {
@@ -67,7 +76,7 @@ export async function restoreLatestBackup(): Promise<DataRestoreResult> {
   }
   const res = await fetch('/api/data/restore-latest', { method: 'POST' });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<DataRestoreResult>(res);
 }
 
 export async function openDataDir(): Promise<string> {
@@ -90,5 +99,5 @@ export async function probeLlm(): Promise<LlmCapabilities> {
   }
   const res = await fetch('/api/probe-llm', { method: 'POST' });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<LlmCapabilities>(res);
 }

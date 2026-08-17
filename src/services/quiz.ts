@@ -15,6 +15,15 @@ async function throwHttpError(res: Response): Promise<never> {
   throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
 }
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
+  }
+}
+
 export async function generateQuiz(
   params: QuizStreamParams,
   onPhase: (phase: string) => void,
@@ -130,7 +139,7 @@ export async function generateDiagnosisReport(sessionId: string): Promise<Diagno
   }
   const res = await fetch(`/api/quiz/diagnose/${sessionId}/report`);
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<DiagnosisReport>(res);
 }
 
 export interface SessionCleanupResult {
@@ -144,5 +153,5 @@ export async function cleanupSessions(): Promise<SessionCleanupResult> {
   }
   const res = await fetch('/api/sessions/cleanup', { method: 'POST' });
   if (!res.ok) await throwHttpError(res);
-  return res.json();
+  return parseJsonResponse<SessionCleanupResult>(res);
 }

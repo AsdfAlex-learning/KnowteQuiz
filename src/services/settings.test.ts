@@ -19,12 +19,13 @@ describe('settings service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({
-          ok: false,
-          kind: 'auth',
-          message: 'LLM endpoint rejected the API key',
-          status: 401,
-        }),
+        text: async () =>
+          JSON.stringify({
+            ok: false,
+            kind: 'auth',
+            message: 'LLM endpoint rejected the API key',
+            status: 401,
+          }),
       }))
     );
 
@@ -80,10 +81,11 @@ describe('settings service', () => {
   it('posts to the web data backup endpoint and returns the backup details', async () => {
     const fetch = vi.fn(async () => ({
       ok: true,
-      json: async () => ({
-        backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
-        files: ['settings.json', 'mistakes.json'],
-      }),
+      text: async () =>
+        JSON.stringify({
+          backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+          files: ['settings.json', 'mistakes.json'],
+        }),
     }));
     vi.stubGlobal('fetch', fetch);
 
@@ -97,17 +99,18 @@ describe('settings service', () => {
   it('loads web data file status from the data status endpoint', async () => {
     const fetch = vi.fn(async () => ({
       ok: true,
-      json: async () => ({
-        data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
-        files: [
-          {
-            name: 'settings.json',
-            exists: true,
-            size_bytes: 2048,
-            modified_at: '2026-06-21T12:00:00Z',
-          },
-        ],
-      }),
+      text: async () =>
+        JSON.stringify({
+          data_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz',
+          files: [
+            {
+              name: 'settings.json',
+              exists: true,
+              size_bytes: 2048,
+              modified_at: '2026-06-21T12:00:00Z',
+            },
+          ],
+        }),
     }));
     vi.stubGlobal('fetch', fetch);
 
@@ -121,11 +124,12 @@ describe('settings service', () => {
   it('posts to the web restore latest backup endpoint and returns restored files', async () => {
     const fetch = vi.fn(async () => ({
       ok: true,
-      json: async () => ({
-        backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
-        pre_restore_backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-130000',
-        files: ['settings.json', 'mistakes.json'],
-      }),
+      text: async () =>
+        JSON.stringify({
+          backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',
+          pre_restore_backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-130000',
+          files: ['settings.json', 'mistakes.json'],
+        }),
     }));
     vi.stubGlobal('fetch', fetch);
 
