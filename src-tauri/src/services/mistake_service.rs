@@ -1,7 +1,10 @@
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
+use std::fs;
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 
-const MISTAKES_FILE: &str = "mistakes.json";
+const MISTAKES_FILE: &str = "mistakes.jsonl";
+const MISTAKES_LEGACY_FILE: &str = "mistakes.json";
 
 pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, String> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
@@ -11,7 +14,7 @@ pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<Mist
 pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), String> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
     let updated = upsert_mistake(mistakes, entry);
-    crate::services::storage::write_json_path(data_dir, MISTAKES_FILE, &updated)
+    write_mistakes_jsonl(data_dir, &updated)
 }
 
 pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), String> {
@@ -29,15 +32,88 @@ pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), St
     if !found {
         return Err(format!("Mistake {} not found", mistake_id));
     }
-    crate::services::storage::write_json_path(data_dir, MISTAKES_FILE, &mistakes)
+    write_mistakes_jsonl(data_dir, &mistakes)
 }
 
+/// Read mistakes from jsonl file, migrating from legacy json if needed.
 fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, String> {
-    match crate::services::storage::read_json_path(data_dir, MISTAKES_FILE) {
-        Ok(mistakes) => Ok(mistakes),
-        Err(error) if error.starts_with("File not found:") => Ok(vec![]),
-        Err(error) => Err(error),
+    let jsonl_path = data_dir.join(MISTAKES_FILE);
+    let json_path = data_dir.join(MISTAKES_LEGACY_FILE);
+
+    // If jsonl exists, read it
+    if jsonl_path.exists() {
+        return read_jsonl(&jsonl_path);
     }
+
+    // If only legacy json exists, migrate it
+    if json_path.exists() {
+        let mistakes: Vec<MistakeEntry> = crate::services::storage::read_json_path(data_dir, MISTAKES_LEGACY_FILE)?;
+        write_mistakes_jsonl(data_dir, &mistakes)?;
+        // Remove legacy file after successful migration
+        let _ = fs::remove_file(&json_path);
+        let _ = fs::remove_file(data_dir.join(format!("{}.bak", MISTAKES_LEGACY_FILE)));
+        return Ok(mistakes);
+    }
+
+    // No file at all
+    Ok(vec![])
+}
+
+/// Read mistakes from a jsonl file (one JSON object per line).
+fn read_jsonl(path: &Path) -> Result<Vec<MistakeEntry>, String> {
+    let file = fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+    let reader = BufReader::new(file);
+    let mut mistakes = Vec::new();
+
+    for (line_num, line) in reader.lines().enumerate() {
+        let line = line.map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let entry: MistakeEntry = serde_json::from_str(trimmed)
+            .map_err(|e| format!("Failed to parse line {}: {}", line_num + 1, e))?;
+        mistakes.push(entry);
+    }
+
+    Ok(mistakes)
+}
+
+/// Write mistakes as jsonl (one JSON object per line) with atomic write.
+fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<(), String> {
+    let target = data_dir.join(MISTAKES_FILE);
+    let tmp = data_dir.join(format!("{}.tmp", MISTAKES_FILE));
+
+    // Build jsonl content
+    let mut content = String::new();
+    for entry in mistakes {
+        let line = serde_json::to_string(entry)
+            .map_err(|e| format!("Failed to serialize mistake {}: {}", entry.id, e))?;
+        content.push_str(&line);
+        content.push('\n');
+    }
+
+    // Atomic write: tmp → sync → backup old → rename
+    {
+        let mut file = fs::File::create(&tmp)
+            .map_err(|e| format!("Failed to create {}: {}", tmp.display(), e))?;
+        file.write_all(content.as_bytes())
+            .map_err(|e| format!("Failed to write {}: {}", tmp.display(), e))?;
+        file.sync_all()
+            .map_err(|e| format!("Failed to sync {}: {}", tmp.display(), e))?;
+    }
+
+    // Backup existing
+    if target.exists() {
+        let bak = data_dir.join(format!("{}.bak", MISTAKES_FILE));
+        let _ = fs::copy(&target, &bak);
+    }
+
+    // Rename tmp → target
+    fs::rename(&tmp, &target)
+        .map_err(|e| format!("Failed to rename {} to {}: {}", tmp.display(), target.display(), e))?;
+
+    Ok(())
 }
 
 pub fn upsert_mistake(existing: Vec<MistakeEntry>, incoming: MistakeEntry) -> Vec<MistakeEntry> {
@@ -246,15 +322,98 @@ mod tests {
     }
 
     #[test]
-    fn load_mistakes_reports_corrupt_file_without_overwriting_it() {
-        let dir = temp_data_dir("load_mistakes_reports_corrupt_file_without_overwriting_it");
-        std::fs::write(dir.join(MISTAKES_FILE), "{ not valid json")
+    fn load_mistakes_reports_corrupt_jsonl_without_overwriting_it() {
+        let dir = temp_data_dir("load_mistakes_reports_corrupt_jsonl_without_overwriting_it");
+        std::fs::write(dir.join(MISTAKES_FILE), "{ not valid json\n")
             .expect("corrupt mistakes file should be written");
 
         let error = load_mistakes(&dir, &MistakeFilter::default())
             .expect_err("corrupt mistakes file should not be treated as empty");
 
         assert!(error.contains("Failed to parse"));
+    }
+
+    #[test]
+    fn save_mistake_writes_jsonl_format() {
+        let dir = temp_data_dir("save_mistake_writes_jsonl_format");
+        let entry = mistake(
+            "m1",
+            "/notes/test.md",
+            "Question?",
+            MistakeMode::Basic,
+            "2026-01-01T00:00:00Z",
+        );
+
+        save_mistake(&dir, entry).expect("save should succeed");
+
+        let content = std::fs::read_to_string(dir.join(MISTAKES_FILE))
+            .expect("jsonl file should exist");
+        // Each line should be valid JSON, no array wrapper
+        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+        assert_eq!(lines.len(), 1);
+        let parsed: MistakeEntry =
+            serde_json::from_str(lines[0]).expect("line should be valid JSON");
+        assert_eq!(parsed.id, "m1");
+    }
+
+    #[test]
+    fn save_mistake_appends_new_entry() {
+        let dir = temp_data_dir("save_mistake_appends_new_entry");
+        let entry1 = mistake(
+            "m1",
+            "/notes/test.md",
+            "Q1?",
+            MistakeMode::Basic,
+            "2026-01-01T00:00:00Z",
+        );
+        let entry2 = mistake(
+            "m2",
+            "/notes/test.md",
+            "Q2?",
+            MistakeMode::Basic,
+            "2026-01-02T00:00:00Z",
+        );
+
+        save_mistake(&dir, entry1).expect("first save should succeed");
+        save_mistake(&dir, entry2).expect("second save should succeed");
+
+        let content = std::fs::read_to_string(dir.join(MISTAKES_FILE)).unwrap();
+        let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
+        assert_eq!(lines.len(), 2);
+    }
+
+    #[test]
+    fn migrate_legacy_json_to_jsonl() {
+        let dir = temp_data_dir("migrate_legacy_json_to_jsonl");
+        let entries = vec![
+            mistake(
+                "m1",
+                "/notes/a.md",
+                "Q1?",
+                MistakeMode::Basic,
+                "2026-01-01T00:00:00Z",
+            ),
+            mistake(
+                "m2",
+                "/notes/b.md",
+                "Q2?",
+                MistakeMode::Advanced,
+                "2026-01-02T00:00:00Z",
+            ),
+        ];
+        // Write as legacy JSON array
+        let json = serde_json::to_string(&entries).unwrap();
+        std::fs::write(dir.join(MISTAKES_LEGACY_FILE), json).expect("legacy json should be written");
+
+        let loaded = load_mistakes(&dir, &MistakeFilter::default())
+            .expect("migration should succeed");
+
+        assert_eq!(loaded.len(), 2);
+        // filter_mistakes sorts by created_at descending — m2 (Jan 2) before m1 (Jan 1)
+        assert_eq!(loaded[0].id, "m2");
+        assert_eq!(loaded[1].id, "m1");
+        // jsonl should now exist
+        assert!(dir.join(MISTAKES_FILE).exists());
     }
 
     #[test]

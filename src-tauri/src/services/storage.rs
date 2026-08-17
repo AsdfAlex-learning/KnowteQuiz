@@ -4,9 +4,11 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 const APP_DATA_SUBDIR: &str = "knowtequiz";
-const MANAGED_DATA_FILES: [&str; 6] = [
+const MANAGED_DATA_FILES: [&str; 8] = [
     "settings.json",
     "settings.json.bak",
+    "mistakes.jsonl",
+    "mistakes.jsonl.bak",
     "mistakes.json",
     "mistakes.json.bak",
     "index.json",
