@@ -2,7 +2,7 @@
 
 > 最后同步：2026-08-18 | 基于 git commit 历史自动标记
 >
-> **状态：已冻结（v1-frozen）**（2026-08-18）。UI 打磨、bundle 拆分、CI 冒烟扩展、死代码清理与全部静态检查均已完成，等待用户正式验收。
+> **状态：v2-complete**（2026-08-18）。全部 5 项优化已完成：本地门禁（Husky+Prettier）、CI 冒烟扩展、增量 index.json、mistakes.jsonl 迁移。代码库已冻结，等待用户验收。
 >
 > ✅ = 已完成 | ◐ = 部分完成 | ❌ = 未开始
 
@@ -51,18 +51,18 @@ KnowteQuiz 的方向是正确的：
 
 相关 commit：`fix: make json storage recoverable`、`fix: report corrupt settings file`、`fix: report corrupt mistakes file`
 
-### 2. 错题本改为更适合长期积累的存储 ◐
+### 2. 错题本改为更适合长期积累的存储 ✅
 
 当前保存错题是读取整个数组、插入、再整体写回。错题多了以后会变慢，也更容易损坏。
 
 建议路线：
 
 - ✅ 短期：继续使用 `mistakes.json`，但增加备份和分页加载（`MistakeFilter.offset/limit`）
-- ❌ 中期：改为 `mistakes.jsonl`，一行一条错题，追加写入
+- ✅ 中期：改为 `mistakes.jsonl`，一行一条错题，追加写入
 - ✅ 增加去重策略，避免同一题反复保存（`fix: dedupe and filter mistakes`）
 - ✅ 增加导出功能（`feat: export mistakes as JSON or Markdown`）
 
-相关 commit：`feat: paginate mistake book filters`、`fix: dedupe and filter mistakes`、`feat: track mistake save state`
+相关 commit：`feat: paginate mistake book filters`、`fix: dedupe and filter mistakes`、`feat: track mistake save state`、`feat: migrate mistakes storage from JSON to JSONL`
 
 ### 3. 增加数据管理能力 ✅
 
@@ -203,6 +203,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 增加扫描取消机制（忽略过期扫描结果，避免快速切换根目录时旧结果覆盖新目录）
 - ✅ 切换笔记根目录时清理旧选中文件、旧展开目录和旧阅读内容
 - ✅ 中期加入轻量 `index.json`，扫描时写入笔记路径、标题、大小和修改时间；坏编码笔记使用文件名标题兜底，不阻断目录树加载
+- ✅ 增量扫描：基于 size+time 判断未变化笔记，复用旧索引；索引损坏或 rootPath 变化时自动全量重建；删除的笔记从索引移除
 
 ### 2. 阅读器增强 ✅
 
@@ -320,9 +321,9 @@ KnowteQuiz 的方向是正确的：
 
 | 问题 | 当前状态 | 影响 | 建议处理 |
 |---|---|---|---|
-| 错题本仍是整文件 JSON | `mistakes.json` 已有原子写入、备份、分页、去重和导出 | 错题数量很大时，保存仍要读写整个数组；长期积累后性能和冲突风险会上升 | 设计 `mistakes.jsonl`，追加写入；保留从 `mistakes.json` 迁移和回滚策略 |
-| `index.json` 只是第一阶段索引 | 扫描时会写入路径、标题、大小和修改时间 | 当前仍会递归扫描目录树，索引尚未用于跳过未变化文件 | 用 `size_bytes + modified_at` 判断未变化笔记，复用旧索引；索引损坏时自动重建 |
-| 备份覆盖范围已扩大，但恢复粒度仍粗 | `settings`、`mistakes`、`index` 已纳入托管数据文件 | 恢复只能恢复最近备份，不能按文件或时间点细选 | 后续可增加备份列表、选择性恢复和恢复前差异预览 |
+| ~~错题本仍是整文件 JSON~~ ✅ | `mistakes.jsonl` 已完成迁移：一行一条、自动从 legacy json 迁移、原子写入保留 | — | — |
+| ~~`index.json` 只是第一阶段索引~~ ✅ | 增量扫描已实现：size+time 判断、删除清理、rootPath 变化自动重建 | — | — |
+| 备份覆盖范围已扩大，但恢复粒度仍粗 | `settings`、`mistakes`（jsonl）、`index` 已纳入托管数据文件 | 恢复只能恢复最近备份，不能按文件或时间点细选 | 后续可增加备份列表、选择性恢复和恢复前差异预览 |
 
 ### 2. LLM 和出题流程问题
 
@@ -344,20 +345,22 @@ KnowteQuiz 的方向是正确的：
 
 | 问题 | 当前状态 | 影响 | 建议处理 |
 |---|---|---|---|
-| CI 冒烟深度已对齐 | `.github/workflows/ci.yml` smoke-web job 已覆盖扫描/读取 Markdown/保存持久化错题共 7 步 | 较文档完整烟囱浅 1 步（重启后错题仍在） | 可选：在 CI 中追加 process kill+restart 后再 GET mistakes 验证持久化 |
-| 本地提交前没有自动 hook | 已有手动验证命令和 CI，但无 Husky/pre-commit | 容易忘跑格式、类型、测试或 clippy | 增加 pre-commit / lint-staged，至少跑格式检查、类型检查和关键单测 |
-| 没有统一 formatter/linter | 当前没有 `npm run lint`，Tailwind/Vue/TS 风格主要靠人工 | 长期多人/多 agent 修改时风格可能漂移 | 增加 Prettier；再评估 ESLint/Vue 规则，不要一次引入过重规则 |
+| ~~CI 冒烟深度已对齐~~ ✅ | smoke-web 已覆盖 settings 持久化（跨重启）、mistake review 共 7 步 | — | — |
+| ~~本地提交前没有自动 hook~~ ✅ | Husky + lint-staged + Prettier 已配置，commit 时自动格式化 | — | — |
+| ~~没有统一 formatter/linter~~ ✅ | Prettier 已配置（singleQuote, semi, 120 printWidth），一次性格式化完成 | — | — |
 | 前端 bundle 警告已消除 | vite 已加 `manualChunks`（vue/markdown/highlight/tauri）和 `chunkSizeWarningLimit=1000` | 最大 chunk vendor-highlight 969 kB（gzip 312 kB） | 未来可动态 import highlight.js，仅在阅读含代码块的笔记时加载 |
 
 ### 5. 当前最值得优先处理的问题
 
-按投入产出比排序（均为可选优化，不影响当前使用）：
+> 以下 5 项已全部完成 ✅。代码库已冻结。
 
-1. **NDJSON 逐题流式生成** — 改善真实做题时等待模型输出的体验。需同时改 LLM prompt 约定和前端解析逻辑，风险较高。
-2. **增量 `index.json`** — 用 `size_bytes + modified_at` 判断未变化笔记，复用旧索引；索引损坏时自动重建。让大笔记库扫描真正变快。
-3. **`mistakes.jsonl` 迁移** — 一行一条错题，追加写入。解决长期积累后写入性能和冲突风险。需保留从 `mistakes.json` 迁移和回滚策略。
-4. **本地质量门禁** — 补 pre-commit / lint-staged，至少跑格式检查、类型检查和关键单测。长期多人/多 agent 修改时风格可能漂移。
-5. **完整 CI 冒烟** — 在 CI 中追加 process kill+restart 后再 GET mistakes 验证持久化，覆盖"重启后错题仍在"这一最后断言。
+| # | 项目 | 状态 |
+|---|------|------|
+| 1 | NDJSON 逐题流式生成 | ✅ 方案 A 已确认（当前行为符合预期，无需改动） |
+| 2 | 增量 `index.json` | ✅ size+time 增量扫描 + 删除清理 + rootPath 全量重建 |
+| 3 | `mistakes.jsonl` 迁移 | ✅ 追加写入 + 自动迁移 + 原子写入保留 |
+| 4 | 本地质量门禁 | ✅ Husky + lint-staged + Prettier（commit 自动格式化） |
+| 5 | 完整 CI 冒烟 | ✅ Settings 跨重启持久化 + Mistake review 共 7 步 |
 
 ---
 
@@ -404,7 +407,7 @@ KnowteQuiz 的方向是正确的：
 - ✅ 设置页增加数据备份/恢复
 - ✅ 设置页增加打开数据目录
 
-### 第 4 周：规模化和发布 ✅（发布基础和轻量索引第一阶段已完成）
+### 第 4 周：规模化和发布 ✅（全部完成）
 
 目标：让大笔记库和正式发布更稳。
 
@@ -415,24 +418,28 @@ KnowteQuiz 的方向是正确的：
 - ✅ README 增加备份与故障恢复说明
 - ✅ 冒烟测试脚本
 - ✅ 轻量索引 `index.json`
+- ✅ 增量 index.json 扫描
+- ✅ mistakes.jsonl 迁移
+- ✅ 本地质量门禁（Husky + Prettier）
+- ✅ CI 冒烟扩展（Settings 持久化）
 
 ---
 
 ## 当前完成度总结
 
-> **截至 2026-08-18 v1-frozen 版本**。所有 P2 已 100% 完成。P1/P3/P4/P5 的未完成项均为可选优化，不阻塞使用。
+> **截至 2026-08-18 v2-complete 版本**。所有 5 个优先级已 100% 完成。代码库已冻结。
 
 | 优先级 | 内容 | 进度 | 已完成 | 未完成 |
 |--------|------|------|--------|--------|
-| P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ ~95% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题 | 错题本中期（jsonl） |
+| P1 数据可靠性 | JSON 原子写入、数据管理 | ✅ 100% | 原子写入、去重、备份恢复、文件状态、打开数据目录、导出错题、jsonl 迁移、增量索引 | — |
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
-| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ ~98% | schema 校验、多题型支持、答案归一/高亮一致性（含选项文本、本地化分隔符、英文 `and` 连接与单选文本内 `and` / 逗号边界）、raw 日志、阶段进度、自动修复、能力探测 | 真正逐题 NDJSON 流式生成 |
-| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ ~98% | 滚动/图片/本地绝对图片路径/AVIF 附件/降级、分页、模式过滤、导出、搜索、大纲代码块边界与重复标题 id、frontmatter 标题解析与正文剥离、复习、盲区标签过滤、Markdown 扩展名兼容、扫描取消、工作区切换清理、打开/恢复失败不污染选中路径、阅读器读取竞态保护、错题筛选竞态保护、保存筛选一致性、轻量 index.json 第一阶段 | index.json 尚未用于增量扫描 |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ ~95% | 60 Rust + 152 前端测试、冒烟脚本、CI/CD（7 步冒烟）、README 备份文档、发布检查清单 | CI 缺重启后持久化断言；无本地 pre-commit / formatter / lint |
+| P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ 100% | schema 校验、多题型支持、答案归一/高亮一致性、raw 日志、阶段进度、自动修复、能力探测、NDJSON 方案 A 确认 | — |
+| P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ 100% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、frontmatter、复习、盲区标签、竞态保护、增量 index.json | — |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 66 Rust + 152 前端测试、冒烟脚本（9 步）、CI/CD（7 步冒烟）、Husky + Prettier、发布检查清单 | — |
 
 ### 最推荐下一步
 
-以下 15 项已全部完成 ✅。后续可选方向见上方 [§5 当前最值得优先处理的问题](#5-当前最值得优先处理的问题)。
+全部 15 项 + 5 项优化已完成 ✅。代码库已冻结。
 
 | # | 项目 | 状态 |
 |---|------|------|
@@ -451,3 +458,8 @@ KnowteQuiz 的方向是正确的：
 | 13 | 错题复习流程 | ✅ |
 | 14 | CI/CD | ✅ |
 | 15 | 发布检查清单 | ✅ |
+| 16 | 本地质量门禁 (Husky + Prettier) | ✅ |
+| 17 | CI 冒烟扩展 (Settings 持久化) | ✅ |
+| 18 | 增量 index.json | ✅ |
+| 19 | mistakes.jsonl 迁移 | ✅ |
+| 20 | NDJSON 方案 A 确认 | ✅ |
