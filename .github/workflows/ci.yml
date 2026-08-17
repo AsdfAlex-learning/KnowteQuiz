@@ -126,5 +126,43 @@ jobs:
           if [ "$FOUND" != "1" ]; then echo "Mistake did not persist"; exit 1; fi
           echo "Smoke: mistake persisted"
 
-          echo "Smoke test passed"
+          # 6. Settings persistence across restart
+          #    Read settings, modify quiz.language, write back, restart, verify
+          curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_orig.json
+          ORIGINAL_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['language'])" < /tmp/settings_orig.json)
+          python3 -c "
+          import json,sys
+          s=json.load(open('/tmp/settings_orig.json'))
+          s['quiz']['language']='ja'
+          json.dump(s,open('/tmp/settings_new.json','w'))
+          "
+          curl -sSf -X POST http://127.0.0.1:14201/api/settings \
+            -H "Content-Type: application/json" \
+            -d @/tmp/settings_new.json > /dev/null
+
+          kill $SERVER_PID
+          wait $SERVER_PID 2>/dev/null || true
+          sleep 1
+
+          cargo run -- --mode=web --port=14201 &
+          SERVER_PID=$!
+          sleep 5
+
+          curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_after.json
+          SAVED_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['language'])" < /tmp/settings_after.json)
+          if [ "$SAVED_LANG" != "ja" ]; then echo "Settings did not persist: expected ja, got $SAVED_LANG"; exit 1; fi
+          echo "Smoke: settings persisted across restart"
+
+          # Restore original settings
+          curl -sSf -X POST http://127.0.0.1:14201/api/settings \
+            -H "Content-Type: application/json" \
+            -d @/tmp/settings_orig.json > /dev/null
+
+          # 7. Mark mistake as reviewed
+          curl -sSf -X POST http://127.0.0.1:14201/api/mistakes/review \
+            -H "Content-Type: application/json" \
+            -d "{\"id\":\"$MISTAKE_ID\"}" > /dev/null
+          echo "Smoke: mistake marked as reviewed"
+
+          echo "Smoke test passed (7 steps)"
           kill $SERVER_PID
