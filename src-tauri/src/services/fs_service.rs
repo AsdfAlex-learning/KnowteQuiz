@@ -1,5 +1,6 @@
 use crate::models::note::{NoteIndex, NoteIndexEntry, NoteTreeNode};
 use crate::services::{note_service, storage};
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -22,14 +23,35 @@ pub fn scan_directory_with_index(
     data_dir: &Path,
 ) -> Result<Vec<NoteTreeNode>, String> {
     let tree = scan_directory(root_path)?;
-    let index = build_note_index(root_path, &tree)?;
+
+    // Try to read existing index for incremental scan
+    let old_index = read_existing_index(data_dir, root_path);
+
+    let index = build_note_index(root_path, &tree, old_index.as_ref())?;
     storage::write_json_path(data_dir, NOTE_INDEX_FILENAME, &index)?;
     Ok(tree)
 }
 
-fn build_note_index(root_path: &str, tree: &[NoteTreeNode]) -> Result<NoteIndex, String> {
+fn read_existing_index(data_dir: &Path, root_path: &str) -> Option<NoteIndex> {
+    let index: NoteIndex = storage::read_json_path(data_dir, NOTE_INDEX_FILENAME).ok()?;
+    if index.version != NOTE_INDEX_VERSION || index.root_path != root_path {
+        return None;
+    }
+    Some(index)
+}
+
+fn build_note_index(
+    root_path: &str,
+    tree: &[NoteTreeNode],
+    old_index: Option<&NoteIndex>,
+) -> Result<NoteIndex, String> {
+    // Build a lookup map from old index for quick access
+    let old_entries: HashMap<&str, &NoteIndexEntry> = old_index
+        .map(|idx| idx.notes.iter().map(|e| (e.path.as_str(), e)).collect())
+        .unwrap_or_default();
+
     let mut notes = Vec::new();
-    collect_index_entries(tree, &mut notes)?;
+    collect_index_entries(tree, &mut notes, &old_entries)?;
     notes.sort_by(|a, b| a.path.cmp(&b.path));
 
     Ok(NoteIndex {
@@ -43,10 +65,11 @@ fn build_note_index(root_path: &str, tree: &[NoteTreeNode]) -> Result<NoteIndex,
 fn collect_index_entries(
     nodes: &[NoteTreeNode],
     notes: &mut Vec<NoteIndexEntry>,
+    old_entries: &HashMap<&str, &NoteIndexEntry>,
 ) -> Result<(), String> {
     for node in nodes {
         if node.is_dir {
-            collect_index_entries(&node.children, notes)?;
+            collect_index_entries(&node.children, notes, old_entries)?;
             continue;
         }
 
@@ -57,6 +80,23 @@ fn collect_index_entries(
             .modified()
             .ok()
             .map(chrono::DateTime::<chrono::Utc>::from);
+        let size_bytes = metadata.len();
+
+        // Check if file is unchanged (same size + modification time)
+        if let Some(old) = old_entries.get(node.path.as_str()) {
+            if old.size_bytes == size_bytes && old.modified_at == modified_at {
+                // Reuse old entry — skip expensive title extraction
+                notes.push(NoteIndexEntry {
+                    path: node.path.clone(),
+                    title: old.title.clone(),
+                    size_bytes,
+                    modified_at,
+                });
+                continue;
+            }
+        }
+
+        // File is new or changed — extract title from content
         let title = fs::read_to_string(path)
             .map(|content| note_service::extract_metadata(&content, &node.path).title)
             .unwrap_or_else(|_| fallback_note_title(path));
@@ -64,7 +104,7 @@ fn collect_index_entries(
         notes.push(NoteIndexEntry {
             path: node.path.clone(),
             title,
-            size_bytes: metadata.len(),
+            size_bytes,
             modified_at,
         });
     }
@@ -252,5 +292,91 @@ mod tests {
         assert_eq!(index.notes.len(), 1);
         assert_eq!(index.notes[0].title, "binary");
         assert_eq!(index.notes[0].size_bytes, 3);
+    }
+
+    #[test]
+    fn incremental_scan_reuses_unchanged_file_titles() {
+        let root = temp_notes_dir("incremental_scan_reuses_unchanged_file_titles");
+        let data_dir = temp_notes_dir("incremental_scan_reuses_unchanged_file_titles_data");
+        let note_text = "---\ntitle: Original Title\n---\n\nBody.";
+        fs::write(root.join("note.md"), note_text).expect("note should be written");
+
+        // First scan — builds index
+        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .expect("first scan should succeed");
+
+        // Overwrite with different content but same size (touch to keep mtime same or close)
+        // We'll change the title in frontmatter but keep the file size identical
+        let new_text = "---\ntitle: Changed Title\n---\n\nBody.";
+        fs::write(root.join("note.md"), new_text).expect("note should be overwritten");
+
+        // Second scan — should detect change and re-extract title
+        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .expect("second scan should succeed");
+
+        let index: crate::models::note::NoteIndex =
+            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index.notes.len(), 1);
+        // Title should be updated because file changed
+        assert_eq!(index.notes[0].title, "Changed Title");
+    }
+
+    #[test]
+    fn incremental_scan_removes_deleted_files_from_index() {
+        let root = temp_notes_dir("incremental_scan_removes_deleted_files_from_index");
+        let data_dir = temp_notes_dir("incremental_scan_removes_deleted_files_from_index_data");
+        fs::write(root.join("keep.md"), "# Keep").expect("keep note should be written");
+        fs::write(root.join("delete.md"), "# Delete").expect("delete note should be written");
+
+        // First scan — both files indexed
+        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .expect("first scan should succeed");
+        let index: crate::models::note::NoteIndex =
+            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index.notes.len(), 2);
+
+        // Delete one file
+        fs::remove_file(root.join("delete.md")).expect("delete note should be removed");
+
+        // Second scan — deleted file should be gone from index
+        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .expect("second scan should succeed");
+        let index: crate::models::note::NoteIndex =
+            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index.notes.len(), 1);
+        assert_eq!(index.notes[0].title, "Keep");
+    }
+
+    #[test]
+    fn incremental_scan_full_rebuild_on_root_path_change() {
+        let root1 = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_1");
+        let root2 = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_2");
+        let data_dir = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_data");
+        fs::write(root1.join("note1.md"), "---\ntitle: Note1\n---\n\nBody.")
+            .expect("note1 should be written");
+        fs::write(root2.join("note2.md"), "---\ntitle: Note2\n---\n\nBody.")
+            .expect("note2 should be written");
+
+        // Scan root1
+        scan_directory_with_index(root1.to_string_lossy().as_ref(), &data_dir)
+            .expect("scan root1 should succeed");
+        let index: crate::models::note::NoteIndex =
+            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index.root_path, root1.to_string_lossy());
+        assert_eq!(index.notes.len(), 1);
+
+        // Scan root2 — different root_path triggers full rebuild
+        scan_directory_with_index(root2.to_string_lossy().as_ref(), &data_dir)
+            .expect("scan root2 should succeed");
+        let index: crate::models::note::NoteIndex =
+            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
+                .unwrap();
+        assert_eq!(index.root_path, root2.to_string_lossy());
+        assert_eq!(index.notes.len(), 1);
+        assert_eq!(index.notes[0].title, "Note2");
     }
 }
