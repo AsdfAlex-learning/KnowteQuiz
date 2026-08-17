@@ -1,5 +1,21 @@
 <template>
   <div class="p-4 space-y-6">
+    <!-- Language selector -->
+    <div class="space-y-2">
+      <label class="text-xs font-medium text-[var(--text-secondary)]">Language / 语言</label>
+      <select
+        :value="settings.ui_language"
+        class="w-full px-2 py-1.5 text-sm bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
+        @change="handleLanguageChange"
+      >
+        <option v-for="loc in availableLocales" :key="loc.value" :value="loc.value">
+          {{ loc.label }}
+        </option>
+      </select>
+    </div>
+
+    <div class="border-t border-[var(--border-default)]" />
+
     <LLMConfigForm :llm="settings.llm" @update:llm="updateLLM" />
 
     <div class="border-t border-[var(--border-default)]" />
@@ -226,12 +242,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
+import { useI18n } from '@/composables/useI18n';
 import LLMConfigForm from './LLMConfigForm.vue';
 import QuizDefaultsForm from './QuizDefaultsForm.vue';
 import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/settings';
 
 const settingsStore = useSettingsStore();
 const settings = settingsStore.settings;
+const { availableLocales, setLocale } = useI18n();
 const testing = ref(false);
 const backingUp = ref(false);
 const restoring = ref(false);
@@ -245,6 +263,11 @@ function updateLLM(llm: SettingsLLM) {
 
 function updateQuiz(quiz: SettingsQuiz) {
   settingsStore.settings.quiz = quiz;
+}
+
+function handleLanguageChange(e: Event) {
+  const target = e.target as HTMLSelectElement;
+  setLocale(target.value);
 }
 
 async function handleTestConnection() {

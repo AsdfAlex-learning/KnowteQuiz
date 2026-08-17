@@ -90,11 +90,17 @@ pub struct WorkspaceState {
 pub struct Settings {
     pub version: String,
     pub theme: String,
+    #[serde(default = "default_ui_language")]
+    pub ui_language: String,
     pub llm: LlmConfig,
     pub ui: UiLayoutContainer,
     pub quiz: QuizDefaults,
     #[serde(default)]
     pub workspace: WorkspaceState,
+}
+
+fn default_ui_language() -> String {
+    "zh-CN".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

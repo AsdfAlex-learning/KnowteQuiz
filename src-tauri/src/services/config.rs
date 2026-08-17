@@ -8,6 +8,7 @@ fn default_settings() -> Settings {
     Settings {
         version: "1.0.0".to_string(),
         theme: "obsidian-dark".to_string(),
+        ui_language: "zh-CN".to_string(),
         llm: LlmConfig {
             provider: "openai-compatible".to_string(),
             base_url: "http://localhost:11434/v1".to_string(),
