@@ -20,22 +20,58 @@ pub struct UiLayout {
     pub right_width: u32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AdvancedConfig {
+    #[serde(default = "default_max_diagnosis_rounds")]
     pub max_diagnosis_rounds: u32,
+    #[serde(default = "default_require_reasoning")]
     pub require_reasoning: bool,
+    #[serde(default = "default_show_diagnosis_report")]
     pub show_diagnosis_report: bool,
+}
+
+fn default_max_diagnosis_rounds() -> u32 {
+    3
+}
+
+fn default_require_reasoning() -> bool {
+    true
+}
+
+fn default_show_diagnosis_report() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuizDefaults {
     pub default_types: Vec<QuestionType>,
+    #[serde(default = "default_language")]
     pub default_language: String,
     pub default_count: u32,
+    #[serde(default = "default_mode")]
     pub default_mode: String,
+    #[serde(default = "default_difficulty")]
     pub default_difficulty: String,
+    #[serde(default = "default_prompt_template")]
     pub prompt_template: String,
+    #[serde(default)]
     pub advanced: AdvancedConfig,
+}
+
+fn default_language() -> String {
+    "zh".to_string()
+}
+
+fn default_mode() -> String {
+    "basic".to_string()
+}
+
+fn default_difficulty() -> String {
+    "medium".to_string()
+}
+
+fn default_prompt_template() -> String {
+    "default".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
