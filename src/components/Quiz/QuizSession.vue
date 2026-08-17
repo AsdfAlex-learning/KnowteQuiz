@@ -4,7 +4,7 @@
       v-if="quizStore.hasSession && quizStore.generatingError"
       class="mx-4 mt-4 rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
     >
-      <p class="text-xs font-medium text-[var(--color-error)]">Quiz session error</p>
+      <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
       <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
         {{ quizStore.generatingError }}
       </p>
@@ -52,7 +52,7 @@
           :disabled="!canSubmit"
           @click="handleSubmit"
         >
-          {{ mode === 'advanced' ? 'Submit & Diagnose' : 'Submit' }}
+          {{ mode === 'advanced' ? t('quiz.submit_diagnosis') : t('quiz.submit') }}
         </button>
 
         <template v-else>
@@ -68,7 +68,7 @@
             class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
             @click="handleNext"
           >
-            {{ quizStore.isLastQuestion ? 'View Results' : 'Next Question' }}
+            {{ quizStore.isLastQuestion ? t('quiz.result') : t('quiz.next') }}
           </button>
         </template>
       </div>
@@ -122,7 +122,7 @@
           class="w-full py-2.5 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors"
           @click="handleNextAfterReport"
         >
-          {{ quizStore.isLastQuestion ? 'View Results' : 'Next Question' }}
+          {{ quizStore.isLastQuestion ? t('quiz.result') : t('quiz.next') }}
         </button>
       </div>
     </div>
@@ -139,7 +139,7 @@
 
     <!-- Idle state -->
     <div v-else class="flex-1 flex items-center justify-center p-4">
-      <p class="text-sm text-[var(--text-faint)]">Configure and start a quiz above</p>
+      <p class="text-sm text-[var(--text-faint)]">{{ t('reader.no_content') }}</p>
     </div>
   </div>
 </template>
@@ -150,6 +150,7 @@ import { useQuizStore } from '@/stores/quiz';
 import { useExplorerStore } from '@/stores/explorer';
 import { useReaderStore } from '@/stores/reader';
 import { useMistakeStore } from '@/stores/mistakes';
+import { useI18n } from '@/composables/useI18n';
 import QuestionCard from './QuestionCard.vue';
 import AnswerInput from './AnswerInput.vue';
 import ReasoningInput from './ReasoningInput.vue';
@@ -169,6 +170,7 @@ const quizStore = useQuizStore();
 const explorerStore = useExplorerStore();
 const readerStore = useReaderStore();
 const mistakeStore = useMistakeStore();
+const { t } = useI18n();
 
 const selectedOptions = ref<number[]>([]);
 const shortAnswer = ref('');

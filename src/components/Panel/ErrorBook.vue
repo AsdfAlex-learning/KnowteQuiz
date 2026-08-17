@@ -20,7 +20,7 @@
         <button
           class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           :disabled="mistakeStore.isExporting || mistakeStore.items.length === 0"
-          title="Export as JSON"
+          :title="t('error_book.export_json')"
           @click="handleExport('json')"
         >
           JSON
@@ -28,7 +28,7 @@
         <button
           class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           :disabled="mistakeStore.isExporting || mistakeStore.items.length === 0"
-          title="Export as Markdown"
+          :title="t('error_book.export_markdown')"
           @click="handleExport('markdown')"
         >
           MD
@@ -39,7 +39,7 @@
         class="text-[11px] text-[var(--color-error)]"
         :title="mistakeStore.exportError"
       >
-        Export failed
+        {{ t('common.error') }}
       </div>
     </div>
 
@@ -85,7 +85,7 @@
         v-else-if="mistakeStore.items.length === 0"
         class="flex flex-col items-center justify-center py-12 text-[var(--text-faint)]"
       >
-        <p class="text-sm">No mistakes recorded</p>
+        <p class="text-sm">{{ t('error_book.no_mistakes') }}</p>
         <p class="text-xs mt-1">Wrong answers will appear here</p>
       </div>
       <MistakeItem
@@ -111,11 +111,14 @@
 import { ref, computed, onMounted } from 'vue';
 import { useMistakeStore } from '@/stores/mistakes';
 import { useNavigationStore } from '@/stores/navigation';
+import { useI18n } from '@/composables/useI18n';
 import MistakeItem from './MistakeItem.vue';
 import MistakeDetail from './MistakeDetail.vue';
 import type { MistakeMode } from '@/types/mistake';
 
 type FilterValue = 'all' | 'basic' | 'advanced';
+
+const { t } = useI18n();
 
 const filters: { value: FilterValue; label: string }[] = [
   { value: 'all', label: 'All' },

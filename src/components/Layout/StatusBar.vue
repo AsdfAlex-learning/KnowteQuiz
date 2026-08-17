@@ -7,12 +7,12 @@
       <span v-if="readerStore.currentNote" class="truncate" :title="readerStore.currentNote.path">
         {{ readerStore.currentNote.path }}
       </span>
-      <span v-else class="text-[var(--text-faint)]">No file open</span>
+      <span v-else class="text-[var(--text-faint)]">{{ t('reader.no_file') }}</span>
     </div>
 
     <!-- Center: Word count -->
     <div v-if="readerStore.currentNote" class="flex items-center gap-3 text-[var(--text-faint)]">
-      <span>{{ wordCount }} words</span>
+      <span>{{ t('reader.words', { count: wordCount }) }}</span>
     </div>
 
     <!-- Right: LLM status -->
@@ -29,9 +29,11 @@
 import { computed } from 'vue';
 import { useReaderStore } from '@/stores/reader';
 import { useSettingsStore } from '@/stores/settings';
+import { useI18n } from '@/composables/useI18n';
 
 const readerStore = useReaderStore();
 const settingsStore = useSettingsStore();
+const { t } = useI18n();
 
 const wordCount = computed(() => readerStore.wordCount);
 
@@ -44,10 +46,10 @@ const statusDotClass = computed(() => {
 });
 
 const statusLabel = computed(() => {
-  if (settingsStore.llmConnected) return 'LLM connected';
+  if (settingsStore.llmConnected) return t('status.llm_connected');
   if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
-    return 'LLM ready';
+    return t('status.llm_ready');
   }
-  return 'LLM not configured';
+  return t('status.llm_not_configured');
 });
 </script>

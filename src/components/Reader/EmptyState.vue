@@ -14,9 +14,9 @@
       </svg>
     </div>
 
-    <h2 class="text-[var(--text-xl)] font-semibold text-[var(--text-primary)] mb-2">KnowteQuiz</h2>
+    <h2 class="text-[var(--text-xl)] font-semibold text-[var(--text-primary)] mb-2">{{ t('app.name') }}</h2>
     <p class="text-[var(--text-sm)] text-[var(--text-muted)] max-w-xs leading-relaxed">
-      Select a note from the explorer to start reading, or open a folder to browse your markdown files.
+      {{ t('reader.no_content') }}
     </p>
 
     <div v-if="!explorerStore.rootPath" class="mt-6">
@@ -24,7 +24,7 @@
         class="px-5 py-2.5 rounded-[var(--radius-md)] bg-[var(--accent-purple)] text-[var(--bg-base)] font-medium text-[var(--text-sm)] hover:bg-[var(--accent-purple)]/85 transition-colors"
         @click="explorerStore.chooseFolder()"
       >
-        Open a Folder
+        {{ t('sidebar.open_folder') }}
       </button>
     </div>
   </div>
@@ -32,6 +32,8 @@
 
 <script setup lang="ts">
 import { useExplorerStore } from '@/stores/explorer';
+import { useI18n } from '@/composables/useI18n';
 
 const explorerStore = useExplorerStore();
+const { t } = useI18n();
 </script>

@@ -9,7 +9,7 @@
         ref="searchInput"
         v-model="searchQuery"
         type="text"
-        placeholder="Find in note..."
+        :placeholder="t('reader.find_in_note')"
         class="flex-1 px-2.5 py-1 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
         @input="handleSearchInput"
         @keydown.enter.prevent="findNext"
@@ -46,7 +46,7 @@
         class="w-48 shrink-0 overflow-y-auto border-r border-[var(--border-default)] bg-[var(--bg-elevated)] p-3"
       >
         <div class="flex items-center justify-between mb-2">
-          <span class="text-[11px] font-medium text-[var(--text-secondary)]">Outline</span>
+          <span class="text-[11px] font-medium text-[var(--text-secondary)]">{{ t('reader.outline') }}</span>
           <button
             class="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             @click="showToc = false"
@@ -76,7 +76,7 @@
       <!-- Main content -->
       <div class="flex-1 overflow-y-auto p-6">
         <!-- Loading state -->
-        <LoadingSpinner v-if="readerStore.isLoading" label="Loading note..." overlay />
+        <LoadingSpinner v-if="readerStore.isLoading" :label="t('reader.loading')" overlay />
 
         <!-- Error state -->
         <div v-else-if="readerStore.error" class="flex flex-col items-center justify-center h-full text-center">
@@ -105,7 +105,7 @@
     <button
       v-if="tocHeadings.length > 0 && !showToc"
       class="absolute right-3 bottom-3 w-8 h-8 rounded-full bg-[var(--accent-purple)]/20 text-[var(--accent-purple)] flex items-center justify-center text-xs font-medium shadow hover:bg-[var(--accent-purple)]/30 transition-colors z-10"
-      title="Toggle outline"
+      :title="t('reader.outline')"
       @click="showToc = true"
     >
       ☰
@@ -124,10 +124,12 @@ import { convertFileSrc, isTauri } from '@/services/tauri';
 import { renderMarkdownWithFallback, uniqueHeadingId } from '@/utils/markdown';
 import { extractHeadings, type TocHeading } from '@/utils/markdown';
 import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets';
+import { useI18n } from '@/composables/useI18n';
 import EmptyState from './EmptyState.vue';
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 
 const readerStore = useReaderStore();
+const { t } = useI18n();
 
 const md = new MarkdownIt({
   html: true,

@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 space-y-5">
     <div class="flex items-center justify-between">
-      <h2 class="text-sm font-semibold text-[var(--text-primary)]">Generate Quiz</h2>
+      <h2 class="text-sm font-semibold text-[var(--text-primary)]">{{ t('panel.quiz') }}</h2>
       <ModeToggle v-model="mode" />
     </div>
 
@@ -82,13 +82,13 @@
       {{ generatingLabel }}
     </button>
 
-    <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">Select a note to generate a quiz</p>
+    <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">{{ t('reader.no_file') }}</p>
 
     <div
       v-if="quizStore.generatingError"
       class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
     >
-      <p class="text-xs font-medium text-[var(--color-error)]">Quiz generation failed</p>
+      <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
       <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
         {{ quizStore.generatingError }}
       </p>
@@ -102,11 +102,13 @@ import { useQuizStore } from '@/stores/quiz';
 import { useSettingsStore } from '@/stores/settings';
 import { useExplorerStore } from '@/stores/explorer';
 import { useMistakeStore } from '@/stores/mistakes';
+import { useI18n } from '@/composables/useI18n';
 import ModeToggle from './ModeToggle.vue';
 import type { QuizMode } from '@/stores/quiz';
 import type { QuestionType, QuizDifficulty, QuizLanguage } from '@/types/quiz';
 
 const quizStore = useQuizStore();
+const { t } = useI18n();
 const settingsStore = useSettingsStore();
 const explorerStore = useExplorerStore();
 const mistakeStore = useMistakeStore();

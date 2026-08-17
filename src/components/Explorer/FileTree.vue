@@ -2,7 +2,9 @@
   <div class="flex flex-col h-full bg-[var(--bg-sidebar)]">
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]">
-      <h2 class="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Explorer</h2>
+      <h2 class="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        {{ t('sidebar.explorer') }}
+      </h2>
       <div class="flex items-center gap-1">
         <button class="icon-btn" title="Refresh" :disabled="explorerStore.isLoading" @click="explorerStore.loadTree()">
           <svg
@@ -41,7 +43,7 @@
         v-else-if="explorerStore.rootPath"
         class="px-3 py-8 text-center text-[var(--text-xs)] text-[var(--text-faint)]"
       >
-        No markdown files found
+        {{ t('sidebar.no_files') }}
       </div>
     </div>
   </div>
@@ -49,10 +51,12 @@
 
 <script setup lang="ts">
 import { useExplorerStore } from '@/stores/explorer';
+import { useI18n } from '@/composables/useI18n';
 import FileTreeItem from './FileTreeItem.vue';
 import FolderSelector from './FolderSelector.vue';
 
 const explorerStore = useExplorerStore();
+const { t } = useI18n();
 </script>
 
 <style scoped>

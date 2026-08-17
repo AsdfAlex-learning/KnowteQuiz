@@ -4,7 +4,7 @@
       <input
         v-model="manualPath"
         type="text"
-        placeholder="Enter notes folder path..."
+        :placeholder="t('sidebar.enter_path')"
         class="w-full px-2 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
         @keydown.enter="setManualPath"
       />
@@ -37,7 +37,7 @@
       <svg class="w-5 h-5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M8 2v6m0 0v6m0-6h6m-6 0H2" />
       </svg>
-      <span>Open Folder</span>
+      <span>{{ t('sidebar.open_folder') }}</span>
     </button>
   </div>
 </template>
@@ -46,10 +46,12 @@
 import { computed, ref } from 'vue';
 import { useExplorerStore } from '@/stores/explorer';
 import { useNavigationStore } from '@/stores/navigation';
+import { useI18n } from '@/composables/useI18n';
 import { isTauri } from '@/services/tauri';
 
 const explorerStore = useExplorerStore();
 const navigationStore = useNavigationStore();
+const { t } = useI18n();
 const manualPath = ref('');
 
 const shortPath = computed(() => {

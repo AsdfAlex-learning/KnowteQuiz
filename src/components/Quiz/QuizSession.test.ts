@@ -9,6 +9,31 @@ import { useQuizStore } from '@/stores/quiz';
 import { useMistakeStore } from '@/stores/mistakes';
 import type { DiagnosisReport } from '@/types/diagnosis';
 
+vi.mock('@/composables/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'common.error': 'Error',
+        'quiz.submit_diagnosis': 'Submit & Diagnose',
+        'quiz.submit': 'Submit',
+        'quiz.result': 'View Results',
+        'quiz.next': 'Next Question',
+        'quiz.save_mistake': 'Save to Mistake Book',
+        'reader.no_content': 'Configure and start a quiz above',
+        'quiz.score': 'Score',
+        'quiz.wrong': 'Yours',
+        'quiz.correct': 'Correct',
+        'quiz.retry': 'Start New Quiz',
+        'quiz.explanation': 'Explanation',
+      };
+      return translations[key] || key;
+    },
+    locale: { value: 'en' },
+    availableLocales: [],
+    setLocale: () => {},
+  }),
+}));
+
 const report: DiagnosisReport = {
   summary: 'You confused the ownership transfer rule.',
   blind_spots: [],

@@ -3,7 +3,7 @@
     <!-- Score display -->
     <div class="text-center py-4">
       <div class="text-4xl font-bold" :class="scoreColor">{{ correctCount }} / {{ total }}</div>
-      <p class="text-xs text-[var(--text-muted)] mt-1">{{ Math.round(scorePercent) }}% correct</p>
+      <p class="text-xs text-[var(--text-muted)] mt-1">{{ t('quiz.score') }}: {{ Math.round(scorePercent) }}%</p>
     </div>
 
     <!-- Question review -->
@@ -24,8 +24,10 @@
           <div class="flex-1 min-w-0">
             <p class="text-sm text-[var(--text-primary)] leading-snug">{{ q.question }}</p>
             <div class="mt-1.5 flex items-center gap-3 text-xs">
-              <span class="text-[var(--color-error)]"> Yours: {{ formatUserAnswer(answers.get(q.id)) }} </span>
-              <span class="text-[var(--accent-green)]"> Correct: {{ q.answer }} </span>
+              <span class="text-[var(--color-error)]">
+                {{ t('quiz.wrong') }}: {{ formatUserAnswer(answers.get(q.id)) }}
+              </span>
+              <span class="text-[var(--accent-green)]"> {{ t('quiz.correct') }}: {{ q.answer }} </span>
             </div>
             <p v-if="!isCorrect(q) && q.explanation" class="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">
               {{ q.explanation }}
@@ -40,7 +42,7 @@
           :disabled="mistakeStore.isSaving(q.id)"
           @click="handleSaveMistake(q)"
         >
-          {{ mistakeStore.isSaving(q.id) ? 'Saving...' : 'Save to Mistake Book' }}
+          {{ mistakeStore.isSaving(q.id) ? '...' : t('quiz.save_mistake') }}
         </button>
         <span v-else-if="!isCorrect(q) && mistakeStore.isSaved(q.id)" class="text-[11px] text-[var(--accent-green)]">
           Saved &#10003;
@@ -57,7 +59,7 @@
         class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors btn-press"
         @click="$emit('newQuiz')"
       >
-        Start New Quiz
+        {{ t('quiz.retry') }}
       </button>
     </div>
   </div>
@@ -69,12 +71,15 @@ import { useQuizStore } from '@/stores/quiz';
 import { useExplorerStore } from '@/stores/explorer';
 import { useReaderStore } from '@/stores/reader';
 import { useMistakeStore } from '@/stores/mistakes';
+import { useI18n } from '@/composables/useI18n';
 import { isQuizAnswerCorrect } from '@/utils/answer';
 import { createLocalId } from '@/utils/id';
 import type { QuizQuestion } from '@/types/quiz';
 import type { DiagnosisReport } from '@/types/diagnosis';
 import type { QuizMode } from '@/stores/quiz';
 import type { DiagnosisContext, MistakeEntry } from '@/types/mistake';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   mode: QuizMode;

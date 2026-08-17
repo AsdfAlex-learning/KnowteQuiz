@@ -51,7 +51,7 @@
         :disabled="!reply.trim() || submitting"
         @click="handleSubmit"
       >
-        {{ submitting ? '...' : 'Send' }}
+        {{ submitting ? '...' : t('quiz.submit') }}
       </button>
     </div>
 
@@ -68,7 +68,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from '@/composables/useI18n';
 import type { DiagnosisRound } from '@/types/diagnosis';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   messages: DiagnosisRound[];
