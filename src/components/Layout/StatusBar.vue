@@ -1,5 +1,7 @@
 <template>
-  <div class="h-[var(--statusbar-height)] flex items-center justify-between px-3 bg-[var(--bg-sidebar)] border-t border-[var(--border-subtle)] text-[var(--text-xs)] text-[var(--text-muted)]">
+  <div
+    class="h-[var(--statusbar-height)] flex items-center justify-between px-3 bg-[var(--bg-sidebar)] border-t border-[var(--border-subtle)] text-[var(--text-xs)] text-[var(--text-muted)]"
+  >
     <!-- Left: Current note path -->
     <div class="flex items-center gap-2 min-w-0 flex-1">
       <span v-if="readerStore.currentNote" class="truncate" :title="readerStore.currentNote.path">
@@ -24,28 +26,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useReaderStore } from '@/stores/reader'
-import { useSettingsStore } from '@/stores/settings'
+import { computed } from 'vue';
+import { useReaderStore } from '@/stores/reader';
+import { useSettingsStore } from '@/stores/settings';
 
-const readerStore = useReaderStore()
-const settingsStore = useSettingsStore()
+const readerStore = useReaderStore();
+const settingsStore = useSettingsStore();
 
-const wordCount = computed(() => readerStore.wordCount)
+const wordCount = computed(() => readerStore.wordCount);
 
 const statusDotClass = computed(() => {
-  if (settingsStore.llmConnected) return 'bg-[var(--color-success)]'
+  if (settingsStore.llmConnected) return 'bg-[var(--color-success)]';
   if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
-    return 'bg-[var(--color-warning)]'
+    return 'bg-[var(--color-warning)]';
   }
-  return 'bg-[var(--text-faint)]'
-})
+  return 'bg-[var(--text-faint)]';
+});
 
 const statusLabel = computed(() => {
-  if (settingsStore.llmConnected) return 'LLM connected'
+  if (settingsStore.llmConnected) return 'LLM connected';
   if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
-    return 'LLM ready'
+    return 'LLM ready';
   }
-  return 'LLM not configured'
-})
+  return 'LLM not configured';
+});
 </script>

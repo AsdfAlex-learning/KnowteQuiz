@@ -14,10 +14,7 @@
     </div>
 
     <!-- Question type badge -->
-    <span
-      class="inline-block px-2 py-0.5 text-[10px] font-semibold uppercase rounded"
-      :class="typeBadgeClass"
-    >
+    <span class="inline-block px-2 py-0.5 text-[10px] font-semibold uppercase rounded" :class="typeBadgeClass">
       {{ question.question_type }}
     </span>
 
@@ -42,54 +39,52 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { QuizQuestion } from '@/types/quiz'
-import OptionCard from './OptionCard.vue'
-import type { OptionState } from './OptionCard.vue'
-import { correctChoiceLetters } from '@/utils/answer'
+import { computed } from 'vue';
+import type { QuizQuestion } from '@/types/quiz';
+import OptionCard from './OptionCard.vue';
+import type { OptionState } from './OptionCard.vue';
+import { correctChoiceLetters } from '@/utils/answer';
 
 const props = defineProps<{
-  question: QuizQuestion
-  currentIndex: number
-  total: number
-  selectedOptions: number[]
-  submitted: boolean
-}>()
+  question: QuizQuestion;
+  currentIndex: number;
+  total: number;
+  selectedOptions: number[];
+  submitted: boolean;
+}>();
 
 defineEmits<{
-  selectOption: [index: number]
-}>()
+  selectOption: [index: number];
+}>();
 
-const progressPercent = computed(() =>
-  props.total > 0 ? ((props.currentIndex + 1) / props.total) * 100 : 0
-)
+const progressPercent = computed(() => (props.total > 0 ? ((props.currentIndex + 1) / props.total) * 100 : 0));
 
 const typeBadgeClass = computed(() => {
   switch (props.question.question_type) {
     case 'single':
-      return 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]'
+      return 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]';
     case 'multiple':
-      return 'bg-[var(--accent-purple)]/20 text-[var(--accent-purple)]'
+      return 'bg-[var(--accent-purple)]/20 text-[var(--accent-purple)]';
     case 'short':
-      return 'bg-[var(--accent-green)]/20 text-[var(--accent-green)]'
+      return 'bg-[var(--accent-green)]/20 text-[var(--accent-green)]';
     default:
-      return 'bg-[var(--bg-active)] text-[var(--text-muted)]'
+      return 'bg-[var(--bg-active)] text-[var(--text-muted)]';
   }
-})
+});
 
 function getOptionState(index: number): OptionState {
   if (!props.submitted) {
-    return props.selectedOptions.includes(index) ? 'selected' : 'default'
+    return props.selectedOptions.includes(index) ? 'selected' : 'default';
   }
-  const letter = String.fromCharCode(65 + index)
-  const isCorrect = correctChoiceLetters(props.question).includes(letter)
+  const letter = String.fromCharCode(65 + index);
+  const isCorrect = correctChoiceLetters(props.question).includes(letter);
 
-  if (isCorrect) return 'correct'
-  if (props.selectedOptions.includes(index)) return 'incorrect'
-  return 'default'
+  if (isCorrect) return 'correct';
+  if (props.selectedOptions.includes(index)) return 'incorrect';
+  return 'default';
 }
 
 function optionText(option: string): string {
-  return option.trim().replace(/^[A-Z]\s*[.)\]:\uFF1A\u3001]\s*/i, '')
+  return option.trim().replace(/^[A-Z]\s*[.)\]:\uFF1A\u3001]\s*/i, '');
 }
 </script>

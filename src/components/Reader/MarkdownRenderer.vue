@@ -1,7 +1,10 @@
 <template>
   <div class="flex-1 flex flex-col relative">
     <!-- Search bar -->
-    <div v-if="showSearch" class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border-default)] bg-[var(--bg-elevated)]">
+    <div
+      v-if="showSearch"
+      class="flex items-center gap-2 px-4 py-2 border-b border-[var(--border-default)] bg-[var(--bg-elevated)]"
+    >
       <input
         ref="searchInput"
         v-model="searchQuery"
@@ -77,7 +80,13 @@
 
         <!-- Error state -->
         <div v-else-if="readerStore.error" class="flex flex-col items-center justify-center h-full text-center">
-          <svg class="w-12 h-12 text-[var(--color-error)] mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <svg
+            class="w-12 h-12 text-[var(--color-error)] mb-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
             <circle cx="12" cy="12" r="10" />
             <path d="M12 8v4m0 4h.01" />
           </svg>
@@ -105,20 +114,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import MarkdownIt from 'markdown-it'
-import mk from '@traptitech/markdown-it-katex'
-import hljs from 'highlight.js'
-import 'katex/dist/katex.min.css'
-import { useReaderStore } from '@/stores/reader'
-import { convertFileSrc, isTauri } from '@/services/tauri'
-import { renderMarkdownWithFallback, uniqueHeadingId } from '@/utils/markdown'
-import { extractHeadings, type TocHeading } from '@/utils/markdown'
-import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets'
-import EmptyState from './EmptyState.vue'
-import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import MarkdownIt from 'markdown-it';
+import mk from '@traptitech/markdown-it-katex';
+import hljs from 'highlight.js';
+import 'katex/dist/katex.min.css';
+import { useReaderStore } from '@/stores/reader';
+import { convertFileSrc, isTauri } from '@/services/tauri';
+import { renderMarkdownWithFallback, uniqueHeadingId } from '@/utils/markdown';
+import { extractHeadings, type TocHeading } from '@/utils/markdown';
+import { configureMarkdownAssetRenderer, markdownWebAssetUrl } from '@/utils/markdownAssets';
+import EmptyState from './EmptyState.vue';
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 
-const readerStore = useReaderStore()
+const readerStore = useReaderStore();
 
 const md = new MarkdownIt({
   html: true,
@@ -127,122 +136,122 @@ const md = new MarkdownIt({
   highlight(str: string, lang: string): string {
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre>`
+        return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre>`;
       } catch {
         // fall through
       }
     }
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
   },
-})
+});
 
-md.use(mk)
+md.use(mk);
 configureMarkdownAssetRenderer(
   md,
   () => readerStore.currentNote?.path,
-  (path) => isTauri() ? convertFileSrc(path) : markdownWebAssetUrl(path),
-)
+  (path) => (isTauri() ? convertFileSrc(path) : markdownWebAssetUrl(path))
+);
 
-let renderHeadingCounts = new Map<string, number>()
+let renderHeadingCounts = new Map<string, number>();
 md.renderer.rules.heading_open = function (tokens, idx) {
-  const token = tokens[idx]
-  const level = token.tag
-  const nextToken = tokens[idx + 1]
-  const text = nextToken?.type === 'inline' ? nextToken.content || '' : ''
-  const id = uniqueHeadingId(text, renderHeadingCounts)
-  return `<${level} id="${id}">`
-}
+  const token = tokens[idx];
+  const level = token.tag;
+  const nextToken = tokens[idx + 1];
+  const text = nextToken?.type === 'inline' ? nextToken.content || '' : '';
+  const id = uniqueHeadingId(text, renderHeadingCounts);
+  return `<${level} id="${id}">`;
+};
 
 const renderedHtml = computed(() => {
-  if (!readerStore.currentNote?.content) return ''
+  if (!readerStore.currentNote?.content) return '';
   return renderMarkdownWithFallback(readerStore.currentNote.content, (source) => {
-    renderHeadingCounts = new Map<string, number>()
-    return md.render(source)
-  })
-})
+    renderHeadingCounts = new Map<string, number>();
+    return md.render(source);
+  });
+});
 
 // TOC outline
-const showToc = ref(false)
+const showToc = ref(false);
 const tocHeadings = computed<TocHeading[]>(() => {
-  if (!readerStore.currentNote?.content) return []
-  return extractHeadings(readerStore.currentNote.content)
-})
+  if (!readerStore.currentNote?.content) return [];
+  return extractHeadings(readerStore.currentNote.content);
+});
 
 function scrollToHeading(id: string) {
-  const el = document.getElementById(id)
+  const el = document.getElementById(id);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
 // In-note search
-const showSearch = ref(false)
-const searchQuery = ref('')
-const searchInput = ref<HTMLInputElement | null>(null)
-const matchInfo = ref('')
-let searchTimer: ReturnType<typeof setTimeout> | null = null
+const showSearch = ref(false);
+const searchQuery = ref('');
+const searchInput = ref<HTMLInputElement | null>(null);
+const matchInfo = ref('');
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleSearchInput() {
-  if (searchTimer) clearTimeout(searchTimer)
+  if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
-    doSearch()
-  }, 150)
+    doSearch();
+  }, 150);
 }
 
 function doSearch() {
   if (!searchQuery.value.trim()) {
-    clearFind()
-    return
+    clearFind();
+    return;
   }
   // window.find() highlights and scrolls to the first match
-  const found = (window as any).find(searchQuery.value, false, false, true, false, true, false)
-  matchInfo.value = found ? '?' : '0/0'
+  const found = (window as any).find(searchQuery.value, false, false, true, false, true, false);
+  matchInfo.value = found ? '?' : '0/0';
 }
 
 function findNext() {
-  if (!searchQuery.value.trim()) return
-  const found = (window as any).find(searchQuery.value, false, false, true, false, false, true)
-  matchInfo.value = found ? '?' : '0/0'
+  if (!searchQuery.value.trim()) return;
+  const found = (window as any).find(searchQuery.value, false, false, true, false, false, true);
+  matchInfo.value = found ? '?' : '0/0';
 }
 
 function findPrev() {
-  if (!searchQuery.value.trim()) return
-  const found = (window as any).find(searchQuery.value, false, true, true, false, false, true)
-  matchInfo.value = found ? '?' : '0/0'
+  if (!searchQuery.value.trim()) return;
+  const found = (window as any).find(searchQuery.value, false, true, true, false, false, true);
+  matchInfo.value = found ? '?' : '0/0';
 }
 
 function clearFind() {
-  window.getSelection()?.removeAllRanges()
-  matchInfo.value = ''
+  window.getSelection()?.removeAllRanges();
+  matchInfo.value = '';
 }
 
 function closeSearch() {
-  showSearch.value = false
-  searchQuery.value = ''
-  clearFind()
+  showSearch.value = false;
+  searchQuery.value = '';
+  clearFind();
 }
 
 async function openSearch() {
-  showSearch.value = true
-  await nextTick()
-  searchInput.value?.focus()
+  showSearch.value = true;
+  await nextTick();
+  searchInput.value?.focus();
   if (searchQuery.value) {
-    doSearch()
+    doSearch();
   }
 }
 
 function handleKeydown(e: KeyboardEvent) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-    e.preventDefault()
-    openSearch()
+    e.preventDefault();
+    openSearch();
   }
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
+  window.addEventListener('keydown', handleKeydown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+  window.removeEventListener('keydown', handleKeydown);
+});
 </script>

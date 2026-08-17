@@ -1,91 +1,104 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { webStream } from './tauri'
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { webStream } from './tauri';
 
 function streamFromText(text: string): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
-      controller.enqueue(new TextEncoder().encode(text))
-      controller.close()
+      controller.enqueue(new TextEncoder().encode(text));
+      controller.close();
     },
-  })
+  });
 }
 
 function streamFromChunks(chunks: string[]): ReadableStream<Uint8Array> {
   return new ReadableStream({
     start(controller) {
       for (const chunk of chunks) {
-        controller.enqueue(new TextEncoder().encode(chunk))
+        controller.enqueue(new TextEncoder().encode(chunk));
       }
-      controller.close()
+      controller.close();
     },
-  })
+  });
 }
 
 describe('webStream', () => {
   afterEach(() => {
-    vi.unstubAllGlobals()
-  })
+    vi.unstubAllGlobals();
+  });
 
   it('emits final SSE data even when the stream ends without a blank delimiter', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      body: streamFromText('data: {"event":"done","data":{"total":1}}'),
-    })))
-    const messages: unknown[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        body: streamFromText('data: {"event":"done","data":{"total":1}}'),
+      }))
+    );
+    const messages: unknown[] = [];
 
-    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg))
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg));
 
-    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
-  })
+    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }]);
+  });
 
   it('accepts SSE data lines without a space after the colon', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      body: streamFromText('data:{"event":"done","data":{"total":1}}'),
-    })))
-    const messages: unknown[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        body: streamFromText('data:{"event":"done","data":{"total":1}}'),
+      }))
+    );
+    const messages: unknown[] = [];
 
-    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg))
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg));
 
-    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }])
-  })
+    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }]);
+  });
 
   it('emits SSE events separated by CRLF delimiters', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      body: streamFromChunks([
-        'data: {"event":"phase","data":{"phase":"requesting_model"}}\r\n\r\n',
-        'data: {"event":"done","data":{"total":1}}\r\n\r\n',
-      ]),
-    })))
-    const messages: unknown[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        body: streamFromChunks([
+          'data: {"event":"phase","data":{"phase":"requesting_model"}}\r\n\r\n',
+          'data: {"event":"done","data":{"total":1}}\r\n\r\n',
+        ]),
+      }))
+    );
+    const messages: unknown[] = [];
 
-    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg))
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg));
 
     expect(messages).toEqual([
       { event: 'phase', data: { phase: 'requesting_model' } },
       { event: 'done', data: { total: 1 } },
-    ])
-  })
+    ]);
+  });
 
   it('rejects malformed SSE data instead of silently ignoring it', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      body: streamFromText('data: {"event":"done"'),
-    })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        body: streamFromText('data: {"event":"done"'),
+      }))
+    );
 
-    await expect(webStream('/api/quiz/generate', {}, vi.fn()))
-      .rejects.toThrow('SSE parse error')
-  })
+    await expect(webStream('/api/quiz/generate', {}, vi.fn())).rejects.toThrow('SSE parse error');
+  });
 
   it('includes response text when an HTTP request fails', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: false,
-      status: 500,
-      text: async () => 'LLM API error: model not found',
-    })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => 'LLM API error: model not found',
+      }))
+    );
 
-    await expect(webStream('/api/quiz/generate', {}, vi.fn()))
-      .rejects.toThrow('LLM API error: model not found')
-  })
-})
+    await expect(webStream('/api/quiz/generate', {}, vi.fn())).rejects.toThrow('LLM API error: model not found');
+  });
+});

@@ -1,16 +1,10 @@
 <template>
   <div class="p-4 space-y-6">
-    <LLMConfigForm
-      :llm="settings.llm"
-      @update:llm="updateLLM"
-    />
+    <LLMConfigForm :llm="settings.llm" @update:llm="updateLLM" />
 
     <div class="border-t border-[var(--border-default)]" />
 
-    <QuizDefaultsForm
-      :model-value="settings.quiz"
-      @update:model-value="updateQuiz"
-    />
+    <QuizDefaultsForm :model-value="settings.quiz" @update:model-value="updateQuiz" />
 
     <div class="border-t border-[var(--border-default)]" />
 
@@ -68,10 +62,7 @@
           Available: {{ settingsStore.llmCapabilities.available_models.join(', ') }}
         </p>
       </div>
-      <div
-        v-if="settingsStore.probeErr"
-        class="text-xs text-[var(--color-error)]"
-      >
+      <div v-if="settingsStore.probeErr" class="text-xs text-[var(--color-error)]">
         {{ settingsStore.probeErr }}
       </div>
 
@@ -139,10 +130,7 @@
         </p>
       </div>
 
-      <div
-        v-if="settingsStore.cleanupErr"
-        class="text-xs text-[var(--color-error)]"
-      >
+      <div v-if="settingsStore.cleanupErr" class="text-xs text-[var(--color-error)]">
         {{ settingsStore.cleanupErr }}
       </div>
 
@@ -174,10 +162,7 @@
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <p class="text-xs font-medium text-[var(--text-primary)]">Data Files</p>
-            <p
-              v-if="settingsStore.dataStatus"
-              class="mt-1 truncate text-[11px] text-[var(--text-muted)]"
-            >
+            <p v-if="settingsStore.dataStatus" class="mt-1 truncate text-[11px] text-[var(--text-muted)]">
               {{ settingsStore.dataStatus.data_dir }}
             </p>
           </div>
@@ -198,10 +183,7 @@
           </div>
         </div>
 
-        <div
-          v-if="settingsStore.dataStatus"
-          class="space-y-1"
-        >
+        <div v-if="settingsStore.dataStatus" class="space-y-1">
           <div
             v-for="file in settingsStore.dataStatus.files"
             :key="file.name"
@@ -220,16 +202,10 @@
           </div>
         </div>
 
-        <p
-          v-else-if="settingsStore.dataStatusError"
-          class="text-xs text-[var(--color-error)]"
-        >
+        <p v-else-if="settingsStore.dataStatusError" class="text-xs text-[var(--color-error)]">
           {{ settingsStore.dataStatusError }}
         </p>
-        <p
-          v-if="settingsStore.openDirErr"
-          class="text-[11px] text-[var(--color-error)]"
-        >
+        <p v-if="settingsStore.openDirErr" class="text-[11px] text-[var(--color-error)]">
           {{ settingsStore.openDirErr }}
         </p>
       </div>
@@ -248,114 +224,118 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useSettingsStore } from '@/stores/settings'
-import LLMConfigForm from './LLMConfigForm.vue'
-import QuizDefaultsForm from './QuizDefaultsForm.vue'
-import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/settings'
+import { ref, onMounted } from 'vue';
+import { useSettingsStore } from '@/stores/settings';
+import LLMConfigForm from './LLMConfigForm.vue';
+import QuizDefaultsForm from './QuizDefaultsForm.vue';
+import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/settings';
 
-const settingsStore = useSettingsStore()
-const settings = settingsStore.settings
-const testing = ref(false)
-const backingUp = ref(false)
-const restoring = ref(false)
-const probing = ref(false)
-const saving = ref(false)
-const connectionResult = ref<ConnectionTestResult | null>(null)
+const settingsStore = useSettingsStore();
+const settings = settingsStore.settings;
+const testing = ref(false);
+const backingUp = ref(false);
+const restoring = ref(false);
+const probing = ref(false);
+const saving = ref(false);
+const connectionResult = ref<ConnectionTestResult | null>(null);
 
 function updateLLM(llm: SettingsLLM) {
-  settingsStore.settings.llm = llm
+  settingsStore.settings.llm = llm;
 }
 
 function updateQuiz(quiz: SettingsQuiz) {
-  settingsStore.settings.quiz = quiz
+  settingsStore.settings.quiz = quiz;
 }
 
 async function handleTestConnection() {
-  testing.value = true
-  connectionResult.value = null
+  testing.value = true;
+  connectionResult.value = null;
   try {
-    connectionResult.value = await settingsStore.testConnection()
+    connectionResult.value = await settingsStore.testConnection();
   } catch {
     connectionResult.value = {
       ok: false,
       kind: 'network',
       message: 'Connection failed',
       status: null,
-    }
+    };
   } finally {
-    testing.value = false
+    testing.value = false;
   }
 }
 
 async function handleSave() {
-  saving.value = true
+  saving.value = true;
   try {
-    await settingsStore.persistSettings()
+    await settingsStore.persistSettings();
   } catch {
     // The store owns the user-visible error state.
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 async function handleBackup() {
-  backingUp.value = true
+  backingUp.value = true;
   try {
-    await settingsStore.backupDataNow()
+    await settingsStore.backupDataNow();
   } catch {
     // The store owns the user-visible error state.
   } finally {
-    backingUp.value = false
+    backingUp.value = false;
   }
 }
 
 async function handleRestore() {
-  if (!window.confirm('Restore will overwrite current settings and mistakes from the latest backup. A pre-restore snapshot is taken automatically. Continue?')) {
-    return
+  if (
+    !window.confirm(
+      'Restore will overwrite current settings and mistakes from the latest backup. A pre-restore snapshot is taken automatically. Continue?'
+    )
+  ) {
+    return;
   }
-  restoring.value = true
+  restoring.value = true;
   try {
-    await settingsStore.restoreLatestBackupNow()
+    await settingsStore.restoreLatestBackupNow();
   } catch {
     // The store owns the user-visible error state.
   } finally {
-    restoring.value = false
+    restoring.value = false;
   }
 }
 
 async function handleOpenDataDir() {
-  await settingsStore.openDataDirNow()
+  await settingsStore.openDataDirNow();
 }
 
 async function handleCleanupSessions() {
-  await settingsStore.cleanupSessionsNow()
+  await settingsStore.cleanupSessionsNow();
 }
 
 async function handleProbeLlm() {
-  probing.value = true
+  probing.value = true;
   try {
-    await settingsStore.probeLlmNow()
+    await settingsStore.probeLlmNow();
   } finally {
-    probing.value = false
+    probing.value = false;
   }
 }
 
 function backupFolderName(path: string): string {
-  return path.split(/[\\/]/).filter(Boolean).pop() || path
+  return path.split(/[\\/]/).filter(Boolean).pop() || path;
 }
 
 function formatFileSize(sizeBytes: number): string {
-  if (sizeBytes < 1024) return `${sizeBytes} B`
-  return `${Math.round(sizeBytes / 1024)} KB`
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  return `${Math.round(sizeBytes / 1024)} KB`;
 }
 
 function formatModifiedAt(value: string): string {
-  return value.slice(0, 16).replace('T', ' ')
+  return value.slice(0, 16).replace('T', ' ');
 }
 
 onMounted(() => {
-  settingsStore.loadSettings()
-  settingsStore.loadDataStatus()
-})
+  settingsStore.loadSettings();
+  settingsStore.loadDataStatus();
+});
 </script>

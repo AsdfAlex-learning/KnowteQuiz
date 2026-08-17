@@ -1,20 +1,20 @@
-import MarkdownIt from 'markdown-it'
-import mk from '@traptitech/markdown-it-katex'
-import hljs from 'highlight.js'
+import MarkdownIt from 'markdown-it';
+import mk from '@traptitech/markdown-it-katex';
+import hljs from 'highlight.js';
 
-import 'katex/dist/katex.min.css'
+import 'katex/dist/katex.min.css';
 
 export interface MarkdownOptions {
-  html?: boolean
-  xhtmlOut?: boolean
-  breaks?: boolean
-  linkify?: boolean
-  typographer?: boolean
-  katex?: boolean
-  highlight?: boolean
+  html?: boolean;
+  xhtmlOut?: boolean;
+  breaks?: boolean;
+  linkify?: boolean;
+  typographer?: boolean;
+  katex?: boolean;
+  highlight?: boolean;
 }
 
-type ResolvedMarkdownOptions = Required<MarkdownOptions>
+type ResolvedMarkdownOptions = Required<MarkdownOptions>;
 
 const defaultOptions: ResolvedMarkdownOptions = {
   html: false,
@@ -24,15 +24,15 @@ const defaultOptions: ResolvedMarkdownOptions = {
   typographer: true,
   katex: true,
   highlight: true,
-}
+};
 
-const markdownInstances = new Map<string, MarkdownIt>()
+const markdownInstances = new Map<string, MarkdownIt>();
 
 export function getMarkdown_it(options: MarkdownOptions = {}): MarkdownIt {
-  const resolvedOptions = resolveMarkdownOptions(options)
-  const cacheKey = JSON.stringify(resolvedOptions)
-  const cached = markdownInstances.get(cacheKey)
-  if (cached) return cached
+  const resolvedOptions = resolveMarkdownOptions(options);
+  const cacheKey = JSON.stringify(resolvedOptions);
+  const cached = markdownInstances.get(cacheKey);
+  if (cached) return cached;
 
   const md = new MarkdownIt({
     html: resolvedOptions.html,
@@ -42,107 +42,109 @@ export function getMarkdown_it(options: MarkdownOptions = {}): MarkdownIt {
     typographer: resolvedOptions.typographer,
     highlight: resolvedOptions.highlight
       ? (str: string, lang: string) => {
-          const langLower = lang.toLowerCase()
+          const langLower = lang.toLowerCase();
           if (langLower && hljs.getLanguage(langLower)) {
             try {
-              return hljs.highlight(str, { language: langLower }).value
+              return hljs.highlight(str, { language: langLower }).value;
             } catch {
               // fallback to plain text
             }
           }
-          return ''
+          return '';
         }
       : undefined,
-  })
+  });
 
   if (resolvedOptions.katex) {
     md.use(mk, {
       throwOnError: false,
       errorColor: '#cc0000',
-    })
+    });
   }
 
-  markdownInstances.set(cacheKey, md)
-  return md
+  markdownInstances.set(cacheKey, md);
+  return md;
 }
 
 export function renderMarkdown(content: string, options?: MarkdownOptions): string {
-  const md = getMarkdown_it(options)
-  return renderMarkdownWithFallback(content, (source) => md.render(source))
+  const md = getMarkdown_it(options);
+  return renderMarkdownWithFallback(content, (source) => md.render(source));
 }
 
 export function renderInline(content: string, options?: MarkdownOptions): string {
-  const md = getMarkdown_it(options)
-  return md.renderInline(content)
+  const md = getMarkdown_it(options);
+  return md.renderInline(content);
 }
 
-export function renderMarkdownWithFallback(
-  content: string,
-  render: (source: string) => string,
-): string {
+export function renderMarkdownWithFallback(content: string, render: (source: string) => string): string {
   try {
-    return render(content)
+    return render(content);
   } catch {
-    return `<pre class="markdown-render-fallback"><code>${escapeHtml(content)}</code></pre>`
+    return `<pre class="markdown-render-fallback"><code>${escapeHtml(content)}</code></pre>`;
   }
 }
 
 export function highlightCode(code: string, language: string): string {
-  const langLower = language.toLowerCase()
+  const langLower = language.toLowerCase();
   if (langLower && hljs.getLanguage(langLower)) {
     try {
-      return hljs.highlight(code, { language: langLower }).value
+      return hljs.highlight(code, { language: langLower }).value;
     } catch {
       // fallback
     }
   }
-  return code
+  return code;
 }
 
 export function extractText(content: string): string {
-  const md = getMarkdown_it({ katex: false, highlight: false })
-  const html = md.render(content)
-  return html.replace(/<[^>]+>/g, '').replace(/</g, '<').replace(/>/g, '>').replace(/&/g, '&').replace(/"/g, '"')
+  const md = getMarkdown_it({ katex: false, highlight: false });
+  const html = md.render(content);
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/&/g, '&')
+    .replace(/"/g, '"');
 }
 
 export function splitByParagraph(content: string): string[] {
-  return content.split(/\n\n+/).filter(Boolean)
+  return content.split(/\n\n+/).filter(Boolean);
 }
 
 export interface TocHeading {
-  level: number
-  text: string
-  id: string
+  level: number;
+  text: string;
+  id: string;
 }
 
 export function extractHeadings(content: string): TocHeading[] {
-  const headings: TocHeading[] = []
-  const headingRegex = /^ {0,3}(#{1,6})\s+(.+)$/
-  let fenceMarker: string | null = null
-  const headingCounts = new Map<string, number>()
+  const headings: TocHeading[] = [];
+  const headingRegex = /^ {0,3}(#{1,6})\s+(.+)$/;
+  let fenceMarker: string | null = null;
+  const headingCounts = new Map<string, number>();
 
   for (const line of content.split(/\r?\n/)) {
-    const fence = line.match(/^ {0,3}(`{3,}|~{3,})/)
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})/);
     if (fence) {
-      const marker = fence[1][0]
+      const marker = fence[1][0];
       if (!fenceMarker) {
-        fenceMarker = marker
+        fenceMarker = marker;
       } else if (fenceMarker === marker) {
-        fenceMarker = null
+        fenceMarker = null;
       }
-      continue
+      continue;
     }
-    if (fenceMarker) continue
+    if (fenceMarker) continue;
 
-    const match = line.match(headingRegex)
-    if (!match) continue
-    const level = match[1].length
-    const text = match[2].trim()
-    const id = uniqueHeadingId(text, headingCounts)
-    headings.push({ level, text, id })
+    const match = line.match(headingRegex);
+    if (!match) continue;
+    const level = match[1].length;
+    const text = match[2].trim();
+    const id = uniqueHeadingId(text, headingCounts);
+    headings.push({ level, text, id });
   }
 
-  return headings
+  return headings;
 }
 
 export function baseHeadingId(text: string): string {
@@ -151,14 +153,14 @@ export function baseHeadingId(text: string): string {
     .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/^-|-$/g, '');
 }
 
 export function uniqueHeadingId(text: string, headingCounts: Map<string, number>): string {
-  const baseId = baseHeadingId(text) || 'heading'
-  const nextCount = (headingCounts.get(baseId) ?? 0) + 1
-  headingCounts.set(baseId, nextCount)
-  return nextCount === 1 ? baseId : `${baseId}-${nextCount}`
+  const baseId = baseHeadingId(text) || 'heading';
+  const nextCount = (headingCounts.get(baseId) ?? 0) + 1;
+  headingCounts.set(baseId, nextCount);
+  return nextCount === 1 ? baseId : `${baseId}-${nextCount}`;
 }
 
 function escapeHtml(content: string): string {
@@ -167,7 +169,7 @@ function escapeHtml(content: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    .replace(/'/g, '&#39;');
 }
 
 function resolveMarkdownOptions(options: MarkdownOptions): ResolvedMarkdownOptions {
@@ -179,5 +181,5 @@ function resolveMarkdownOptions(options: MarkdownOptions): ResolvedMarkdownOptio
     typographer: options.typographer ?? defaultOptions.typographer,
     katex: options.katex ?? defaultOptions.katex,
     highlight: options.highlight ?? defaultOptions.highlight,
-  }
+  };
 }

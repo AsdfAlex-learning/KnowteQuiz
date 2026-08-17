@@ -21,24 +21,24 @@
 </template>
 
 <script setup lang="ts">
-export type PanelTab = 'quiz' | 'mistakes' | 'settings'
+export type PanelTab = 'quiz' | 'mistakes' | 'settings';
 
 interface TabDef {
-  key: PanelTab
-  label: string
+  key: PanelTab;
+  label: string;
 }
 
 defineProps<{
-  modelValue: PanelTab
-}>()
+  modelValue: PanelTab;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: PanelTab]
-}>()
+  'update:modelValue': [value: PanelTab];
+}>();
 
 const tabs: TabDef[] = [
   { key: 'quiz', label: 'Quiz' },
   { key: 'mistakes', label: 'Mistakes' },
   { key: 'settings', label: 'Settings' },
-]
+];
 </script>

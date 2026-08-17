@@ -147,7 +147,7 @@ async function main() {
   const args = process.argv.slice(2);
   const isDev = args.includes('--dev') || args.includes('-d');
   const shouldBuild = args.includes('--build') || args.includes('-b');
-  const extraArgs = args.filter(a => a !== '--dev' && a !== '-d' && a !== '--build' && a !== '-b');
+  const extraArgs = args.filter((a) => a !== '--dev' && a !== '-d' && a !== '--build' && a !== '-b');
 
   log(`检测平台: ${process.platform} (${isWindows ? 'Windows' : isMac ? 'macOS' : 'Linux'})`);
 

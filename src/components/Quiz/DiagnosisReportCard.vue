@@ -1,10 +1,7 @@
 <template>
   <div class="border border-[var(--border-default)] rounded-lg p-3 space-y-2.5 card-hover">
     <div class="flex items-center gap-2">
-      <span
-        class="px-2 py-0.5 text-[10px] font-semibold rounded"
-        :class="severityClass"
-      >
+      <span class="px-2 py-0.5 text-[10px] font-semibold rounded" :class="severityClass">
         {{ spot.severity }}
       </span>
       <span class="text-xs font-medium text-[var(--accent-purple)]">{{ spot.tag }}</span>
@@ -30,23 +27,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { BlindSpot } from '@/types/diagnosis'
+import { computed } from 'vue';
+import type { BlindSpot } from '@/types/diagnosis';
 
 const props = defineProps<{
-  spot: BlindSpot
-}>()
+  spot: BlindSpot;
+}>();
 
 const severityClass = computed(() => {
   switch (props.spot.severity) {
     case 'high':
-      return 'bg-[var(--color-error)]/20 text-[var(--color-error)]'
+      return 'bg-[var(--color-error)]/20 text-[var(--color-error)]';
     case 'medium':
-      return 'bg-[var(--accent-peach)]/20 text-[var(--accent-peach)]'
+      return 'bg-[var(--accent-peach)]/20 text-[var(--accent-peach)]';
     case 'low':
-      return 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]'
+      return 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]';
     default:
-      return 'bg-[var(--bg-active)] text-[var(--text-muted)]'
+      return 'bg-[var(--bg-active)] text-[var(--text-muted)]';
   }
-})
+});
 </script>

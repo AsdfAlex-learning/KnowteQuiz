@@ -1,10 +1,18 @@
-import type { QuizStreamParams, QuizQuestion, QuizEvent, DiagnosisEvent, DiagnosisReport, BlindSpot, DiagnosisRound } from '../types'
-import { invoke, isTauri, webStream } from './tauri'
-import { createLocalId } from '../utils/id'
+import type {
+  QuizStreamParams,
+  QuizQuestion,
+  QuizEvent,
+  DiagnosisEvent,
+  DiagnosisReport,
+  BlindSpot,
+  DiagnosisRound,
+} from '../types';
+import { invoke, isTauri, webStream } from './tauri';
+import { createLocalId } from '../utils/id';
 
 async function throwHttpError(res: Response): Promise<never> {
-  const body = await res.text()
-  throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`)
+  const body = await res.text();
+  throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
 }
 
 export async function generateQuiz(
@@ -12,25 +20,25 @@ export async function generateQuiz(
   onPhase: (phase: string) => void,
   onChunk: (q: QuizQuestion) => void,
   onDone: (total: number) => void,
-  onError: (msg: string) => void,
+  onError: (msg: string) => void
 ): Promise<void> {
   if (isTauri()) {
-    const { Channel } = await import('@tauri-apps/api/core')
-    const channel = new Channel<QuizEvent>()
+    const { Channel } = await import('@tauri-apps/api/core');
+    const channel = new Channel<QuizEvent>();
     channel.onmessage = (msg) => {
-      if (msg.event === 'phase') onPhase(msg.data.phase)
-      else if (msg.event === 'chunk') onChunk(msg.data)
-      else if (msg.event === 'done') onDone(msg.data.total)
-      else if (msg.event === 'error') onError(msg.data.message)
-    }
-    await invoke('generate_quiz', { params, onEvent: channel })
+      if (msg.event === 'phase') onPhase(msg.data.phase);
+      else if (msg.event === 'chunk') onChunk(msg.data);
+      else if (msg.event === 'done') onDone(msg.data.total);
+      else if (msg.event === 'error') onError(msg.data.message);
+    };
+    await invoke('generate_quiz', { params, onEvent: channel });
   } else {
     await webStream<QuizEvent>('/api/quiz/generate', params, (msg) => {
-      if (msg.event === 'phase') onPhase(msg.data.phase)
-      else if (msg.event === 'chunk') onChunk(msg.data)
-      else if (msg.event === 'done') onDone(msg.data.total)
-      else if (msg.event === 'error') onError(msg.data.message)
-    })
+      if (msg.event === 'phase') onPhase(msg.data.phase);
+      else if (msg.event === 'chunk') onChunk(msg.data);
+      else if (msg.event === 'done') onDone(msg.data.total);
+      else if (msg.event === 'error') onError(msg.data.message);
+    });
   }
 }
 
@@ -43,17 +51,17 @@ export async function submitAnswerAdvanced(
   onInitial: (data: DiagnosisRound) => void,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
-  onError: (msg: string) => void,
+  onError: (msg: string) => void
 ): Promise<string> {
   if (isTauri()) {
-    const { Channel } = await import('@tauri-apps/api/core')
-    const channel = new Channel<DiagnosisEvent>()
+    const { Channel } = await import('@tauri-apps/api/core');
+    const channel = new Channel<DiagnosisEvent>();
     channel.onmessage = (msg) => {
-      if (msg.event === 'initial') onInitial(msg.data)
-      else if (msg.event === 'follow_up') onFollowUp(msg.data)
-      else if (msg.event === 'report') onReport(msg.data)
-      else if (msg.event === 'error') onError(msg.data.message)
-    }
+      if (msg.event === 'initial') onInitial(msg.data);
+      else if (msg.event === 'follow_up') onFollowUp(msg.data);
+      else if (msg.event === 'report') onReport(msg.data);
+      else if (msg.event === 'error') onError(msg.data.message);
+    };
     return invoke<string>('submit_answer_advanced', {
       question,
       correctAnswer: correct_answer,
@@ -61,23 +69,27 @@ export async function submitAnswerAdvanced(
       userReasoning: user_reasoning,
       notePath: note_path,
       onEvent: channel,
-    })
+    });
   } else {
-    const sessionId = createLocalId('web')
-    await webStream<DiagnosisEvent>('/api/quiz/diagnose', {
-      session_id: sessionId,
-      question,
-      correct_answer,
-      user_answer,
-      user_reasoning,
-      note_path,
-    }, (msg) => {
-      if (msg.event === 'initial') onInitial(msg.data)
-      else if (msg.event === 'follow_up') onFollowUp(msg.data)
-      else if (msg.event === 'report') onReport(msg.data)
-      else if (msg.event === 'error') onError(msg.data.message)
-    })
-    return sessionId
+    const sessionId = createLocalId('web');
+    await webStream<DiagnosisEvent>(
+      '/api/quiz/diagnose',
+      {
+        session_id: sessionId,
+        question,
+        correct_answer,
+        user_answer,
+        user_reasoning,
+        note_path,
+      },
+      (msg) => {
+        if (msg.event === 'initial') onInitial(msg.data);
+        else if (msg.event === 'follow_up') onFollowUp(msg.data);
+        else if (msg.event === 'report') onReport(msg.data);
+        else if (msg.event === 'error') onError(msg.data.message);
+      }
+    );
+    return sessionId;
   }
 }
 
@@ -86,47 +98,51 @@ export async function diagnoseFollowUp(
   userReply: string,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
-  onError: (msg: string) => void,
+  onError: (msg: string) => void
 ): Promise<void> {
   if (isTauri()) {
-    const { Channel } = await import('@tauri-apps/api/core')
-    const channel = new Channel<DiagnosisEvent>()
+    const { Channel } = await import('@tauri-apps/api/core');
+    const channel = new Channel<DiagnosisEvent>();
     channel.onmessage = (msg) => {
-      if (msg.event === 'follow_up') onFollowUp(msg.data)
-      else if (msg.event === 'report') onReport(msg.data)
-      else if (msg.event === 'error') onError(msg.data.message)
-    }
-    await invoke('diagnose_follow_up', { sessionId, userReply, onEvent: channel })
+      if (msg.event === 'follow_up') onFollowUp(msg.data);
+      else if (msg.event === 'report') onReport(msg.data);
+      else if (msg.event === 'error') onError(msg.data.message);
+    };
+    await invoke('diagnose_follow_up', { sessionId, userReply, onEvent: channel });
   } else {
-    await webStream<DiagnosisEvent>(`/api/quiz/diagnose/${sessionId}/follow_up`, {
-      user_reply: userReply,
-    }, (msg) => {
-      if (msg.event === 'follow_up') onFollowUp(msg.data)
-      else if (msg.event === 'report') onReport(msg.data)
-      else if (msg.event === 'error') onError(msg.data.message)
-    })
+    await webStream<DiagnosisEvent>(
+      `/api/quiz/diagnose/${sessionId}/follow_up`,
+      {
+        user_reply: userReply,
+      },
+      (msg) => {
+        if (msg.event === 'follow_up') onFollowUp(msg.data);
+        else if (msg.event === 'report') onReport(msg.data);
+        else if (msg.event === 'error') onError(msg.data.message);
+      }
+    );
   }
 }
 
 export async function generateDiagnosisReport(sessionId: string): Promise<DiagnosisReport> {
   if (isTauri()) {
-    return invoke<DiagnosisReport>('generate_diagnosis_report', { sessionId })
+    return invoke<DiagnosisReport>('generate_diagnosis_report', { sessionId });
   }
-  const res = await fetch(`/api/quiz/diagnose/${sessionId}/report`)
-  if (!res.ok) await throwHttpError(res)
-  return res.json()
+  const res = await fetch(`/api/quiz/diagnose/${sessionId}/report`);
+  if (!res.ok) await throwHttpError(res);
+  return res.json();
 }
 
 export interface SessionCleanupResult {
-  deleted_count: number
-  remaining_count: number
+  deleted_count: number;
+  remaining_count: number;
 }
 
 export async function cleanupSessions(): Promise<SessionCleanupResult> {
   if (isTauri()) {
-    return invoke<SessionCleanupResult>('cleanup_sessions')
+    return invoke<SessionCleanupResult>('cleanup_sessions');
   }
-  const res = await fetch('/api/sessions/cleanup', { method: 'POST' })
-  if (!res.ok) await throwHttpError(res)
-  return res.json()
+  const res = await fetch('/api/sessions/cleanup', { method: 'POST' });
+  if (!res.ok) await throwHttpError(res);
+  return res.json();
 }

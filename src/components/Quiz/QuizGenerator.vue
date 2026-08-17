@@ -82,9 +82,7 @@
       {{ generatingLabel }}
     </button>
 
-    <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">
-      Select a note to generate a quiz
-    </p>
+    <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">Select a note to generate a quiz</p>
 
     <div
       v-if="quizStore.generatingError"
@@ -99,65 +97,65 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useQuizStore } from '@/stores/quiz'
-import { useSettingsStore } from '@/stores/settings'
-import { useExplorerStore } from '@/stores/explorer'
-import { useMistakeStore } from '@/stores/mistakes'
-import ModeToggle from './ModeToggle.vue'
-import type { QuizMode } from '@/stores/quiz'
-import type { QuestionType, QuizDifficulty, QuizLanguage } from '@/types/quiz'
+import { ref, computed, watch } from 'vue';
+import { useQuizStore } from '@/stores/quiz';
+import { useSettingsStore } from '@/stores/settings';
+import { useExplorerStore } from '@/stores/explorer';
+import { useMistakeStore } from '@/stores/mistakes';
+import ModeToggle from './ModeToggle.vue';
+import type { QuizMode } from '@/stores/quiz';
+import type { QuestionType, QuizDifficulty, QuizLanguage } from '@/types/quiz';
 
-const quizStore = useQuizStore()
-const settingsStore = useSettingsStore()
-const explorerStore = useExplorerStore()
-const mistakeStore = useMistakeStore()
+const quizStore = useQuizStore();
+const settingsStore = useSettingsStore();
+const explorerStore = useExplorerStore();
+const mistakeStore = useMistakeStore();
 
-const mode = ref<QuizMode>('basic')
-const selectedTypes = ref<QuestionType[]>([])
-const count = ref(5)
-const difficulty = ref<QuizDifficulty>('medium')
-const lang = ref<QuizLanguage>('zh')
+const mode = ref<QuizMode>('basic');
+const selectedTypes = ref<QuestionType[]>([]);
+const count = ref(5);
+const difficulty = ref<QuizDifficulty>('medium');
+const lang = ref<QuizLanguage>('zh');
 
-const notePath = ref<string | null>(null)
-const fallbackQuestionTypes: QuestionType[] = ['single', 'short']
-const supportedQuestionTypes: QuestionType[] = ['single', 'multiple', 'short']
-const supportedLanguages: QuizLanguage[] = ['zh', 'en', 'ja', 'ko']
-const supportedDifficulties: QuizDifficulty[] = ['easy', 'medium', 'hard']
-const fallbackQuestionCount = 5
-const minQuestionCount = 1
-const maxQuestionCount = 20
+const notePath = ref<string | null>(null);
+const fallbackQuestionTypes: QuestionType[] = ['single', 'short'];
+const supportedQuestionTypes: QuestionType[] = ['single', 'multiple', 'short'];
+const supportedLanguages: QuizLanguage[] = ['zh', 'en', 'ja', 'ko'];
+const supportedDifficulties: QuizDifficulty[] = ['easy', 'medium', 'hard'];
+const fallbackQuestionCount = 5;
+const minQuestionCount = 1;
+const maxQuestionCount = 20;
 
 const generatingLabel = computed(() => {
-  if (!quizStore.isGenerating) return 'Start Quiz'
-  const phase = quizStore.generatingPhase
-  if (phase === 'requesting_model') return 'Requesting model...'
-  if (phase === 'parsing_response') return 'Parsing response...'
-  return 'Generating...'
-})
+  if (!quizStore.isGenerating) return 'Start Quiz';
+  const phase = quizStore.generatingPhase;
+  if (phase === 'requesting_model') return 'Requesting model...';
+  if (phase === 'parsing_response') return 'Parsing response...';
+  return 'Generating...';
+});
 
 const questionTypes: { value: QuestionType; label: string }[] = [
   { value: 'single', label: 'Single Choice' },
   { value: 'multiple', label: 'Multiple Choice' },
   { value: 'short', label: 'Short Answer' },
-]
+];
 
 function toggleType(type: QuestionType) {
-  const idx = selectedTypes.value.indexOf(type)
+  const idx = selectedTypes.value.indexOf(type);
   if (idx >= 0) {
     if (selectedTypes.value.length > 1) {
-      selectedTypes.value.splice(idx, 1)
+      selectedTypes.value.splice(idx, 1);
     }
   } else {
-    selectedTypes.value.push(type)
+    selectedTypes.value.push(type);
   }
 }
 
 async function handleGenerate() {
-  if (!notePath.value || quizStore.isGenerating) return
-  quizStore.resetQuiz()
-  quizStore.setMode(mode.value)
-  mistakeStore.clearSaveState()
+  if (!notePath.value || quizStore.isGenerating) return;
+  quizStore.resetQuiz();
+  quizStore.setMode(mode.value);
+  mistakeStore.clearSaveState();
 
   await quizStore.startQuiz({
     path: notePath.value,
@@ -165,40 +163,46 @@ async function handleGenerate() {
     count: count.value,
     difficulty: difficulty.value,
     lang: lang.value,
-  })
+  });
 }
 
-watch(() => explorerStore.selectedPath, (path) => {
-  notePath.value = path
-}, { immediate: true })
+watch(
+  () => explorerStore.selectedPath,
+  (path) => {
+    notePath.value = path;
+  },
+  { immediate: true }
+);
 
-watch(() => settingsStore.settings.quiz, (defaults) => {
-  mode.value = defaults.default_mode === 'advanced' ? 'advanced' : 'basic'
-  selectedTypes.value = normalizeQuestionTypes(defaults.default_types)
-  count.value = normalizeCount(defaults.default_count)
-  lang.value = normalizeLanguage(defaults.default_language)
-  difficulty.value = normalizeDifficulty(defaults.default_difficulty)
-}, { immediate: true, deep: true })
+watch(
+  () => settingsStore.settings.quiz,
+  (defaults) => {
+    mode.value = defaults.default_mode === 'advanced' ? 'advanced' : 'basic';
+    selectedTypes.value = normalizeQuestionTypes(defaults.default_types);
+    count.value = normalizeCount(defaults.default_count);
+    lang.value = normalizeLanguage(defaults.default_language);
+    difficulty.value = normalizeDifficulty(defaults.default_difficulty);
+  },
+  { immediate: true, deep: true }
+);
 
 function normalizeQuestionTypes(types: unknown): QuestionType[] {
-  if (!Array.isArray(types)) return [...fallbackQuestionTypes]
-  const filtered = types.filter((type): type is QuestionType =>
-    supportedQuestionTypes.includes(type as QuestionType)
-  )
-  return filtered.length > 0 ? filtered : [...fallbackQuestionTypes]
+  if (!Array.isArray(types)) return [...fallbackQuestionTypes];
+  const filtered = types.filter((type): type is QuestionType => supportedQuestionTypes.includes(type as QuestionType));
+  return filtered.length > 0 ? filtered : [...fallbackQuestionTypes];
 }
 
 function normalizeLanguage(value: string): QuizLanguage {
-  return supportedLanguages.includes(value as QuizLanguage) ? value as QuizLanguage : 'zh'
+  return supportedLanguages.includes(value as QuizLanguage) ? (value as QuizLanguage) : 'zh';
 }
 
 function normalizeDifficulty(value: string): QuizDifficulty {
-  return supportedDifficulties.includes(value as QuizDifficulty) ? value as QuizDifficulty : 'medium'
+  return supportedDifficulties.includes(value as QuizDifficulty) ? (value as QuizDifficulty) : 'medium';
 }
 
 function normalizeCount(value: number): number {
   return Number.isInteger(value) && value >= minQuestionCount && value <= maxQuestionCount
     ? value
-    : fallbackQuestionCount
+    : fallbackQuestionCount;
 }
 </script>

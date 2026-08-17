@@ -1,8 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-      LLM Configuration
-    </h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">LLM Configuration</h3>
 
     <div class="space-y-3">
       <label class="block">
@@ -79,17 +77,17 @@
 </template>
 
 <script setup lang="ts">
-import type { SettingsLLM } from '@/types/settings'
+import type { SettingsLLM } from '@/types/settings';
 
 const props = defineProps<{
-  llm: SettingsLLM
-}>()
+  llm: SettingsLLM;
+}>();
 
 const emit = defineEmits<{
-  'update:llm': [value: SettingsLLM]
-}>()
+  'update:llm': [value: SettingsLLM];
+}>();
 
 function update(key: keyof SettingsLLM, value: string | number) {
-  emit('update:llm', { ...props.llm, [key]: value })
+  emit('update:llm', { ...props.llm, [key]: value });
 }
 </script>

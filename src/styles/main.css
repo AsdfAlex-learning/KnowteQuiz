@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ========================================
    KnowteQuiz Design System — Catppuccin-based Dark Theme
@@ -223,8 +223,13 @@ input[type='range']::-moz-range-thumb {
 
 /* ---- Subtle pulse animation for loading states ---- */
 @keyframes pulse-soft {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .animate-pulse-soft {

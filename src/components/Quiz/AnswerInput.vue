@@ -14,11 +14,11 @@
 
 <script setup lang="ts">
 defineProps<{
-  modelValue: string
-  disabled?: boolean
-}>()
+  modelValue: string;
+  disabled?: boolean;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: string]
-}>()
+  'update:modelValue': [value: string];
+}>();
 </script>

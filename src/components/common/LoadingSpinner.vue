@@ -1,20 +1,7 @@
 <template>
   <div :class="containerClasses" :role="overlay ? 'alert' : undefined" :aria-busy="overlay ? 'true' : undefined">
-    <svg
-      :class="spinnerClasses"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-linecap="round"
-        class="opacity-20"
-      />
+    <svg :class="spinnerClasses" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="opacity-20" />
       <path
         d="M12 2a10 10 0 0 1 10 10"
         stroke="currentColor"
@@ -28,24 +15,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-const props = withDefaults(defineProps<{
-  size?: 'sm' | 'md' | 'lg'
-  label?: string
-  overlay?: boolean
-}>(), {
-  size: 'md',
-  label: '',
-  overlay: false,
-})
+const props = withDefaults(
+  defineProps<{
+    size?: 'sm' | 'md' | 'lg';
+    label?: string;
+    overlay?: boolean;
+  }>(),
+  {
+    size: 'md',
+    label: '',
+    overlay: false,
+  }
+);
 
 const containerClasses = computed(() => [
   'flex flex-col items-center justify-center',
-  props.overlay
-    ? 'absolute inset-0 bg-[var(--bg-base)]/70 z-40'
-    : '',
-])
+  props.overlay ? 'absolute inset-0 bg-[var(--bg-base)]/70 z-40' : '',
+]);
 
 const spinnerClasses = computed(() => [
   'animate-spin text-[var(--accent-purple)]',
@@ -54,7 +42,7 @@ const spinnerClasses = computed(() => [
     md: 'w-6 h-6',
     lg: 'w-10 h-10',
   }[props.size],
-])
+]);
 </script>
 
 <style scoped>

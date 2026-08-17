@@ -36,27 +36,21 @@
       </div>
 
       <div class="bg-[var(--bg-base)] rounded-lg p-3">
-        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
-          Explanation
-        </h4>
+        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">Explanation</h4>
         <p class="text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
           {{ mistake.explanation }}
         </p>
       </div>
 
       <div v-if="mistake.user_reasoning" class="bg-[var(--bg-base)] rounded-lg p-3">
-        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
-          Your Reasoning
-        </h4>
+        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">Your Reasoning</h4>
         <p class="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap italic">
           {{ mistake.user_reasoning }}
         </p>
       </div>
 
       <div v-if="parsedDiagnosis" class="bg-[var(--bg-base)] rounded-lg p-3 space-y-3">
-        <h4 class="text-xs font-semibold text-[var(--accent-purple)] uppercase tracking-wider">
-          Diagnosis
-        </h4>
+        <h4 class="text-xs font-semibold text-[var(--accent-purple)] uppercase tracking-wider">Diagnosis</h4>
 
         <div v-if="parsedDiagnosis.summary" class="text-sm text-[var(--text-primary)] leading-relaxed">
           {{ parsedDiagnosis.summary }}
@@ -69,7 +63,9 @@
             class="border border-[var(--border-default)] rounded-md p-2.5"
           >
             <div class="flex items-center gap-2 mb-1">
-              <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[var(--color-error)]/20 text-[var(--color-error)]">
+              <span
+                class="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[var(--color-error)]/20 text-[var(--color-error)]"
+              >
                 {{ spot.severity }}
               </span>
               <span class="text-xs font-medium text-[var(--accent-purple)]">{{ spot.tag }}</span>
@@ -110,64 +106,59 @@
       :disabled="isReviewing"
       @click="handleMarkReviewed"
     >
-      {{ isReviewing ? 'Marking...' : (mistake.review_count > 0 ? `Reviewed ${mistake.review_count}x` : 'Mark Reviewed') }}
+      {{
+        isReviewing ? 'Marking...' : mistake.review_count > 0 ? `Reviewed ${mistake.review_count}x` : 'Mark Reviewed'
+      }}
     </button>
-    <p
-      v-if="reviewError"
-      class="text-[11px] text-[var(--color-error)]"
-    >
+    <p v-if="reviewError" class="text-[11px] text-[var(--color-error)]">
       {{ reviewError }}
     </p>
-    <span
-      v-if="mistake.last_reviewed_at"
-      class="text-[11px] text-[var(--text-faint)]"
-    >
+    <span v-if="mistake.last_reviewed_at" class="text-[11px] text-[var(--text-faint)]">
       Last: {{ formatLastReviewed(mistake.last_reviewed_at) }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { MistakeEntry } from '@/types/mistake'
-import type { DiagnosisReport } from '@/types/diagnosis'
-import { useMistakeStore } from '@/stores/mistakes'
+import { computed } from 'vue';
+import type { MistakeEntry } from '@/types/mistake';
+import type { DiagnosisReport } from '@/types/diagnosis';
+import { useMistakeStore } from '@/stores/mistakes';
 
 const props = defineProps<{
-  mistake: MistakeEntry
-}>()
+  mistake: MistakeEntry;
+}>();
 
 defineEmits<{
-  back: []
-  openNote: [path: string]
-}>()
+  back: [];
+  openNote: [path: string];
+}>();
 
-const mistakeStore = useMistakeStore()
-const isReviewing = computed(() => mistakeStore.isReviewing(props.mistake.id))
-const reviewError = computed(() => mistakeStore.reviewErrorFor(props.mistake.id))
+const mistakeStore = useMistakeStore();
+const isReviewing = computed(() => mistakeStore.isReviewing(props.mistake.id));
+const reviewError = computed(() => mistakeStore.reviewErrorFor(props.mistake.id));
 
 async function handleMarkReviewed() {
-  await mistakeStore.markReviewed(props.mistake.id)
+  await mistakeStore.markReviewed(props.mistake.id);
 }
 
 function formatLastReviewed(dateStr: string): string {
-  const d = new Date(dateStr)
+  const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
-  })
+  });
 }
 
 const parsedDiagnosis = computed<DiagnosisReport | null>(() => {
-  if (!props.mistake.diagnosis) return null
+  if (!props.mistake.diagnosis) return null;
   try {
-    const diagnosis = typeof props.mistake.diagnosis === 'string'
-      ? JSON.parse(props.mistake.diagnosis)
-      : props.mistake.diagnosis
+    const diagnosis =
+      typeof props.mistake.diagnosis === 'string' ? JSON.parse(props.mistake.diagnosis) : props.mistake.diagnosis;
 
-    return diagnosis.final_report ?? diagnosis
+    return diagnosis.final_report ?? diagnosis;
   } catch {
-    return null
+    return null;
   }
-})
+});
 </script>

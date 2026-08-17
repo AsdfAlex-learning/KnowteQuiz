@@ -2,16 +2,9 @@
   <div class="flex flex-col h-full bg-[var(--bg-sidebar)]">
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]">
-      <h2 class="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-        Explorer
-      </h2>
+      <h2 class="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Explorer</h2>
       <div class="flex items-center gap-1">
-        <button
-          class="icon-btn"
-          title="Refresh"
-          :disabled="explorerStore.isLoading"
-          @click="explorerStore.loadTree()"
-        >
+        <button class="icon-btn" title="Refresh" :disabled="explorerStore.isLoading" @click="explorerStore.loadTree()">
           <svg
             width="14"
             height="14"
@@ -32,21 +25,22 @@
     <FolderSelector />
 
     <!-- Error state -->
-    <div v-if="explorerStore.error" class="px-3 py-2 text-[var(--text-xs)] text-[var(--color-error)] bg-[var(--color-error)]/10">
+    <div
+      v-if="explorerStore.error"
+      class="px-3 py-2 text-[var(--text-xs)] text-[var(--color-error)] bg-[var(--color-error)]/10"
+    >
       {{ explorerStore.error }}
     </div>
 
     <!-- File tree -->
     <div class="flex-1 overflow-y-auto px-1 py-1">
       <template v-if="explorerStore.tree.length > 0">
-        <FileTreeItem
-          v-for="node in explorerStore.tree"
-          :key="node.path"
-          :node="node"
-          :depth="0"
-        />
+        <FileTreeItem v-for="node in explorerStore.tree" :key="node.path" :node="node" :depth="0" />
       </template>
-      <div v-else-if="explorerStore.rootPath" class="px-3 py-8 text-center text-[var(--text-xs)] text-[var(--text-faint)]">
+      <div
+        v-else-if="explorerStore.rootPath"
+        class="px-3 py-8 text-center text-[var(--text-xs)] text-[var(--text-faint)]"
+      >
         No markdown files found
       </div>
     </div>
@@ -54,11 +48,11 @@
 </template>
 
 <script setup lang="ts">
-import { useExplorerStore } from '@/stores/explorer'
-import FileTreeItem from './FileTreeItem.vue'
-import FolderSelector from './FolderSelector.vue'
+import { useExplorerStore } from '@/stores/explorer';
+import FileTreeItem from './FileTreeItem.vue';
+import FolderSelector from './FolderSelector.vue';
 
-const explorerStore = useExplorerStore()
+const explorerStore = useExplorerStore();
 </script>
 
 <style scoped>

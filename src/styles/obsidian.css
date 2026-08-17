@@ -24,12 +24,29 @@
   line-height: 1.3;
 }
 
-.markdown-body h1 { font-size: var(--text-3xl); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.3em; }
-.markdown-body h2 { font-size: var(--text-2xl); border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.25em; }
-.markdown-body h3 { font-size: var(--text-xl); }
-.markdown-body h4 { font-size: var(--text-lg); }
-.markdown-body h5 { font-size: var(--text-base); }
-.markdown-body h6 { font-size: var(--text-sm); color: var(--text-secondary); }
+.markdown-body h1 {
+  font-size: var(--text-3xl);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.3em;
+}
+.markdown-body h2 {
+  font-size: var(--text-2xl);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.25em;
+}
+.markdown-body h3 {
+  font-size: var(--text-xl);
+}
+.markdown-body h4 {
+  font-size: var(--text-lg);
+}
+.markdown-body h5 {
+  font-size: var(--text-base);
+}
+.markdown-body h6 {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
 
 .markdown-body p {
   margin: 0 0 1em;
@@ -161,7 +178,7 @@
   margin-left: -1.5em;
 }
 
-.markdown-body .task-list-item input[type="checkbox"] {
+.markdown-body .task-list-item input[type='checkbox'] {
   accent-color: var(--accent-purple);
   margin-right: 0.5em;
 }

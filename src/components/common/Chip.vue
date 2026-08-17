@@ -15,17 +15,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-const props = withDefaults(defineProps<{
-  variant?: 'default' | 'purple' | 'green' | 'pink' | 'cyan' | 'yellow' | 'red'
-  removable?: boolean
-}>(), {
-  variant: 'default',
-  removable: false,
-})
+const props = withDefaults(
+  defineProps<{
+    variant?: 'default' | 'purple' | 'green' | 'pink' | 'cyan' | 'yellow' | 'red';
+    removable?: boolean;
+  }>(),
+  {
+    variant: 'default',
+    removable: false,
+  }
+);
 
-defineEmits<{ remove: [] }>()
+defineEmits<{ remove: [] }>();
 
 const variantStyles: Record<string, string> = {
   default: 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border-default)]',
@@ -35,11 +38,11 @@ const variantStyles: Record<string, string> = {
   cyan: 'bg-[var(--accent-cyan)]/15 text-[var(--accent-cyan)] border-[var(--accent-cyan)]/30',
   yellow: 'bg-[var(--accent-yellow)]/15 text-[var(--accent-yellow)] border-[var(--accent-yellow)]/30',
   red: 'bg-[var(--color-error)]/15 text-[var(--color-error)] border-[var(--color-error)]/30',
-}
+};
 
 const classes = computed(() => [
   'inline-flex items-center gap-1 px-2 py-0.5 text-[var(--text-xs)] font-medium rounded-[var(--radius-sm)] border',
   'transition-colors duration-[var(--transition-fast)]',
   variantStyles[props.variant],
-])
+]);
 </script>

@@ -17,18 +17,18 @@
 </template>
 
 <script setup lang="ts">
-export type QuizMode = 'basic' | 'advanced'
+export type QuizMode = 'basic' | 'advanced';
 
 defineProps<{
-  modelValue: QuizMode
-}>()
+  modelValue: QuizMode;
+}>();
 
 defineEmits<{
-  'update:modelValue': [value: QuizMode]
-}>()
+  'update:modelValue': [value: QuizMode];
+}>();
 
 const options: { value: QuizMode; label: string }[] = [
   { value: 'basic', label: 'Basic' },
   { value: 'advanced', label: 'Advanced' },
-]
+];
 </script>

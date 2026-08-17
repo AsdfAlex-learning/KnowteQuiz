@@ -1,24 +1,12 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div
-        v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-        @keydown.escape="close"
-      >
+      <div v-if="modelValue" class="fixed inset-0 z-50 flex items-center justify-center" @keydown.escape="close">
         <!-- Backdrop -->
-        <div
-          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          @click="close"
-        />
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="close" />
 
         <!-- Dialog -->
-        <div
-          :class="dialogClasses"
-          role="dialog"
-          aria-modal="true"
-          :aria-labelledby="titleId"
-        >
+        <div :class="dialogClasses" role="dialog" aria-modal="true" :aria-labelledby="titleId">
           <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
             <h2 :id="titleId" class="text-[var(--text-lg)] font-semibold text-[var(--text-primary)]">
@@ -41,7 +29,10 @@
           </div>
 
           <!-- Footer -->
-          <div v-if="$slots.footer" class="px-5 py-3 border-t border-[var(--border-subtle)] flex items-center justify-end gap-2">
+          <div
+            v-if="$slots.footer"
+            class="px-5 py-3 border-t border-[var(--border-subtle)] flex items-center justify-end gap-2"
+          >
             <slot name="footer" />
           </div>
         </div>
@@ -51,21 +42,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-const props = withDefaults(defineProps<{
-  modelValue: boolean
-  title: string
-  size?: 'sm' | 'md' | 'lg'
-}>(), {
-  size: 'md',
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue: boolean;
+    title: string;
+    size?: 'sm' | 'md' | 'lg';
+  }>(),
+  {
+    size: 'md',
+  }
+);
 
 const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-}>()
+  'update:modelValue': [value: boolean];
+}>();
 
-const titleId = computed(() => `modal-title-${Math.random().toString(36).slice(2, 9)}`)
+const titleId = computed(() => `modal-title-${Math.random().toString(36).slice(2, 9)}`);
 
 const dialogClasses = computed(() => [
   'relative z-10 bg-[var(--bg-sidebar)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] shadow-[var(--shadow-lg)] w-full',
@@ -74,10 +68,10 @@ const dialogClasses = computed(() => [
     md: 'max-w-lg',
     lg: 'max-w-2xl',
   }[props.size],
-])
+]);
 
 function close() {
-  emit('update:modelValue', false)
+  emit('update:modelValue', false);
 }
 </script>
 
@@ -88,7 +82,9 @@ function close() {
 }
 .modal-enter-active .relative.z-10,
 .modal-leave-active .relative.z-10 {
-  transition: transform 200ms ease, opacity 200ms ease;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease;
 }
 .modal-enter-from,
 .modal-leave-to {

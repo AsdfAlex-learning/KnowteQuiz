@@ -7,12 +7,13 @@
     <div class="flex items-center gap-2 min-w-0" data-tauri-drag-region>
       <div class="w-5 h-5 rounded bg-[var(--accent-purple)] flex items-center justify-center flex-shrink-0">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M2 3h3v3H2V3zm5 0h3v3H7V3zM2 8h3v3H2V8zm5 1.5A1.5 1.5 0 017 11a1.5 1.5 0 01-1.5-1.5A1.5 1.5 0 017 8a1.5 1.5 0 011.5 1.5z" fill="#1e1e2e" />
+          <path
+            d="M2 3h3v3H2V3zm5 0h3v3H7V3zM2 8h3v3H2V8zm5 1.5A1.5 1.5 0 017 11a1.5 1.5 0 01-1.5-1.5A1.5 1.5 0 017 8a1.5 1.5 0 011.5 1.5z"
+            fill="#1e1e2e"
+          />
         </svg>
       </div>
-      <span class="text-xs font-semibold text-[var(--text-primary)] truncate" data-tauri-drag-region>
-        KnowteQuiz
-      </span>
+      <span class="text-xs font-semibold text-[var(--text-primary)] truncate" data-tauri-drag-region> KnowteQuiz </span>
     </div>
 
     <!-- Center: Current note title -->
@@ -82,35 +83,35 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useLayoutStore } from '@/stores/layout'
-import { isTauri } from '@/services/tauri'
+import { computed } from 'vue';
+import { useLayoutStore } from '@/stores/layout';
+import { isTauri } from '@/services/tauri';
 
-const layoutStore = useLayoutStore()
+const layoutStore = useLayoutStore();
 
-const tauriAvailable = computed(() => isTauri())
+const tauriAvailable = computed(() => isTauri());
 
 function minimize() {
   if (tauriAvailable.value) {
     import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-      getCurrentWebviewWindow().minimize()
-    })
+      getCurrentWebviewWindow().minimize();
+    });
   }
 }
 
 function toggleMaximize() {
   if (tauriAvailable.value) {
     import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-      getCurrentWebviewWindow().toggleMaximize()
-    })
+      getCurrentWebviewWindow().toggleMaximize();
+    });
   }
 }
 
 function closeWindow() {
   if (tauriAvailable.value) {
     import('@tauri-apps/api/webviewWindow').then(({ getCurrentWebviewWindow }) => {
-      getCurrentWebviewWindow().close()
-    })
+      getCurrentWebviewWindow().close();
+    });
   }
 }
 </script>

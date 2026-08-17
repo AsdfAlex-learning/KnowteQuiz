@@ -1,10 +1,7 @@
 <template>
   <div>
     <!-- Directory node -->
-    <div
-      v-if="node.is_dir"
-      class="select-none"
-    >
+    <div v-if="node.is_dir" class="select-none">
       <div
         class="tree-item"
         :style="{ paddingLeft: depth * 12 + 8 + 'px' }"
@@ -23,7 +20,9 @@
 
         <!-- Folder icon -->
         <svg class="w-4 h-4 flex-shrink-0 text-[var(--accent-yellow)]" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M1 3.5A1.5 1.5 0 012.5 2h3.172a1.5 1.5 0 011.06.44l.708.707a.5.5 0 00.353.146H13.5A1.5 1.5 0 0115 4.793v7.707a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z" />
+          <path
+            d="M1 3.5A1.5 1.5 0 012.5 2h3.172a1.5 1.5 0 011.06.44l.708.707a.5.5 0 00.353.146H13.5A1.5 1.5 0 0115 4.793v7.707a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z"
+          />
         </svg>
 
         <span class="truncate">{{ node.name }}</span>
@@ -31,12 +30,7 @@
 
       <!-- Children (recursive) -->
       <div v-show="isExpanded">
-        <FileTreeItem
-          v-for="child in node.children"
-          :key="child.path"
-          :node="child"
-          :depth="depth + 1"
-        />
+        <FileTreeItem v-for="child in node.children" :key="child.path" :node="child" :depth="depth + 1" />
       </div>
     </div>
 
@@ -50,7 +44,13 @@
       @click="navigationStore.openNote(node.path)"
     >
       <!-- File icon -->
-      <svg class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2">
+      <svg
+        class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.2"
+      >
         <path d="M4 2h5l3 3v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" />
         <path d="M9 2v3h3" />
       </svg>
@@ -61,25 +61,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useExplorerStore } from '@/stores/explorer'
-import { useNavigationStore } from '@/stores/navigation'
-import type { NoteTreeNode } from '@/types/note'
+import { computed } from 'vue';
+import { useExplorerStore } from '@/stores/explorer';
+import { useNavigationStore } from '@/stores/navigation';
+import type { NoteTreeNode } from '@/types/note';
 
 const props = defineProps<{
-  node: NoteTreeNode
-  depth: number
-}>()
+  node: NoteTreeNode;
+  depth: number;
+}>();
 
-const explorerStore = useExplorerStore()
-const navigationStore = useNavigationStore()
+const explorerStore = useExplorerStore();
+const navigationStore = useNavigationStore();
 
-const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path))
-const isSelected = computed(() => explorerStore.selectedPath === props.node.path)
+const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path));
+const isSelected = computed(() => explorerStore.selectedPath === props.node.path);
 
 const displayName = computed(() => {
-  return props.node.name.replace(/\.(md|markdown)$/i, '')
-})
+  return props.node.name.replace(/\.(md|markdown)$/i, '');
+});
 </script>
 
 <style scoped>
@@ -93,7 +93,9 @@ const displayName = computed(() => {
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .tree-item:hover {

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import QuestionCard from './QuestionCard.vue'
-import OptionCard from './OptionCard.vue'
+import { mount } from '@vue/test-utils';
+import { describe, expect, it } from 'vitest';
+import QuestionCard from './QuestionCard.vue';
+import OptionCard from './OptionCard.vue';
 
 describe('QuestionCard', () => {
   it('highlights the correct option when the model answer is option text', () => {
@@ -22,13 +22,13 @@ describe('QuestionCard', () => {
         selectedOptions: [],
         submitted: true,
       },
-    })
+    });
 
-    const options = wrapper.findAllComponents(OptionCard)
+    const options = wrapper.findAllComponents(OptionCard);
 
-    expect(options[0].props('state')).toBe('correct')
-    expect(options[1].props('state')).toBe('default')
-  })
+    expect(options[0].props('state')).toBe('correct');
+    expect(options[1].props('state')).toBe('default');
+  });
 
   it('removes repeated option labels from rendered option text', () => {
     const wrapper = mount(QuestionCard, {
@@ -46,11 +46,11 @@ describe('QuestionCard', () => {
         selectedOptions: [],
         submitted: false,
       },
-    })
+    });
 
-    const options = wrapper.findAllComponents(OptionCard)
+    const options = wrapper.findAllComponents(OptionCard);
 
-    expect(options[0].props('text')).toBe('Alpha')
-    expect(options[1].props('text')).toBe('Beta')
-  })
-})
+    expect(options[0].props('text')).toBe('Alpha');
+    expect(options[1].props('text')).toBe('Beta');
+  });
+});

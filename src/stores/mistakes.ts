@@ -1,90 +1,87 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
 import {
   exportMistakes as exportMistakesService,
   loadMistakes,
   markMistakeReviewed,
   saveMistake,
-} from '../services/mistake'
-import type { MistakeEntry, MistakeMode } from '../types/mistake'
+} from '../services/mistake';
+import type { MistakeEntry, MistakeMode } from '../types/mistake';
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
 export const useMistakeStore = defineStore('mistakes', () => {
-  const items = ref<MistakeEntry[]>([])
-  const loading = ref(false)
-  const listError = ref<string | null>(null)
-  const modeFilter = ref<MistakeMode | undefined>(undefined)
-  const searchText = ref<string | undefined>(undefined)
-  const blindSpotTag = ref<string | undefined>(undefined)
-  const hasMore = ref(false)
-  const savingIds = ref(new Set<string>())
-  const savedIds = ref(new Set<string>())
-  const errors = ref(new Map<string, string>())
-  const reviewingIds = ref(new Set<string>())
-  const reviewErrors = ref(new Map<string, string>())
-  let listRequestId = 0
+  const items = ref<MistakeEntry[]>([]);
+  const loading = ref(false);
+  const listError = ref<string | null>(null);
+  const modeFilter = ref<MistakeMode | undefined>(undefined);
+  const searchText = ref<string | undefined>(undefined);
+  const blindSpotTag = ref<string | undefined>(undefined);
+  const hasMore = ref(false);
+  const savingIds = ref(new Set<string>());
+  const savedIds = ref(new Set<string>());
+  const errors = ref(new Map<string, string>());
+  const reviewingIds = ref(new Set<string>());
+  const reviewErrors = ref(new Map<string, string>());
+  let listRequestId = 0;
 
   function isSaving(key: string): boolean {
-    return savingIds.value.has(key)
+    return savingIds.value.has(key);
   }
 
   function isSaved(key: string): boolean {
-    return savedIds.value.has(key)
+    return savedIds.value.has(key);
   }
 
   function errorFor(key: string): string | null {
-    return errors.value.get(key) ?? null
+    return errors.value.get(key) ?? null;
   }
 
   function isReviewing(id: string): boolean {
-    return reviewingIds.value.has(id)
+    return reviewingIds.value.has(id);
   }
 
   function reviewErrorFor(id: string): string | null {
-    return reviewErrors.value.get(id) ?? null
+    return reviewErrors.value.get(id) ?? null;
   }
 
   function clearSaveState(): void {
-    savingIds.value = new Set()
-    savedIds.value = new Set()
-    errors.value = new Map()
+    savingIds.value = new Set();
+    savedIds.value = new Set();
+    errors.value = new Map();
   }
 
   async function saveEntry(key: string, entry: MistakeEntry): Promise<boolean> {
-    if (isSaving(key) || isSaved(key)) return false
+    if (isSaving(key) || isSaved(key)) return false;
 
-    savingIds.value.add(key)
-    errors.value.delete(key)
+    savingIds.value.add(key);
+    errors.value.delete(key);
     try {
-      const saved = await saveMistake(entry)
+      const saved = await saveMistake(entry);
       if (!saved) {
-        errors.value.set(key, 'Mistake was not saved')
-        return false
+        errors.value.set(key, 'Mistake was not saved');
+        return false;
       }
-      savedIds.value.add(key)
-      const itemsWithoutEntry = items.value.filter((item) => item.id !== entry.id)
+      savedIds.value.add(key);
+      const itemsWithoutEntry = items.value.filter((item) => item.id !== entry.id);
       if (matchesActiveFilters(entry)) {
-        items.value = [
-          entry,
-          ...itemsWithoutEntry,
-        ]
+        items.value = [entry, ...itemsWithoutEntry];
       } else {
-        items.value = itemsWithoutEntry
+        items.value = itemsWithoutEntry;
       }
-      return true
+      return true;
     } catch (e) {
-      errors.value.set(key, e instanceof Error ? e.message : String(e))
-      return false
+      errors.value.set(key, e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
-      savingIds.value.delete(key)
+      savingIds.value.delete(key);
     }
   }
 
   async function loadPage(offset = 0): Promise<void> {
-    const requestId = nextListRequest()
-    loading.value = true
-    listError.value = null
+    const requestId = nextListRequest();
+    loading.value = true;
+    listError.value = null;
     try {
       const page = await loadMistakes({
         mode: modeFilter.value,
@@ -92,124 +89,120 @@ export const useMistakeStore = defineStore('mistakes', () => {
         blind_spot_tag: blindSpotTag.value,
         offset,
         limit: PAGE_SIZE,
-      })
-      if (!isLatestListRequest(requestId)) return
-      items.value = offset === 0 ? page : [...items.value, ...page]
-      hasMore.value = page.length === PAGE_SIZE
+      });
+      if (!isLatestListRequest(requestId)) return;
+      items.value = offset === 0 ? page : [...items.value, ...page];
+      hasMore.value = page.length === PAGE_SIZE;
     } catch (e) {
-      if (!isLatestListRequest(requestId)) return
-      listError.value = e instanceof Error ? e.message : String(e)
+      if (!isLatestListRequest(requestId)) return;
+      listError.value = e instanceof Error ? e.message : String(e);
     } finally {
-      finishListRequest(requestId)
+      finishListRequest(requestId);
     }
   }
 
   async function loadNextPage(): Promise<void> {
-    if (loading.value || !hasMore.value) return
-    await loadPage(items.value.length)
+    if (loading.value || !hasMore.value) return;
+    await loadPage(items.value.length);
   }
 
   async function setModeFilter(mode: MistakeMode | undefined): Promise<void> {
-    modeFilter.value = mode
-    await loadPage(0)
+    modeFilter.value = mode;
+    await loadPage(0);
   }
 
   async function setSearchText(text: string): Promise<void> {
-    searchText.value = text.trim() || undefined
-    await loadPage(0)
+    searchText.value = text.trim() || undefined;
+    await loadPage(0);
   }
 
   async function setBlindSpotTag(tag: string): Promise<void> {
-    blindSpotTag.value = tag.trim() || undefined
-    await loadPage(0)
+    blindSpotTag.value = tag.trim() || undefined;
+    await loadPage(0);
   }
 
   async function markReviewed(mistakeId: string): Promise<boolean> {
-    if (isReviewing(mistakeId)) return false
+    if (isReviewing(mistakeId)) return false;
 
-    reviewingIds.value.add(mistakeId)
-    reviewErrors.value.delete(mistakeId)
+    reviewingIds.value.add(mistakeId);
+    reviewErrors.value.delete(mistakeId);
     try {
-      const reviewed = await markMistakeReviewed(mistakeId)
+      const reviewed = await markMistakeReviewed(mistakeId);
       if (!reviewed) {
-        reviewErrors.value.set(mistakeId, 'Mistake was not marked reviewed')
-        return false
+        reviewErrors.value.set(mistakeId, 'Mistake was not marked reviewed');
+        return false;
       }
 
-      const reviewedAt = new Date().toISOString()
+      const reviewedAt = new Date().toISOString();
       items.value = items.value.map((item) => {
-        if (item.id !== mistakeId) return item
+        if (item.id !== mistakeId) return item;
         return {
           ...item,
           review_count: item.review_count + 1,
           last_reviewed_at: reviewedAt,
-        }
-      })
-      return true
+        };
+      });
+      return true;
     } catch (e) {
-      reviewErrors.value.set(mistakeId, e instanceof Error ? e.message : String(e))
-      return false
+      reviewErrors.value.set(mistakeId, e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
-      reviewingIds.value.delete(mistakeId)
+      reviewingIds.value.delete(mistakeId);
     }
   }
 
-  const exportError = ref<string | null>(null)
-  const isExporting = ref(false)
+  const exportError = ref<string | null>(null);
+  const isExporting = ref(false);
 
   async function exportMistakes(format: 'json' | 'markdown'): Promise<boolean> {
-    isExporting.value = true
-    exportError.value = null
+    isExporting.value = true;
+    exportError.value = null;
     try {
-      await exportMistakesService(format)
-      return true
+      await exportMistakesService(format);
+      return true;
     } catch (e) {
-      exportError.value = e instanceof Error ? e.message : String(e)
-      return false
+      exportError.value = e instanceof Error ? e.message : String(e);
+      return false;
     } finally {
-      isExporting.value = false
+      isExporting.value = false;
     }
   }
 
   function nextListRequest(): number {
-    listRequestId += 1
-    return listRequestId
+    listRequestId += 1;
+    return listRequestId;
   }
 
   function isLatestListRequest(requestId: number): boolean {
-    return requestId === listRequestId
+    return requestId === listRequestId;
   }
 
   function finishListRequest(requestId: number): void {
     if (isLatestListRequest(requestId)) {
-      loading.value = false
+      loading.value = false;
     }
   }
 
   function matchesActiveFilters(entry: MistakeEntry): boolean {
-    if (modeFilter.value && entry.mode !== modeFilter.value) return false
+    if (modeFilter.value && entry.mode !== modeFilter.value) return false;
 
-    const search = searchText.value?.toLowerCase()
-    if (search && !searchableText(entry).includes(search)) return false
+    const search = searchText.value?.toLowerCase();
+    if (search && !searchableText(entry).includes(search)) return false;
 
-    const tag = blindSpotTag.value?.toLowerCase()
-    if (tag && !blindSpotTags(entry).some((value) => value.includes(tag))) return false
+    const tag = blindSpotTag.value?.toLowerCase();
+    if (tag && !blindSpotTags(entry).some((value) => value.includes(tag))) return false;
 
-    return true
+    return true;
   }
 
   function searchableText(entry: MistakeEntry): string {
-    return [
-      entry.question,
-      entry.user_answer,
-      entry.correct_answer,
-      entry.explanation,
-      entry.note_title,
-    ].join('\n').toLowerCase()
+    return [entry.question, entry.user_answer, entry.correct_answer, entry.explanation, entry.note_title]
+      .join('\n')
+      .toLowerCase();
   }
 
   function blindSpotTags(entry: MistakeEntry): string[] {
-    return entry.diagnosis?.final_report.blind_spots.map((spot) => spot.tag.toLowerCase()) ?? []
+    return entry.diagnosis?.final_report.blind_spots.map((spot) => spot.tag.toLowerCase()) ?? [];
   }
 
   return {
@@ -241,5 +234,5 @@ export const useMistakeStore = defineStore('mistakes', () => {
     exportMistakes,
     isExporting,
     exportError,
-  }
-})
+  };
+});

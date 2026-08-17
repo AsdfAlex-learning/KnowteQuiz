@@ -18,12 +18,10 @@
 
         <!-- Blind spots from AI -->
         <div v-if="msg.blind_spots?.length" class="mt-2 pt-2 border-t border-[var(--border-default)]/50">
-          <div
-            v-for="(spot, j) in msg.blind_spots"
-            :key="j"
-            class="flex items-center gap-1.5 mb-1"
-          >
-            <span class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-[var(--color-error)]/20 text-[var(--color-error)]">
+          <div v-for="(spot, j) in msg.blind_spots" :key="j" class="flex items-center gap-1.5 mb-1">
+            <span
+              class="px-1.5 py-0.5 text-[9px] font-semibold rounded bg-[var(--color-error)]/20 text-[var(--color-error)]"
+            >
               {{ spot.severity }}
             </span>
             <span class="text-[11px] text-[var(--accent-purple)]">{{ spot.tag }}</span>
@@ -69,27 +67,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { DiagnosisRound } from '@/types/diagnosis'
+import { ref } from 'vue';
+import type { DiagnosisRound } from '@/types/diagnosis';
 
 const props = defineProps<{
-  messages: DiagnosisRound[]
-  active: boolean
-  completed: boolean
-  submitting?: boolean
-}>()
+  messages: DiagnosisRound[];
+  active: boolean;
+  completed: boolean;
+  submitting?: boolean;
+}>();
 
 const emit = defineEmits<{
-  sendReply: [text: string]
-  endDiagnosis: []
-}>()
+  sendReply: [text: string];
+  endDiagnosis: [];
+}>();
 
-const reply = ref('')
+const reply = ref('');
 
 function handleSubmit() {
-  const text = reply.value.trim()
-  if (!text) return
-  emit('sendReply', text)
-  reply.value = ''
+  const text = reply.value.trim();
+  if (!text) return;
+  emit('sendReply', text);
+  reply.value = '';
 }
 </script>

@@ -16,19 +16,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
-const props = withDefaults(defineProps<{
-  title?: string
-  subtitle?: string
-  variant?: 'default' | 'elevated' | 'outlined'
-  padding?: 'none' | 'sm' | 'md' | 'lg'
-}>(), {
-  title: '',
-  subtitle: '',
-  variant: 'default',
-  padding: 'md',
-})
+const props = withDefaults(
+  defineProps<{
+    title?: string;
+    subtitle?: string;
+    variant?: 'default' | 'elevated' | 'outlined';
+    padding?: 'none' | 'sm' | 'md' | 'lg';
+  }>(),
+  {
+    title: '',
+    subtitle: '',
+    variant: 'default',
+    padding: 'md',
+  }
+);
 
 const classes = computed(() => [
   'rounded-[var(--radius-lg)] overflow-hidden',
@@ -37,7 +40,7 @@ const classes = computed(() => [
     elevated: 'bg-[var(--bg-elevated)] shadow-[var(--shadow-md)]',
     outlined: 'bg-transparent border border-[var(--border-default)]',
   }[props.variant],
-])
+]);
 
 const bodyClasses = computed(() => [
   {
@@ -46,5 +49,5 @@ const bodyClasses = computed(() => [
     md: 'p-4',
     lg: 'p-6',
   }[props.padding],
-])
+]);
 </script>

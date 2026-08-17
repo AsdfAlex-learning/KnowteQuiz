@@ -1,11 +1,7 @@
 <template>
   <button
     class="w-full text-left px-3 py-2.5 rounded-lg transition-colors card-hover group"
-    :class="
-      active
-        ? 'bg-[var(--bg-active)]/60'
-        : 'hover:bg-[var(--bg-elevated)]'
-    "
+    :class="active ? 'bg-[var(--bg-active)]/60' : 'hover:bg-[var(--bg-elevated)]'"
     @click="$emit('select', mistake.id)"
   >
     <div class="flex items-start justify-between gap-2">
@@ -37,25 +33,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { MistakeEntry } from '@/types/mistake'
+import { computed } from 'vue';
+import type { MistakeEntry } from '@/types/mistake';
 
 const props = defineProps<{
-  mistake: MistakeEntry
-  active: boolean
-}>()
+  mistake: MistakeEntry;
+  active: boolean;
+}>();
 
 defineEmits<{
-  select: [id: string]
-}>()
+  select: [id: string];
+}>();
 
 const formattedDate = computed(() => {
-  const d = new Date(props.mistake.created_at)
+  const d = new Date(props.mistake.created_at);
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  })
-})
+  });
+});
 </script>

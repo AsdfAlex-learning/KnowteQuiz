@@ -11,10 +11,7 @@
     </div>
 
     <!-- Generating state -->
-    <div
-      v-if="quizStore.isGenerating"
-      class="flex-1 flex flex-col items-center justify-center gap-3 p-4"
-    >
+    <div v-if="quizStore.isGenerating" class="flex-1 flex flex-col items-center justify-center gap-3 p-4">
       <div class="w-8 h-8 border-2 border-[var(--border-focus)] border-t-transparent rounded-full animate-spin" />
       <p class="text-sm text-[var(--text-muted)]">Generating questions...</p>
       <p class="text-xs text-[var(--text-faint)]">{{ quizStore.questions.length }} loaded</p>
@@ -22,7 +19,9 @@
 
     <!-- Answering state -->
     <div
-      v-else-if="quizStore.hasQuestions && !quizStore.showResults && quizStore.quizState === 'answering' && currentQuestion"
+      v-else-if="
+        quizStore.hasQuestions && !quizStore.showResults && quizStore.quizState === 'answering' && currentQuestion
+      "
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
       <QuestionCard
@@ -35,24 +34,16 @@
       />
 
       <!-- Short answer input -->
-      <AnswerInput
-        v-if="currentQuestion.question_type === 'short'"
-        v-model="shortAnswer"
-        :disabled="submitted"
-      />
+      <AnswerInput v-if="currentQuestion.question_type === 'short'" v-model="shortAnswer" :disabled="submitted" />
 
       <!-- Reasoning input (advanced mode) -->
-      <ReasoningInput
-        v-if="mode === 'advanced'"
-        v-model="reasoning"
-        :disabled="submitted"
-      />
+      <ReasoningInput v-if="mode === 'advanced'" v-model="reasoning" :disabled="submitted" />
 
       <!-- Submit / Next buttons -->
       <div class="pt-2 space-y-2">
-          <button
-            v-if="!submitted"
-            class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors btn-press"
+        <button
+          v-if="!submitted"
+          class="w-full py-2.5 rounded-md text-sm font-semibold transition-colors btn-press"
           :class="
             canSubmit
               ? 'bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)]'
@@ -84,13 +75,8 @@
     </div>
 
     <!-- Diagnosing state (advanced mode) -->
-    <div
-      v-else-if="quizStore.quizState === 'diagnosing'"
-      class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
-    >
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">
-        Diagnosis
-      </h3>
+    <div v-else-if="quizStore.quizState === 'diagnosing'" class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">Diagnosis</h3>
       <DiagnosisChat
         :messages="quizStore.diagnosisMessages"
         :active="true"
@@ -111,7 +97,11 @@
       <div class="space-y-2 pt-2">
         <button
           class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors disabled:cursor-wait disabled:bg-[var(--bg-active)] disabled:text-[var(--text-muted)]"
-          :disabled="currentQuestion ? mistakeStore.isSaving(currentQuestion.id) || mistakeStore.isSaved(currentQuestion.id) : true"
+          :disabled="
+            currentQuestion
+              ? mistakeStore.isSaving(currentQuestion.id) || mistakeStore.isSaved(currentQuestion.id)
+              : true
+          "
           @click="handleSaveMistakeFromDiagnosis"
         >
           {{
@@ -138,56 +128,55 @@
     </div>
 
     <!-- Result state -->
-    <div
-      v-else-if="quizStore.showResults"
-      class="flex-1 overflow-y-auto p-4"
-    >
-      <QuizResult :mode="mode" :reasoning="reasoning" :diagnosis-report="quizStore.diagnosisReport" @new-quiz="handleNewQuiz" />
+    <div v-else-if="quizStore.showResults" class="flex-1 overflow-y-auto p-4">
+      <QuizResult
+        :mode="mode"
+        :reasoning="reasoning"
+        :diagnosis-report="quizStore.diagnosisReport"
+        @new-quiz="handleNewQuiz"
+      />
     </div>
 
     <!-- Idle state -->
-    <div
-      v-else
-      class="flex-1 flex items-center justify-center p-4"
-    >
+    <div v-else class="flex-1 flex items-center justify-center p-4">
       <p class="text-sm text-[var(--text-faint)]">Configure and start a quiz above</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useQuizStore } from '@/stores/quiz'
-import { useExplorerStore } from '@/stores/explorer'
-import { useReaderStore } from '@/stores/reader'
-import { useMistakeStore } from '@/stores/mistakes'
-import QuestionCard from './QuestionCard.vue'
-import AnswerInput from './AnswerInput.vue'
-import ReasoningInput from './ReasoningInput.vue'
-import DiagnosisChat from './DiagnosisChat.vue'
-import DiagnosisReportComponent from './DiagnosisReport.vue'
-import QuizResult from './QuizResult.vue'
-import type { QuizMode } from '@/stores/quiz'
-import type { MistakeEntry } from '@/types/mistake'
-import { canSubmitQuizAnswer } from '@/utils/answer'
-import { createLocalId } from '@/utils/id'
+import { ref, computed } from 'vue';
+import { useQuizStore } from '@/stores/quiz';
+import { useExplorerStore } from '@/stores/explorer';
+import { useReaderStore } from '@/stores/reader';
+import { useMistakeStore } from '@/stores/mistakes';
+import QuestionCard from './QuestionCard.vue';
+import AnswerInput from './AnswerInput.vue';
+import ReasoningInput from './ReasoningInput.vue';
+import DiagnosisChat from './DiagnosisChat.vue';
+import DiagnosisReportComponent from './DiagnosisReport.vue';
+import QuizResult from './QuizResult.vue';
+import type { QuizMode } from '@/stores/quiz';
+import type { MistakeEntry } from '@/types/mistake';
+import { canSubmitQuizAnswer } from '@/utils/answer';
+import { createLocalId } from '@/utils/id';
 
 const props = defineProps<{
-  mode: QuizMode
-}>()
+  mode: QuizMode;
+}>();
 
-const quizStore = useQuizStore()
-const explorerStore = useExplorerStore()
-const readerStore = useReaderStore()
-const mistakeStore = useMistakeStore()
+const quizStore = useQuizStore();
+const explorerStore = useExplorerStore();
+const readerStore = useReaderStore();
+const mistakeStore = useMistakeStore();
 
-const selectedOptions = ref<number[]>([])
-const shortAnswer = ref('')
-const reasoning = ref('')
-const submitted = ref(false)
-const diagnosisSubmitting = ref(false)
+const selectedOptions = ref<number[]>([]);
+const shortAnswer = ref('');
+const reasoning = ref('');
+const submitted = ref(false);
+const diagnosisSubmitting = ref(false);
 
-const currentQuestion = computed(() => quizStore.currentQuestion)
+const currentQuestion = computed(() => quizStore.currentQuestion);
 
 const canSubmit = computed(() => {
   return canSubmitQuizAnswer(
@@ -195,79 +184,80 @@ const canSubmit = computed(() => {
     selectedOptions.value,
     shortAnswer.value,
     props.mode,
-    reasoning.value,
-  )
-})
+    reasoning.value
+  );
+});
 
 function handleSelectOption(index: number) {
   if (!submitted.value) {
     if (currentQuestion.value?.question_type === 'multiple') {
       selectedOptions.value = selectedOptions.value.includes(index)
         ? selectedOptions.value.filter((value) => value !== index)
-        : [...selectedOptions.value, index]
+        : [...selectedOptions.value, index];
     } else {
-      selectedOptions.value = [index]
+      selectedOptions.value = [index];
     }
   }
 }
 
 function handleSubmit() {
-  if (!currentQuestion.value || !canSubmit.value) return
+  if (!currentQuestion.value || !canSubmit.value) return;
 
-  const answer = currentQuestion.value.question_type === 'short'
-    ? shortAnswer.value
-    : selectedOptions.value
-        .slice()
-        .sort((a, b) => a - b)
-        .map((index) => String.fromCharCode(65 + index))
-        .join(',')
+  const answer =
+    currentQuestion.value.question_type === 'short'
+      ? shortAnswer.value
+      : selectedOptions.value
+          .slice()
+          .sort((a, b) => a - b)
+          .map((index) => String.fromCharCode(65 + index))
+          .join(',');
 
-  quizStore.submitAnswer(currentQuestion.value.id, answer)
-  submitted.value = true
+  quizStore.submitAnswer(currentQuestion.value.id, answer);
+  submitted.value = true;
 
   if (props.mode === 'advanced') {
-    startDiagnosis(answer)
+    startDiagnosis(answer);
   }
 }
 
 async function startDiagnosis(answer: string) {
-  if (!currentQuestion.value) return
-  const notePath = explorerStore.selectedPath || ''
+  if (!currentQuestion.value) return;
+  const notePath = explorerStore.selectedPath || '';
   await quizStore.startDiagnosis(
     currentQuestion.value.question,
     currentQuestion.value.answer,
     answer,
     reasoning.value,
-    notePath,
-  )
+    notePath
+  );
   if (quizStore.quizState === 'answering' && quizStore.generatingError) {
-    submitted.value = false
+    submitted.value = false;
   }
 }
 
 async function handleDiagnosisReply(text: string) {
-  diagnosisSubmitting.value = true
+  diagnosisSubmitting.value = true;
   try {
-    await quizStore.continueDiagnosis(text)
+    await quizStore.continueDiagnosis(text);
   } finally {
-    diagnosisSubmitting.value = false
+    diagnosisSubmitting.value = false;
   }
 }
 
 async function handleEndDiagnosis() {
-  await quizStore.finishDiagnosis()
+  await quizStore.finishDiagnosis();
 }
 
 function handleNext() {
-  submitted.value = false
-  selectedOptions.value = []
-  shortAnswer.value = ''
-  reasoning.value = ''
+  submitted.value = false;
+  selectedOptions.value = [];
+  shortAnswer.value = '';
+  reasoning.value = '';
 
   if (quizStore.isLastQuestion) {
-    quizStore.finishQuiz()
+    quizStore.finishQuiz();
   } else {
-    quizStore.nextQuestion()
+    quizStore.nextQuestion();
   }
 }
 
@@ -277,28 +267,28 @@ function handleNextAfterReport() {
       currentQuestion.value.id,
       reasoning.value,
       quizStore.diagnosisMessages,
-      quizStore.diagnosisReport,
-    )
+      quizStore.diagnosisReport
+    );
   }
 
   if (quizStore.isLastQuestion) {
-    quizStore.finishQuiz()
+    quizStore.finishQuiz();
   } else {
-    submitted.value = false
-    selectedOptions.value = []
-    shortAnswer.value = ''
-    reasoning.value = ''
-    quizStore.clearDiagnosis()
-    quizStore.nextQuestion()
+    submitted.value = false;
+    selectedOptions.value = [];
+    shortAnswer.value = '';
+    reasoning.value = '';
+    quizStore.clearDiagnosis();
+    quizStore.nextQuestion();
   }
 }
 
 async function handleSaveMistakeFromDiagnosis() {
-  if (!currentQuestion.value) return
-  const answer = quizStore.userAnswers.get(currentQuestion.value.id)
-  const answerStr = answer ? answer : ''
-  const notePath = explorerStore.selectedPath || ''
-  const noteTitle = readerStore.currentNote?.title || ''
+  if (!currentQuestion.value) return;
+  const answer = quizStore.userAnswers.get(currentQuestion.value.id);
+  const answerStr = answer ? answer : '';
+  const notePath = explorerStore.selectedPath || '';
+  const noteTitle = readerStore.currentNote?.title || '';
 
   const entry: MistakeEntry = {
     id: createLocalId('mistake'),
@@ -310,24 +300,26 @@ async function handleSaveMistakeFromDiagnosis() {
     explanation: currentQuestion.value.explanation,
     mode: 'advanced',
     user_reasoning: reasoning.value || undefined,
-    diagnosis: quizStore.diagnosisReport ? {
-      rounds: quizStore.diagnosisMessages.length,
-      conversation: quizStore.diagnosisMessages,
-      final_report: quizStore.diagnosisReport,
-    } : undefined,
+    diagnosis: quizStore.diagnosisReport
+      ? {
+          rounds: quizStore.diagnosisMessages.length,
+          conversation: quizStore.diagnosisMessages,
+          final_report: quizStore.diagnosisReport,
+        }
+      : undefined,
     created_at: new Date().toISOString(),
     review_count: 0,
-  }
+  };
 
-  await mistakeStore.saveEntry(currentQuestion.value.id, entry)
+  await mistakeStore.saveEntry(currentQuestion.value.id, entry);
 }
 
 function handleNewQuiz() {
-  quizStore.resetQuiz()
-  submitted.value = false
-  selectedOptions.value = []
-  shortAnswer.value = ''
-  reasoning.value = ''
-  quizStore.clearDiagnosis()
+  quizStore.resetQuiz();
+  submitted.value = false;
+  selectedOptions.value = [];
+  shortAnswer.value = '';
+  reasoning.value = '';
+  quizStore.clearDiagnosis();
 }
 </script>

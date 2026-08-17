@@ -15,7 +15,15 @@
     "start:dev": "node start.cjs --dev",
     "start:build": "node start.cjs --build",
     "web": "npm run build && cd src-tauri && cargo run -- --mode=web",
-    "web:both": "npm run build && cd src-tauri && cargo run -- --mode=both"
+    "web:both": "npm run build && cd src-tauri && cargo run -- --mode=both",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue,css,json}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
@@ -34,7 +42,10 @@
     "@types/markdown-it": "^14.1.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/test-utils": "^2.4.11",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",

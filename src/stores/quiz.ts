@@ -1,238 +1,301 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { QuizQuestion, DiagnosisRound, DiagnosisReport } from '../types'
-import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz'
-import type { QuizStreamParams } from '../types/quiz'
-import type { DiagnosisContext } from '../types/mistake'
-import { isQuizAnswerCorrect } from '../utils/answer'
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import type { QuizQuestion, DiagnosisRound, DiagnosisReport } from '../types';
+import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced, diagnoseFollowUp } from '../services/quiz';
+import type { QuizStreamParams } from '../types/quiz';
+import type { DiagnosisContext } from '../types/mistake';
+import { isQuizAnswerCorrect } from '../utils/answer';
 
-export type QuizMode = 'basic' | 'advanced'
-export type QuizState = 'idle' | 'generating' | 'answering' | 'diagnosing' | 'report' | 'result'
+export type QuizMode = 'basic' | 'advanced';
+export type QuizState = 'idle' | 'generating' | 'answering' | 'diagnosing' | 'report' | 'result';
 
 export const useQuizStore = defineStore('quiz', () => {
-  const mode = ref<QuizMode>('basic')
-  const quizState = ref<QuizState>('idle')
-  const questions = ref<QuizQuestion[]>([])
-  const currentIndex = ref(0)
-  const answers = ref<Map<string, string>>(new Map())
-  const userReasoning = ref('')
-  const sessionId = ref<string | null>(null)
-  const diagnosisMessages = ref<DiagnosisRound[]>([])
-  const diagnosisReport = ref<DiagnosisReport | null>(null)
-  const advancedReasoning = ref<Map<string, string>>(new Map())
-  const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map())
-  const generatingError = ref<string | null>(null)
-  const generatingPhase = ref<string | null>(null)
+  const mode = ref<QuizMode>('basic');
+  const quizState = ref<QuizState>('idle');
+  const questions = ref<QuizQuestion[]>([]);
+  const currentIndex = ref(0);
+  const answers = ref<Map<string, string>>(new Map());
+  const userReasoning = ref('');
+  const sessionId = ref<string | null>(null);
+  const diagnosisMessages = ref<DiagnosisRound[]>([]);
+  const diagnosisReport = ref<DiagnosisReport | null>(null);
+  const advancedReasoning = ref<Map<string, string>>(new Map());
+  const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map());
+  const generatingError = ref<string | null>(null);
+  const generatingPhase = ref<string | null>(null);
 
-  const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null)
-  const totalQuestions = computed(() => questions.value.length)
-  const isGenerating = computed(() => quizState.value === 'generating')
-  const hasSession = computed(() => questions.value.length > 0)
-  const hasQuestions = computed(() => questions.value.length > 0)
-  const showResults = computed(() => quizState.value === 'result')
-  const isLastQuestion = computed(() => currentIndex.value >= questions.value.length - 1)
-  const userAnswers = computed(() => answers.value)
-  const progress = computed(() => questions.value.length > 0 ? ((currentIndex.value + 1) / questions.value.length) * 100 : 0)
+  const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null);
+  const totalQuestions = computed(() => questions.value.length);
+  const isGenerating = computed(() => quizState.value === 'generating');
+  const hasSession = computed(() => questions.value.length > 0);
+  const hasQuestions = computed(() => questions.value.length > 0);
+  const showResults = computed(() => quizState.value === 'result');
+  const isLastQuestion = computed(() => currentIndex.value >= questions.value.length - 1);
+  const userAnswers = computed(() => answers.value);
+  const progress = computed(() =>
+    questions.value.length > 0 ? ((currentIndex.value + 1) / questions.value.length) * 100 : 0
+  );
   const score = computed(() => {
-    if (questions.value.length === 0) return 0
-    let correct = 0
+    if (questions.value.length === 0) return 0;
+    let correct = 0;
     for (const q of questions.value) {
-      const userAns = answers.value.get(q.id)
+      const userAns = answers.value.get(q.id);
       if (isQuizAnswerCorrect(q, userAns)) {
-        correct++
+        correct++;
       }
     }
-    return Math.round((correct / questions.value.length) * 100)
-  })
+    return Math.round((correct / questions.value.length) * 100);
+  });
 
-  function setMode(newMode: QuizMode) { mode.value = newMode }
+  function setMode(newMode: QuizMode) {
+    mode.value = newMode;
+  }
 
   function reset() {
-    quizState.value = 'idle'
-    questions.value = []
-    currentIndex.value = 0
-    answers.value = new Map()
-    userReasoning.value = ''
-    sessionId.value = null
-    diagnosisMessages.value = []
-    diagnosisReport.value = null
-    advancedReasoning.value = new Map()
-    diagnosisContexts.value = new Map()
-    generatingError.value = null
-    generatingPhase.value = null
+    quizState.value = 'idle';
+    questions.value = [];
+    currentIndex.value = 0;
+    answers.value = new Map();
+    userReasoning.value = '';
+    sessionId.value = null;
+    diagnosisMessages.value = [];
+    diagnosisReport.value = null;
+    advancedReasoning.value = new Map();
+    diagnosisContexts.value = new Map();
+    generatingError.value = null;
+    generatingPhase.value = null;
   }
 
   function addQuestion(q: QuizQuestion) {
-    questions.value.push(q)
+    questions.value.push(q);
   }
 
   function setAnswer(questionId: string, answer: string) {
-    answers.value.set(questionId, answer)
+    answers.value.set(questionId, answer);
   }
 
   function submitAnswer(questionId: string, answer: string) {
-    setAnswer(questionId, answer)
+    setAnswer(questionId, answer);
   }
 
   function nextQuestion() {
     if (currentIndex.value < questions.value.length - 1) {
-      currentIndex.value++
+      currentIndex.value++;
     }
   }
 
   function finishQuiz() {
-    quizState.value = 'result'
+    quizState.value = 'result';
   }
 
   function addDiagnosisMessage(round: DiagnosisRound) {
-    diagnosisMessages.value.push(round)
+    diagnosisMessages.value.push(round);
   }
 
   function setDiagnosisReport(report: DiagnosisReport) {
-    diagnosisReport.value = report
-    quizState.value = 'report'
+    diagnosisReport.value = report;
+    quizState.value = 'report';
   }
 
   function recordAdvancedContext(
     questionId: string,
     reasoning: string,
     conversation: DiagnosisRound[],
-    report: DiagnosisReport,
+    report: DiagnosisReport
   ) {
-    const trimmedReasoning = reasoning.trim()
+    const trimmedReasoning = reasoning.trim();
     if (trimmedReasoning) {
-      advancedReasoning.value.set(questionId, trimmedReasoning)
+      advancedReasoning.value.set(questionId, trimmedReasoning);
     }
     diagnosisContexts.value.set(questionId, {
       rounds: conversation.length,
       conversation: [...conversation],
       final_report: report,
-    })
+    });
   }
 
   function advancedReasoningFor(questionId: string): string | undefined {
-    return advancedReasoning.value.get(questionId)
+    return advancedReasoning.value.get(questionId);
   }
 
   function diagnosisContextFor(questionId: string): DiagnosisContext | undefined {
-    return diagnosisContexts.value.get(questionId)
+    return diagnosisContexts.value.get(questionId);
   }
 
   function clearDiagnosis() {
-    sessionId.value = null
-    diagnosisMessages.value = []
-    diagnosisReport.value = null
+    sessionId.value = null;
+    diagnosisMessages.value = [];
+    diagnosisReport.value = null;
     if (quizState.value === 'diagnosing' || quizState.value === 'report') {
-      quizState.value = 'answering'
+      quizState.value = 'answering';
     }
   }
 
   function failDiagnosis(message: string) {
-    generatingError.value = message
-    sessionId.value = null
-    diagnosisMessages.value = []
-    diagnosisReport.value = null
-    quizState.value = 'answering'
+    generatingError.value = message;
+    sessionId.value = null;
+    diagnosisMessages.value = [];
+    diagnosisReport.value = null;
+    quizState.value = 'answering';
   }
 
   async function startQuiz(params: QuizStreamParams) {
-    reset()
-    quizState.value = 'generating'
-    generatingPhase.value = null
+    reset();
+    quizState.value = 'generating';
+    generatingPhase.value = null;
     const failGeneration = (message: string) => {
-      questions.value = []
-      currentIndex.value = 0
-      answers.value = new Map()
-      generatingError.value = message
-      generatingPhase.value = null
-      quizState.value = 'idle'
-    }
+      questions.value = [];
+      currentIndex.value = 0;
+      answers.value = new Map();
+      generatingError.value = message;
+      generatingPhase.value = null;
+      quizState.value = 'idle';
+    };
     try {
       await generateQuiz(
         params,
-        (phase) => { generatingPhase.value = phase },
+        (phase) => {
+          generatingPhase.value = phase;
+        },
         (q) => addQuestion(q),
         (total) => {
           if (total <= 0 || questions.value.length === 0) {
-            failGeneration('No questions generated')
-            return
+            failGeneration('No questions generated');
+            return;
           }
-          generatingPhase.value = null
-          quizState.value = 'answering'
+          generatingPhase.value = null;
+          quizState.value = 'answering';
         },
         (err) => {
-          failGeneration(err)
+          failGeneration(err);
         }
-      )
+      );
     } catch (e) {
-      failGeneration(String(e))
+      failGeneration(String(e));
     }
   }
 
-  async function startDiagnosis(question: string, correctAnswer: string, userAnswer: string, userReasoning: string, notePath: string) {
-    quizState.value = 'diagnosing'
-    generatingError.value = null
-    sessionId.value = null
-    diagnosisMessages.value = []
-    diagnosisReport.value = null
+  async function startDiagnosis(
+    question: string,
+    correctAnswer: string,
+    userAnswer: string,
+    userReasoning: string,
+    notePath: string
+  ) {
+    quizState.value = 'diagnosing';
+    generatingError.value = null;
+    sessionId.value = null;
+    diagnosisMessages.value = [];
+    diagnosisReport.value = null;
     try {
       const sid = await submitAnswerAdvanced(
-        question, correctAnswer, userAnswer, userReasoning, notePath,
+        question,
+        correctAnswer,
+        userAnswer,
+        userReasoning,
+        notePath,
         (data) => addDiagnosisMessage(data),
         (data) => {
-          addDiagnosisMessage({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })
+          addDiagnosisMessage({
+            role: 'ai',
+            content: data.question,
+            blind_spots: data.blind_spots,
+            follow_up: data.question,
+          });
         },
         (report) => setDiagnosisReport(report),
-        (err) => { failDiagnosis(err) }
-      )
+        (err) => {
+          failDiagnosis(err);
+        }
+      );
       if (!generatingError.value) {
-        sessionId.value = sid
+        sessionId.value = sid;
       }
     } catch (e) {
-      failDiagnosis(String(e))
+      failDiagnosis(String(e));
     }
   }
 
   async function continueDiagnosis(userReply: string) {
-    if (!sessionId.value) return
-    generatingError.value = null
+    if (!sessionId.value) return;
+    generatingError.value = null;
     try {
       await diagnoseFollowUp(
-        sessionId.value, userReply,
+        sessionId.value,
+        userReply,
         (data) => {
-          addDiagnosisMessage({ role: 'user', content: userReply, blind_spots: [] })
-          addDiagnosisMessage({ role: 'ai', content: data.question, blind_spots: data.blind_spots, follow_up: data.question })
+          addDiagnosisMessage({ role: 'user', content: userReply, blind_spots: [] });
+          addDiagnosisMessage({
+            role: 'ai',
+            content: data.question,
+            blind_spots: data.blind_spots,
+            follow_up: data.question,
+          });
         },
         (report) => setDiagnosisReport(report),
-        (err) => { generatingError.value = err }
-      )
+        (err) => {
+          generatingError.value = err;
+        }
+      );
     } catch (e) {
-      generatingError.value = String(e)
+      generatingError.value = String(e);
     }
   }
 
   async function finishDiagnosis() {
-    if (!sessionId.value) return
-    generatingError.value = null
+    if (!sessionId.value) return;
+    generatingError.value = null;
     try {
-      const report = await generateDiagnosisReport(sessionId.value)
-      setDiagnosisReport(report)
+      const report = await generateDiagnosisReport(sessionId.value);
+      setDiagnosisReport(report);
     } catch (e) {
-      generatingError.value = String(e)
+      generatingError.value = String(e);
     }
   }
 
-  const resetQuiz = reset
+  const resetQuiz = reset;
 
   return {
-    mode, quizState, questions, currentIndex, answers, userReasoning,
-    sessionId, diagnosisMessages, diagnosisReport, advancedReasoning, diagnosisContexts,
-    generatingError, generatingPhase,
-    currentQuestion, totalQuestions, isGenerating, hasSession, hasQuestions,
-    showResults, isLastQuestion, userAnswers, progress, score,
-    setMode, reset, resetQuiz, addQuestion, setAnswer, submitAnswer, nextQuestion,
-    finishQuiz, addDiagnosisMessage, setDiagnosisReport, recordAdvancedContext,
-    advancedReasoningFor, diagnosisContextFor, clearDiagnosis,
-    startQuiz, startDiagnosis, continueDiagnosis, finishDiagnosis,
-  }
-})
+    mode,
+    quizState,
+    questions,
+    currentIndex,
+    answers,
+    userReasoning,
+    sessionId,
+    diagnosisMessages,
+    diagnosisReport,
+    advancedReasoning,
+    diagnosisContexts,
+    generatingError,
+    generatingPhase,
+    currentQuestion,
+    totalQuestions,
+    isGenerating,
+    hasSession,
+    hasQuestions,
+    showResults,
+    isLastQuestion,
+    userAnswers,
+    progress,
+    score,
+    setMode,
+    reset,
+    resetQuiz,
+    addQuestion,
+    setAnswer,
+    submitAnswer,
+    nextQuestion,
+    finishQuiz,
+    addDiagnosisMessage,
+    setDiagnosisReport,
+    recordAdvancedContext,
+    advancedReasoningFor,
+    diagnosisContextFor,
+    clearDiagnosis,
+    startQuiz,
+    startDiagnosis,
+    continueDiagnosis,
+    finishDiagnosis,
+  };
+});

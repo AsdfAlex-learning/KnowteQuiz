@@ -1,4 +1,4 @@
-import type { Settings } from '../types/settings'
+import type { Settings } from '../types/settings';
 
 export function defaultSettings(): Settings {
   return {
@@ -39,5 +39,5 @@ export function defaultSettings(): Settings {
       selected_path: null,
       scroll_positions: {},
     },
-  }
+  };
 }

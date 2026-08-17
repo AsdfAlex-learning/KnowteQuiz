@@ -15,9 +15,7 @@
       >
         {{ f.label }}
       </button>
-      <span class="ml-auto text-[11px] text-[var(--text-faint)]">
-        {{ mistakeStore.items.length }} items
-      </span>
+      <span class="ml-auto text-[11px] text-[var(--text-faint)]"> {{ mistakeStore.items.length }} items </span>
       <div class="flex items-center gap-1">
         <button
           class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -65,11 +63,7 @@
 
     <!-- Detail view -->
     <div v-if="selectedId" class="flex-1 overflow-y-auto p-3">
-      <MistakeDetail
-        :mistake="selectedMistake!"
-        @back="selectedId = null"
-        @open-note="handleOpenNote"
-      />
+      <MistakeDetail :mistake="selectedMistake!" @back="selectedId = null" @open-note="handleOpenNote" />
     </div>
 
     <!-- List view -->
@@ -114,68 +108,66 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useMistakeStore } from '@/stores/mistakes'
-import { useNavigationStore } from '@/stores/navigation'
-import MistakeItem from './MistakeItem.vue'
-import MistakeDetail from './MistakeDetail.vue'
-import type { MistakeMode } from '@/types/mistake'
+import { ref, computed, onMounted } from 'vue';
+import { useMistakeStore } from '@/stores/mistakes';
+import { useNavigationStore } from '@/stores/navigation';
+import MistakeItem from './MistakeItem.vue';
+import MistakeDetail from './MistakeDetail.vue';
+import type { MistakeMode } from '@/types/mistake';
 
-type FilterValue = 'all' | 'basic' | 'advanced'
+type FilterValue = 'all' | 'basic' | 'advanced';
 
 const filters: { value: FilterValue; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'basic', label: 'Basic' },
   { value: 'advanced', label: 'Advanced' },
-]
+];
 
-const selectedId = ref<string | null>(null)
-const searchQuery = ref('')
-const blindSpotQuery = ref('')
-const mistakeStore = useMistakeStore()
-const navigationStore = useNavigationStore()
+const selectedId = ref<string | null>(null);
+const searchQuery = ref('');
+const blindSpotQuery = ref('');
+const mistakeStore = useMistakeStore();
+const navigationStore = useNavigationStore();
 
 const activeFilter = computed<FilterValue>(() => {
-  return mistakeStore.modeFilter ?? 'all'
-})
+  return mistakeStore.modeFilter ?? 'all';
+});
 
-const selectedMistake = computed(() =>
-  mistakeStore.items.find((m) => m.id === selectedId.value) ?? null
-)
+const selectedMistake = computed(() => mistakeStore.items.find((m) => m.id === selectedId.value) ?? null);
 
 async function handleFilter(value: FilterValue) {
-  selectedId.value = null
-  await mistakeStore.setModeFilter(value === 'all' ? undefined : value as MistakeMode)
+  selectedId.value = null;
+  await mistakeStore.setModeFilter(value === 'all' ? undefined : (value as MistakeMode));
 }
 
 function handleOpenNote(path: string) {
-  navigationStore.openNote(path)
+  navigationStore.openNote(path);
 }
 
 async function handleExport(format: 'json' | 'markdown') {
-  await mistakeStore.exportMistakes(format)
+  await mistakeStore.exportMistakes(format);
 }
 
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-let blindSpotTimer: ReturnType<typeof setTimeout> | null = null
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let blindSpotTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleSearch() {
-  if (searchTimer) clearTimeout(searchTimer)
+  if (searchTimer) clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => {
-    selectedId.value = null
-    await mistakeStore.setSearchText(searchQuery.value)
-  }, 250)
+    selectedId.value = null;
+    await mistakeStore.setSearchText(searchQuery.value);
+  }, 250);
 }
 
 function handleBlindSpotFilter() {
-  if (blindSpotTimer) clearTimeout(blindSpotTimer)
+  if (blindSpotTimer) clearTimeout(blindSpotTimer);
   blindSpotTimer = setTimeout(async () => {
-    selectedId.value = null
-    await mistakeStore.setBlindSpotTag(blindSpotQuery.value)
-  }, 250)
+    selectedId.value = null;
+    await mistakeStore.setBlindSpotTag(blindSpotQuery.value);
+  }, 250);
 }
 
 onMounted(async () => {
-  await mistakeStore.loadPage()
-})
+  await mistakeStore.loadPage();
+});
 </script>
