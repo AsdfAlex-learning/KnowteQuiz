@@ -26,6 +26,11 @@ vi.mock('@/composables/useI18n', () => ({
         'settings_page.easy': 'Easy',
         'settings_page.medium': 'Medium',
         'settings_page.hard': 'Hard',
+        'settings_page.question_types': 'Question Types',
+        'quiz.start': 'Start Quiz',
+        'quiz.generating': 'Generating...',
+        'quiz.phase_requesting': 'Requesting model...',
+        'quiz.phase_parsing': 'Parsing response...',
       };
       return translations[key] || key;
     },

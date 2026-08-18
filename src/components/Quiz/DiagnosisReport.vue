@@ -2,7 +2,9 @@
   <div v-if="report" class="space-y-4">
     <!-- Summary -->
     <div class="bg-[var(--bg-elevated)] rounded-lg p-4">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Diagnosis Summary</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+        {{ t('quiz.diagnosis_report') }}
+      </h3>
       <p class="text-sm text-[var(--text-primary)] leading-relaxed">
         {{ report.summary }}
       </p>
@@ -10,7 +12,7 @@
 
     <!-- Overall level -->
     <div class="flex items-center gap-2 px-1">
-      <span class="text-xs text-[var(--text-muted)]">Overall Level:</span>
+      <span class="text-xs text-[var(--text-muted)]">{{ t('quiz.overall_level') }}:</span>
       <span class="px-2 py-0.5 text-xs font-semibold rounded" :class="levelClass">
         {{ report.overall_level }}
       </span>
@@ -18,13 +20,17 @@
 
     <!-- Blind spot cards -->
     <div v-if="report.blind_spots.length" class="space-y-2">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Blind Spots</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+        {{ t('quiz.blind_spots') }}
+      </h3>
       <DiagnosisReportCard v-for="(spot, i) in report.blind_spots" :key="i" :spot="spot" />
     </div>
 
     <!-- Next steps -->
     <div v-if="report.next_steps.length" class="bg-[var(--bg-base)] rounded-lg p-3">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">Next Steps</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+        {{ t('quiz.next_steps') }}
+      </h3>
       <ul class="space-y-1.5">
         <li
           v-for="(step, i) in report.next_steps"
@@ -41,8 +47,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '@/composables/useI18n';
 import type { DiagnosisReport } from '@/types/diagnosis';
 import DiagnosisReportCard from './DiagnosisReportCard.vue';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   report: DiagnosisReport;

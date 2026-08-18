@@ -7,7 +7,7 @@
 
     <!-- Question types -->
     <div>
-      <span class="text-xs text-[var(--text-muted)] mb-1.5 block">Question Types</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1.5 block">{{ t('settings_page.question_types') }}</span>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="qt in questionTypes"
@@ -129,18 +129,18 @@ const minQuestionCount = 1;
 const maxQuestionCount = 20;
 
 const generatingLabel = computed(() => {
-  if (!quizStore.isGenerating) return 'Start Quiz';
+  if (!quizStore.isGenerating) return t('quiz.start');
   const phase = quizStore.generatingPhase;
-  if (phase === 'requesting_model') return 'Requesting model...';
-  if (phase === 'parsing_response') return 'Parsing response...';
-  return 'Generating...';
+  if (phase === 'requesting_model') return t('quiz.phase_requesting');
+  if (phase === 'parsing_response') return t('quiz.phase_parsing');
+  return t('quiz.generating');
 });
 
-const questionTypes: { value: QuestionType; label: string }[] = [
-  { value: 'single', label: 'Single Choice' },
-  { value: 'multiple', label: 'Multiple Choice' },
-  { value: 'short', label: 'Short Answer' },
-];
+const questionTypes = computed(() => [
+  { value: 'single' as QuestionType, label: t('settings_page.single_choice') },
+  { value: 'multiple' as QuestionType, label: t('settings_page.multiple_choice') },
+  { value: 'short' as QuestionType, label: t('settings_page.short_answer') },
+]);
 
 function toggleType(type: QuestionType) {
   const idx = selectedTypes.value.indexOf(type);

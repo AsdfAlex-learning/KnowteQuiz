@@ -1,9 +1,9 @@
 <template>
-  <div class="flex bg-[var(--bg-base)] rounded-lg p-0.5 border border-[var(--border-default)]">
+  <div class="flex bg-[var(--bg-base)] rounded-lg p-0.5 border border-[var(--border-default)] min-w-0">
     <button
       v-for="opt in options"
       :key="opt.value"
-      class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all btn-press"
+      class="flex-1 min-w-0 py-1.5 px-3 text-xs font-medium rounded-md transition-all btn-press whitespace-nowrap overflow-hidden text-ellipsis"
       :class="
         modelValue === opt.value
           ? 'bg-[var(--accent-purple)] text-[var(--bg-base)] shadow-sm'
@@ -17,7 +17,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 
 export type QuizMode = 'basic' | 'advanced';
@@ -32,8 +31,8 @@ defineEmits<{
 
 const { t } = useI18n();
 
-const options = computed(() => [
+const options = [
   { value: 'basic' as QuizMode, label: t('settings_page.basic') },
   { value: 'advanced' as QuizMode, label: t('settings_page.advanced') },
-]);
+];
 </script>

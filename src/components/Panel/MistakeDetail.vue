@@ -82,7 +82,7 @@
         </div>
 
         <div v-if="parsedDiagnosis.overall_level" class="text-xs text-[var(--accent-peach)]">
-          Level: {{ parsedDiagnosis.overall_level }}
+          {{ t('quiz.overall_level') }}: {{ parsedDiagnosis.overall_level }}
         </div>
 
         <div v-if="parsedDiagnosis.next_steps?.length">

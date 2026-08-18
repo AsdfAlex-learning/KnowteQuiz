@@ -106,10 +106,10 @@
         >
           {{
             currentQuestion && mistakeStore.isSaved(currentQuestion.id)
-              ? 'Saved'
+              ? t('common.success')
               : currentQuestion && mistakeStore.isSaving(currentQuestion.id)
-                ? 'Saving...'
-                : 'Save to Mistake Book'
+                ? t('common.loading')
+                : t('quiz.save_mistake')
           }}
         </button>
         <p
