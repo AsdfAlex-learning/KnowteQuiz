@@ -24,18 +24,36 @@
 
           <!-- Body (scrollable) -->
           <div class="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-            <!-- Language selector -->
-            <div class="space-y-2">
-              <label class="text-xs font-medium text-[var(--text-secondary)]">{{ t('settings_page.language') }}</label>
-              <select
-                :value="localSettings.ui_language"
-                class="w-full px-3 py-2 text-sm bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-lg focus:border-[var(--border-focus)] focus:outline-none"
-                @change="handleLanguageChange"
-              >
-                <option v-for="loc in availableLocales" :key="loc.value" :value="loc.value">
-                  {{ loc.label }}
-                </option>
-              </select>
+            <!-- Language settings -->
+            <div class="space-y-3">
+              <h3 class="text-sm font-medium text-[var(--text-primary)]">{{ t('settings_page.language') }}</h3>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                  <label class="text-xs text-[var(--text-muted)]">{{ t('settings_page.ui_language') }}</label>
+                  <select
+                    :value="localSettings.ui_language"
+                    class="w-full px-3 py-2 text-sm bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-lg focus:border-[var(--border-focus)] focus:outline-none"
+                    @change="handleLanguageChange"
+                  >
+                    <option v-for="loc in availableLocales" :key="loc.value" :value="loc.value">
+                      {{ loc.label }}
+                    </option>
+                  </select>
+                </div>
+                <div class="space-y-1">
+                  <label class="text-xs text-[var(--text-muted)]">{{ t('settings_page.quiz_language') }}</label>
+                  <select
+                    :value="localSettings.quiz.default_language"
+                    class="w-full px-3 py-2 text-sm bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-lg focus:border-[var(--border-focus)] focus:outline-none"
+                    @change="handleQuizLanguageChange"
+                  >
+                    <option value="zh">中文</option>
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                    <option value="ko">한국어</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div class="border-t border-[var(--border-default)]" />
@@ -277,6 +295,11 @@ function handleLanguageChange(e: Event) {
   const target = e.target as HTMLSelectElement;
   localSettings.ui_language = target.value;
   setLocale(target.value);
+}
+
+function handleQuizLanguageChange(e: Event) {
+  const target = e.target as HTMLSelectElement;
+  localSettings.quiz.default_language = target.value;
 }
 
 async function handleTestConnection() {

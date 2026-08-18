@@ -51,7 +51,9 @@
   },
   "settings_page": {
     "title": "Settings",
-    "language": "UI Language",
+    "language": "Language",
+    "ui_language": "Display Language",
+    "quiz_language": "Quiz Language",
     "llm_config": "LLM Configuration",
     "provider": "Provider",
     "api_url": "API URL",

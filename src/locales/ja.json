@@ -51,7 +51,9 @@
   },
   "settings_page": {
     "title": "設定",
-    "language": "UI 言語",
+    "language": "言語",
+    "ui_language": "UI 言語",
+    "quiz_language": "出題言語",
     "llm_config": "LLM 設定",
     "provider": "プロバイダー",
     "api_url": "API URL",

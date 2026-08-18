@@ -51,7 +51,9 @@
   },
   "settings_page": {
     "title": "设置",
-    "language": "界面语言",
+    "language": "语言",
+    "ui_language": "界面语言",
+    "quiz_language": "出题语言",
     "llm_config": "LLM 配置",
     "provider": "提供商",
     "api_url": "API 地址",

@@ -81,21 +81,6 @@
           <option value="hard">{{ t('settings_page.hard') }}</option>
         </select>
       </label>
-
-      <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.language_hint') }}</span>
-        <select
-          :value="modelValue.default_language"
-          aria-label="Default quiz language"
-          class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
-          @change="update('default_language', ($event.target as HTMLSelectElement).value)"
-        >
-          <option value="zh">中文</option>
-          <option value="en">English</option>
-          <option value="ja">日本語</option>
-          <option value="ko">한국어</option>
-        </select>
-      </label>
     </div>
   </div>
 </template>

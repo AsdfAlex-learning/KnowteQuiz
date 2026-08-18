@@ -55,19 +55,4 @@ describe('QuizDefaultsForm', () => {
       default_mode: 'advanced',
     });
   });
-
-  it('offers all supported quiz languages', () => {
-    const wrapper = mount(QuizDefaultsForm, {
-      props: {
-        modelValue: defaultSettings().quiz,
-      },
-    });
-
-    const languageOptions = wrapper
-      .find('select[aria-label="Default quiz language"]')
-      .findAll('option')
-      .map((option) => option.attributes('value'));
-
-    expect(languageOptions).toEqual(['zh', 'en', 'ja', 'ko']);
-  });
 });
