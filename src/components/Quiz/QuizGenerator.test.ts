@@ -11,6 +11,30 @@ import { useMistakeStore } from '@/stores/mistakes';
 import { useSettingsStore } from '@/stores/settings';
 import { generateQuiz } from '@/services/quiz';
 
+vi.mock('@/composables/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'panel.quiz': 'Quiz',
+        'reader.no_file': 'No file open',
+        'common.error': 'Error',
+        'settings_page.single_choice': 'Single Choice',
+        'settings_page.multiple_choice': 'Multiple Choice',
+        'settings_page.short_answer': 'Short Answer',
+        'settings_page.basic': 'Basic',
+        'settings_page.advanced': 'Advanced',
+        'settings_page.easy': 'Easy',
+        'settings_page.medium': 'Medium',
+        'settings_page.hard': 'Hard',
+      };
+      return translations[key] || key;
+    },
+    locale: { value: 'en' },
+    availableLocales: [],
+    setLocale: () => {},
+  }),
+}));
+
 vi.mock('@/services/quiz', () => ({
   generateQuiz: vi.fn(),
   submitAnswerAdvanced: vi.fn(),

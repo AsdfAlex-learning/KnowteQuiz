@@ -4,7 +4,7 @@
 
     <div class="space-y-3">
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Provider</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.provider') }}</span>
         <input
           :value="llm.provider"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
@@ -14,7 +14,7 @@
       </label>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">API URL</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.api_url') }}</span>
         <input
           :value="llm.base_url"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
@@ -24,7 +24,7 @@
       </label>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">API Key</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.api_key') }}</span>
         <input
           :value="llm.api_key"
           type="password"
@@ -35,7 +35,7 @@
       </label>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Model</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.model') }}</span>
         <input
           :value="llm.model"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-faint)] focus:outline-none focus:border-[var(--border-focus)] transition-colors font-mono"
@@ -46,7 +46,7 @@
 
       <div class="grid grid-cols-2 gap-3">
         <label class="block">
-          <span class="text-xs text-[var(--text-muted)] mb-1 block">Temperature</span>
+          <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.temperature') }}</span>
           <input
             :value="llm.temperature"
             type="number"
@@ -60,7 +60,7 @@
         </label>
 
         <label class="block">
-          <span class="text-xs text-[var(--text-muted)] mb-1 block">Max Tokens</span>
+          <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.max_tokens') }}</span>
           <input
             :value="llm.max_tokens"
             type="number"
@@ -77,7 +77,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from '@/composables/useI18n';
 import type { SettingsLLM } from '@/types/settings';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   llm: SettingsLLM;

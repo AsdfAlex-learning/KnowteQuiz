@@ -17,6 +17,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from '@/composables/useI18n';
+
 export type QuizMode = 'basic' | 'advanced';
 
 defineProps<{
@@ -27,8 +30,10 @@ defineEmits<{
   'update:modelValue': [value: QuizMode];
 }>();
 
-const options: { value: QuizMode; label: string }[] = [
-  { value: 'basic', label: 'Basic' },
-  { value: 'advanced', label: 'Advanced' },
-];
+const { t } = useI18n();
+
+const options = computed(() => [
+  { value: 'basic' as QuizMode, label: t('settings_page.basic') },
+  { value: 'advanced' as QuizMode, label: t('settings_page.advanced') },
+]);
 </script>

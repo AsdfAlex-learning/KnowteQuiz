@@ -1,10 +1,12 @@
 <template>
   <div class="space-y-4">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Quiz Defaults</h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      {{ t('settings_page.quiz_defaults') }}
+    </h3>
 
     <div class="space-y-3">
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Prompt Template</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.language_hint') }}</span>
         <select
           :value="modelValue.prompt_template"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
@@ -20,7 +22,7 @@
       </label>
 
       <div>
-        <span class="text-xs text-[var(--text-muted)] mb-1.5 block">Question Types</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1.5 block">{{ t('settings_page.question_types') }}</span>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="qt in questionTypes"
@@ -39,21 +41,21 @@
       </div>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Default Mode</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.default_mode') }}</span>
         <select
           :value="modelValue.default_mode"
           aria-label="Default quiz mode"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           @change="update('default_mode', ($event.target as HTMLSelectElement).value)"
         >
-          <option value="basic">Basic</option>
-          <option value="advanced">Advanced</option>
+          <option value="basic">{{ t('settings_page.basic') }}</option>
+          <option value="advanced">{{ t('settings_page.advanced') }}</option>
         </select>
       </label>
 
       <label class="block">
         <span class="text-xs text-[var(--text-muted)] mb-1 flex justify-between">
-          Count
+          {{ t('settings_page.question_count') }}
           <span class="text-[var(--text-primary)]">{{ modelValue.default_count }}</span>
         </span>
         <input
@@ -68,20 +70,20 @@
       </label>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Difficulty</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.difficulty') }}</span>
         <select
           :value="modelValue.default_difficulty"
           class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
           @change="update('default_difficulty', ($event.target as HTMLSelectElement).value as QuizDifficulty)"
         >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
+          <option value="easy">{{ t('settings_page.easy') }}</option>
+          <option value="medium">{{ t('settings_page.medium') }}</option>
+          <option value="hard">{{ t('settings_page.hard') }}</option>
         </select>
       </label>
 
       <label class="block">
-        <span class="text-xs text-[var(--text-muted)] mb-1 block">Language</span>
+        <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.language_hint') }}</span>
         <select
           :value="modelValue.default_language"
           aria-label="Default quiz language"
@@ -101,8 +103,11 @@
 <script setup lang="ts">
 import type { SettingsQuiz } from '@/types/settings';
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from '@/composables/useI18n';
 import type { QuestionType, QuizDifficulty } from '@/types/quiz';
 import { listPromptTemplates } from '@/services/mistake';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: SettingsQuiz;
@@ -115,14 +120,14 @@ const emit = defineEmits<{
 const templates = ref<Array<{ name: string; label: string; description: string }>>([]);
 
 const selectedTemplate = computed(() => {
-  return templates.value.find((t) => t.name === props.modelValue.prompt_template);
+  return templates.value.find((tmpl) => tmpl.name === props.modelValue.prompt_template);
 });
 
-const questionTypes: { value: QuestionType; label: string }[] = [
-  { value: 'single', label: 'Single Choice' },
-  { value: 'multiple', label: 'Multiple Choice' },
-  { value: 'short', label: 'Short Answer' },
-];
+const questionTypes = computed(() => [
+  { value: 'single' as QuestionType, label: t('settings_page.single_choice') },
+  { value: 'multiple' as QuestionType, label: t('settings_page.multiple_choice') },
+  { value: 'short' as QuestionType, label: t('settings_page.short_answer') },
+]);
 
 function toggleType(type: QuestionType) {
   const current = [...props.modelValue.default_types];

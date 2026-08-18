@@ -7,6 +7,27 @@ import MistakeDetail from './MistakeDetail.vue';
 import { useMistakeStore } from '@/stores/mistakes';
 import type { MistakeEntry } from '@/types/mistake';
 
+vi.mock('@/composables/useI18n', () => ({
+  useI18n: () => ({
+    t: (key: string, params?: Record<string, string | number>) => {
+      const translations: Record<string, string> = {
+        'error_book.your_answer': 'Your answer',
+        'error_book.correct_answer': 'Correct Answer',
+        'error_book.explanation': 'Explanation',
+        'error_book.reasoning': 'Your Reasoning',
+        'error_book.open_note': 'Open Note',
+        'error_book.mark_reviewed': 'Mark Reviewed',
+        'error_book.review_count': `Reviewed ${params?.count ?? 0}x`,
+        'common.loading': 'Marking...',
+      };
+      return translations[key] || key;
+    },
+    locale: { value: 'en' },
+    availableLocales: [],
+    setLocale: () => {},
+  }),
+}));
+
 function advancedMistake(): MistakeEntry {
   return {
     id: 'm1',

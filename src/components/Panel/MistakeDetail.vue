@@ -26,7 +26,7 @@
 
       <div class="bg-[var(--bg-base)] rounded-lg p-3 space-y-2">
         <div class="flex items-center gap-2">
-          <span class="text-xs text-[var(--color-error)] font-medium">Your answer:</span>
+          <span class="text-xs text-[var(--color-error)] font-medium">{{ t('error_book.your_answer') }}:</span>
           <span class="text-sm text-[var(--text-primary)]">{{ mistake.user_answer }}</span>
         </div>
         <div class="flex items-center gap-2">
@@ -36,14 +36,18 @@
       </div>
 
       <div class="bg-[var(--bg-base)] rounded-lg p-3">
-        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">Explanation</h4>
+        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+          {{ t('error_book.explanation') }}
+        </h4>
         <p class="text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">
           {{ mistake.explanation }}
         </p>
       </div>
 
       <div v-if="mistake.user_reasoning" class="bg-[var(--bg-base)] rounded-lg p-3">
-        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">Your Reasoning</h4>
+        <h4 class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1">
+          {{ t('error_book.reasoning') }}
+        </h4>
         <p class="text-sm text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap italic">
           {{ mistake.user_reasoning }}
         </p>
@@ -94,7 +98,7 @@
       class="w-full py-2 rounded-md text-sm font-medium bg-[var(--bg-elevated)] text-[var(--accent-purple)] hover:bg-[var(--bg-active)] transition-colors"
       @click="$emit('openNote', mistake.note_path)"
     >
-      Open Note
+      {{ t('error_book.open_note') }}
     </button>
     <button
       class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
@@ -107,7 +111,11 @@
       @click="handleMarkReviewed"
     >
       {{
-        isReviewing ? 'Marking...' : mistake.review_count > 0 ? `Reviewed ${mistake.review_count}x` : 'Mark Reviewed'
+        isReviewing
+          ? t('common.loading')
+          : mistake.review_count > 0
+            ? t('error_book.review_count', { count: mistake.review_count })
+            : t('error_book.mark_reviewed')
       }}
     </button>
     <p v-if="reviewError" class="text-[11px] text-[var(--color-error)]">
@@ -121,9 +129,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '@/composables/useI18n';
 import type { MistakeEntry } from '@/types/mistake';
 import type { DiagnosisReport } from '@/types/diagnosis';
 import { useMistakeStore } from '@/stores/mistakes';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   mistake: MistakeEntry;
