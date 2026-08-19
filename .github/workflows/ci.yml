@@ -89,12 +89,16 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Build web server binary
+        working-directory: src-tauri
+        run: cargo build
+
       - name: Start web server & smoke test
         run: |
           cd src-tauri
-          cargo run -- --mode=web --port=14201 &
+          ./target/debug/knowtequiz --mode=web --port=14201 &
           SERVER_PID=$!
-          sleep 5
+          sleep 2
 
           set -e
 
