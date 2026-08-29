@@ -4,6 +4,7 @@ import {
   getDataStatus,
   getSettings,
   openDataDir,
+  probeLlm,
   restoreLatestBackup,
   saveSettings,
   testConnection,
@@ -138,6 +139,53 @@ describe('settings service', () => {
     expect(fetch).toHaveBeenCalledWith('/api/data/restore-latest', { method: 'POST' });
     expect(result.files).toEqual(['settings.json', 'mistakes.json']);
     expect(result.pre_restore_backup_dir).toContain('backups');
+  });
+
+  it('probes LLM capabilities through the web endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          available_models: ['qwen2.5:7b', 'llama3'],
+          supports_streaming: true,
+          supports_response_format: false,
+          default_model: 'qwen2.5:7b',
+        }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await probeLlm();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/probe-llm', { method: 'POST' });
+    expect(result.available_models).toEqual(['qwen2.5:7b', 'llama3']);
+    expect(result.supports_streaming).toBe(true);
+    expect(result.default_model).toBe('qwen2.5:7b');
+  });
+
+  it('includes response text when probing LLM fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 502,
+        text: async () => 'LLM endpoint unreachable',
+      }))
+    );
+
+    await expect(probeLlm()).rejects.toThrow('HTTP 502: LLM endpoint unreachable');
+  });
+
+  it('parses non-JSON error responses gracefully', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      }))
+    );
+
+    await expect(getSettings()).rejects.toThrow('HTTP 500: Internal Server Error');
   });
 });
 

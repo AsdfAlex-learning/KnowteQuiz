@@ -202,4 +202,38 @@ mod tests {
         assert!(result.ok);
         assert_eq!(result.kind, "ok");
     }
+
+    #[test]
+    fn classify_connection_status_identifies_server_errors() {
+        let result = classify_connection_status(StatusCode::INTERNAL_SERVER_ERROR, "internal error");
+
+        assert!(!result.ok);
+        assert_eq!(result.kind, "server");
+        assert!(result.message.contains("server error"));
+    }
+
+    #[test]
+    fn classify_connection_status_identifies_forbidden() {
+        let result = classify_connection_status(StatusCode::FORBIDDEN, "access denied");
+
+        assert!(!result.ok);
+        assert_eq!(result.kind, "auth");
+        assert!(result.message.contains("API key"));
+    }
+
+    #[test]
+    fn classify_connection_status_identifies_network_errors() {
+        let result = classify_connection_status(StatusCode::BAD_GATEWAY, "bad gateway");
+
+        assert!(!result.ok);
+        assert_eq!(result.kind, "server");
+    }
+
+    #[test]
+    fn classify_connection_status_handles_unknown_status() {
+        let result = classify_connection_status(StatusCode::from_u16(418).unwrap(), "teapot");
+
+        assert!(!result.ok);
+        assert_eq!(result.kind, "unknown");
+    }
 }

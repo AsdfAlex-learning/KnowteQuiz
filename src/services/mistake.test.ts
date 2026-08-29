@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { exportMistakes, loadMistakes, markMistakeReviewed } from './mistake';
+import { exportMistakes, loadMistakes, markMistakeReviewed, saveMistake, listPromptTemplates } from './mistake';
 import type { MistakeEntry } from '../types/mistake';
 
 function mockMistake(id = 'm1'): MistakeEntry {
@@ -20,6 +20,70 @@ function mockMistake(id = 'm1'): MistakeEntry {
 describe('mistake service', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('saves a mistake through the web endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify(true),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const entry = mockMistake('m1');
+    const result = await saveMistake(entry);
+
+    expect(result).toBe(true);
+    expect(fetchMock).toHaveBeenCalledWith('/api/mistakes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  });
+
+  it('includes response text when saving a mistake fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => 'Failed to write mistakes.jsonl',
+      }))
+    );
+
+    await expect(saveMistake(mockMistake())).rejects.toThrow('HTTP 500: Failed to write mistakes.jsonl');
+  });
+
+  it('lists prompt templates from the web endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () =>
+        JSON.stringify([
+          ['default', 'Default', 'Balanced question generation'],
+          ['strict', 'Strict', 'Rigorous assessment'],
+        ]),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await listPromptTemplates();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/prompt-templates');
+    expect(result).toEqual([
+      { name: 'default', label: 'Default', description: 'Balanced question generation' },
+      { name: 'strict', label: 'Strict', description: 'Rigorous assessment' },
+    ]);
+  });
+
+  it('includes response text when listing prompt templates fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => 'Templates not found',
+      }))
+    );
+
+    await expect(listPromptTemplates()).rejects.toThrow('HTTP 500: Templates not found');
   });
 
   it('passes mistake filters as web query parameters', async () => {

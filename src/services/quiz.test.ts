@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced } from './quiz';
+import { cleanupSessions, diagnoseFollowUp, generateDiagnosisReport, generateQuiz, submitAnswerAdvanced } from './quiz';
 import { webStream } from './tauri';
 import type { QuizStreamParams } from '../types/quiz';
 
@@ -79,6 +79,63 @@ describe('quiz service', () => {
       }),
       expect.any(Function)
     );
+  });
+
+  it('sends follow-up reply to the web diagnosis endpoint', async () => {
+    vi.mocked(webStream).mockResolvedValue(undefined);
+
+    await diagnoseFollowUp('session-123', 'I think the answer is B', vi.fn(), vi.fn(), vi.fn());
+
+    expect(webStream).toHaveBeenCalledWith(
+      '/api/quiz/diagnose/session-123/follow_up',
+      { user_reply: 'I think the answer is B' },
+      expect.any(Function)
+    );
+  });
+
+  it('cleans up sessions through the web endpoint', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({ deleted_count: 3, remaining_count: 2 }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await cleanupSessions();
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/sessions/cleanup', { method: 'POST' });
+    expect(result).toEqual({ deleted_count: 3, remaining_count: 2 });
+  });
+
+  it('includes response text when cleanup sessions fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        text: async () => 'Cleanup failed',
+      }))
+    );
+
+    await expect(cleanupSessions()).rejects.toThrow('HTTP 500: Cleanup failed');
+  });
+
+  it('returns a session id from submitAnswerAdvanced in web mode', async () => {
+    vi.mocked(webStream).mockResolvedValue(undefined);
+
+    const sessionId = await submitAnswerAdvanced(
+      'Q?',
+      'A',
+      'B',
+      'reasoning',
+      '/notes/test.md',
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn()
+    );
+
+    expect(typeof sessionId).toBe('string');
+    expect(sessionId.length).toBeGreaterThan(0);
   });
 
   it('includes the response body when web diagnosis report generation fails', async () => {

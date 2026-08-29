@@ -160,4 +160,35 @@ mod tests {
         assert!(error.contains("Failed to parse"));
         assert_eq!(content, "{ not valid json");
     }
+
+    #[test]
+    fn save_settings_path_creates_file_and_roundtrips() {
+        let dir = temp_data_dir("save_settings_path_creates_file_and_roundtrips");
+        let settings = default_settings();
+
+        save_settings_path(&dir, &settings).expect("save should succeed");
+        assert!(dir.join("settings.json").exists());
+
+        let loaded = get_settings_path(&dir).expect("load after save should succeed");
+        assert_eq!(loaded.version, settings.version);
+        assert_eq!(loaded.theme, settings.theme);
+        assert_eq!(loaded.ui_language, settings.ui_language);
+        assert_eq!(loaded.llm.model, settings.llm.model);
+        assert_eq!(loaded.quiz.default_count, settings.quiz.default_count);
+    }
+
+    #[test]
+    fn save_settings_path_overwrites_existing_file() {
+        let dir = temp_data_dir("save_settings_path_overwrites_existing_file");
+        let mut settings = default_settings();
+        save_settings_path(&dir, &settings).expect("initial save should succeed");
+
+        settings.llm.model = "custom-model".to_string();
+        settings.quiz.default_count = 10;
+        save_settings_path(&dir, &settings).expect("overwrite should succeed");
+
+        let loaded = get_settings_path(&dir).expect("load after overwrite should succeed");
+        assert_eq!(loaded.llm.model, "custom-model");
+        assert_eq!(loaded.quiz.default_count, 10);
+    }
 }

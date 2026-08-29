@@ -501,4 +501,61 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].id, "ownership");
     }
+
+    #[test]
+    fn mark_mistake_reviewed_increments_review_count_and_sets_timestamp() {
+        let dir = temp_data_dir("mark_mistake_reviewed_increments_review_count");
+        let entry = mistake(
+            "m1",
+            "/notes/rust.md",
+            "What is ownership?",
+            MistakeMode::Basic,
+            "2026-01-01T00:00:00Z",
+        );
+        save_mistake(&dir, entry).expect("save should succeed");
+
+        mark_mistake_reviewed(&dir, "m1").expect("mark reviewed should succeed");
+
+        let mistakes = read_mistakes_or_empty(&dir).expect("read should succeed");
+        assert_eq!(mistakes.len(), 1);
+        assert_eq!(mistakes[0].review_count, 1);
+        assert!(mistakes[0].last_reviewed_at.is_some());
+    }
+
+    #[test]
+    fn mark_mistake_reviewed_returns_error_for_nonexistent_id() {
+        let dir = temp_data_dir("mark_mistake_reviewed_returns_error_for_nonexistent_id");
+
+        let result = mark_mistake_reviewed(&dir, "nonexistent");
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not found"));
+    }
+
+    #[test]
+    fn save_mistake_appends_to_existing_jsonl() {
+        let dir = temp_data_dir("save_mistake_appends_to_existing_jsonl");
+        let entry1 = mistake(
+            "m1",
+            "/notes/a.md",
+            "Q1?",
+            MistakeMode::Basic,
+            "2026-01-01T00:00:00Z",
+        );
+        let entry2 = mistake(
+            "m2",
+            "/notes/b.md",
+            "Q2?",
+            MistakeMode::Advanced,
+            "2026-01-02T00:00:00Z",
+        );
+
+        save_mistake(&dir, entry1).expect("first save should succeed");
+        save_mistake(&dir, entry2).expect("second save should succeed");
+
+        let mistakes = read_mistakes_or_empty(&dir).expect("read should succeed");
+        assert_eq!(mistakes.len(), 2);
+        assert_eq!(mistakes[0].id, "m2"); // front = most recent
+        assert_eq!(mistakes[1].id, "m1");
+    }
 }
