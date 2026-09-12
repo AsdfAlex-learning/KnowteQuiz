@@ -80,7 +80,7 @@ describe('quiz store answer evaluation', () => {
 
     expect(store.quizState).toBe('answering');
     expect(store.questions).toHaveLength(1);
-    expect(store.generatingError).toBeNull();
+    expect(store.error).toBeNull();
   });
 
   it('returns to a retryable state and clears partial questions when generation reports an error', async () => {
@@ -107,7 +107,7 @@ describe('quiz store answer evaluation', () => {
 
     expect(store.quizState).toBe('idle');
     expect(store.hasQuestions).toBe(false);
-    expect(store.generatingError).toContain('answer outside options');
+    expect(store.error).toContain('answer outside options');
   });
 
   it('returns to a retryable state when generation completes without questions', async () => {
@@ -126,7 +126,7 @@ describe('quiz store answer evaluation', () => {
 
     expect(store.quizState).toBe('idle');
     expect(store.hasQuestions).toBe(false);
-    expect(store.generatingError).toContain('No questions generated');
+    expect(store.error).toContain('No questions generated');
   });
 
   it('stores advanced diagnosis messages, session id, and generated report', async () => {
@@ -162,11 +162,11 @@ describe('quiz store answer evaluation', () => {
   it('clears stale diagnosis errors before starting a new diagnosis', async () => {
     vi.mocked(submitAnswerAdvanced).mockResolvedValue('session-2');
     const store = useQuizStore();
-    store.generatingError = 'Previous diagnosis failed';
+    store.error = 'Previous diagnosis failed';
 
     await store.startDiagnosis('Next question?', 'C', 'B', 'Because B', '/notes/rust.md');
 
-    expect(store.generatingError).toBeNull();
+    expect(store.error).toBeNull();
     expect(store.sessionId).toBe('session-2');
   });
 
@@ -193,7 +193,7 @@ describe('quiz store answer evaluation', () => {
 
     expect(store.quizState).toBe('answering');
     expect(store.sessionId).toBeNull();
-    expect(store.generatingError).toContain('missing answer_analysis');
+    expect(store.error).toContain('missing answer_analysis');
   });
 
   it('generates a diagnosis report from the current session', async () => {
@@ -214,11 +214,11 @@ describe('quiz store answer evaluation', () => {
     const store = useQuizStore();
     store.sessionId = 'session-1';
     store.quizState = 'diagnosing';
-    store.generatingError = 'Previous follow-up failed';
+    store.error = 'Previous follow-up failed';
 
     await store.finishDiagnosis();
 
-    expect(store.generatingError).toBeNull();
+    expect(store.error).toBeNull();
     expect(store.diagnosisReport).toEqual(report);
   });
 
@@ -263,11 +263,11 @@ describe('quiz store answer evaluation', () => {
     const store = useQuizStore();
     store.sessionId = 'session-1';
     store.quizState = 'diagnosing';
-    store.generatingError = 'Previous follow-up failed';
+    store.error = 'Previous follow-up failed';
 
     await store.continueDiagnosis('I found the definition.');
 
-    expect(store.generatingError).toBeNull();
+    expect(store.error).toBeNull();
     expect(store.diagnosisMessages).toContainEqual({
       role: 'ai',
       content: 'What changes now?',
@@ -290,7 +290,7 @@ describe('quiz store answer evaluation', () => {
     await store.continueDiagnosis('My reply');
 
     expect(store.quizState).toBe('diagnosing');
-    expect(store.generatingError).toContain('Session session-1 not found');
+    expect(store.error).toContain('Session session-1 not found');
     expect(store.diagnosisMessages).toEqual([
       { role: 'ai', content: 'Which definition applies?', blind_spots: [], follow_up: 'Which definition applies?' },
     ]);
@@ -396,6 +396,6 @@ describe('quiz store generation phase', () => {
 
     expect(store.generatingPhase).toBeNull();
     expect(store.quizState).toBe('idle');
-    expect(store.generatingError).toContain('LLM API error');
+    expect(store.error).toContain('LLM API error');
   });
 });

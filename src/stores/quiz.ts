@@ -21,7 +21,7 @@ export const useQuizStore = defineStore('quiz', () => {
   const diagnosisReport = ref<DiagnosisReport | null>(null);
   const advancedReasoning = ref<Map<string, string>>(new Map());
   const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map());
-  const generatingError = ref<string | null>(null);
+  const error = ref<string | null>(null);
   const generatingPhase = ref<string | null>(null);
 
   const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null);
@@ -62,7 +62,7 @@ export const useQuizStore = defineStore('quiz', () => {
     diagnosisReport.value = null;
     advancedReasoning.value = new Map();
     diagnosisContexts.value = new Map();
-    generatingError.value = null;
+    error.value = null;
     generatingPhase.value = null;
   }
 
@@ -132,7 +132,7 @@ export const useQuizStore = defineStore('quiz', () => {
   }
 
   function failDiagnosis(message: string) {
-    generatingError.value = message;
+    error.value = message;
     sessionId.value = null;
     diagnosisMessages.value = [];
     diagnosisReport.value = null;
@@ -147,7 +147,7 @@ export const useQuizStore = defineStore('quiz', () => {
       questions.value = [];
       currentIndex.value = 0;
       answers.value = new Map();
-      generatingError.value = message;
+      error.value = message;
       generatingPhase.value = null;
       quizState.value = 'idle';
     };
@@ -183,7 +183,7 @@ export const useQuizStore = defineStore('quiz', () => {
     notePath: string
   ) {
     quizState.value = 'diagnosing';
-    generatingError.value = null;
+    error.value = null;
     sessionId.value = null;
     diagnosisMessages.value = [];
     diagnosisReport.value = null;
@@ -208,7 +208,7 @@ export const useQuizStore = defineStore('quiz', () => {
           failDiagnosis(err);
         }
       );
-      if (!generatingError.value) {
+      if (!error.value) {
         sessionId.value = sid;
       }
     } catch (e) {
@@ -218,7 +218,7 @@ export const useQuizStore = defineStore('quiz', () => {
 
   async function continueDiagnosis(userReply: string) {
     if (!sessionId.value) return;
-    generatingError.value = null;
+    error.value = null;
     try {
       await diagnoseFollowUp(
         sessionId.value,
@@ -234,22 +234,22 @@ export const useQuizStore = defineStore('quiz', () => {
         },
         (report) => setDiagnosisReport(report),
         (err) => {
-          generatingError.value = err;
+          error.value = err;
         }
       );
     } catch (e) {
-      generatingError.value = String(e);
+      error.value = String(e);
     }
   }
 
   async function finishDiagnosis() {
     if (!sessionId.value) return;
-    generatingError.value = null;
+    error.value = null;
     try {
       const report = await generateDiagnosisReport(sessionId.value);
       setDiagnosisReport(report);
     } catch (e) {
-      generatingError.value = String(e);
+      error.value = String(e);
     }
   }
 
@@ -267,7 +267,7 @@ export const useQuizStore = defineStore('quiz', () => {
     diagnosisReport,
     advancedReasoning,
     diagnosisContexts,
-    generatingError,
+    error,
     generatingPhase,
     currentQuestion,
     totalQuestions,
