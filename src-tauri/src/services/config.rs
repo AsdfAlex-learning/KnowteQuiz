@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::quiz::QuestionType;
 use crate::models::settings::*;
 use crate::services::storage;
@@ -42,10 +43,10 @@ fn default_settings() -> Settings {
     }
 }
 
-pub fn get_settings_path(data_dir: &Path) -> Result<Settings, String> {
+pub fn get_settings_path(data_dir: &Path) -> Result<Settings, AppError> {
     match storage::read_json_path::<Settings>(data_dir, "settings.json") {
         Ok(settings) => Ok(settings),
-        Err(error) if error.starts_with("File not found:") => {
+        Err(AppError::NotFound(_)) => {
             let defaults = default_settings();
             storage::write_json_path(data_dir, "settings.json", &defaults)?;
             Ok(defaults)
@@ -54,17 +55,17 @@ pub fn get_settings_path(data_dir: &Path) -> Result<Settings, String> {
     }
 }
 
-pub fn save_settings_path(data_dir: &Path, settings: &Settings) -> Result<(), String> {
+pub fn save_settings_path(data_dir: &Path, settings: &Settings) -> Result<(), AppError> {
     storage::write_json_path(data_dir, "settings.json", settings)
 }
 
 // Backward-compatible wrappers for Tauri commands
-pub fn get_settings(app: &AppHandle) -> Result<Settings, String> {
+pub fn get_settings(app: &AppHandle) -> Result<Settings, AppError> {
     let dir = crate::services::storage::get_data_dir(app)?;
     get_settings_path(&dir)
 }
 
-pub fn save_settings(app: &AppHandle, settings: &Settings) -> Result<(), String> {
+pub fn save_settings(app: &AppHandle, settings: &Settings) -> Result<(), AppError> {
     let dir = crate::services::storage::get_data_dir(app)?;
     save_settings_path(&dir, settings)
 }
@@ -157,7 +158,7 @@ mod tests {
         let content = std::fs::read_to_string(dir.join("settings.json"))
             .expect("settings file should still exist");
 
-        assert!(error.contains("Failed to parse"));
+        assert!(error.to_string().contains("Failed to parse"));
         assert_eq!(content, "{ not valid json");
     }
 

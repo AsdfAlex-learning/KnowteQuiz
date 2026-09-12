@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
 use crate::models::settings::LlmConfig;
@@ -58,7 +59,7 @@ pub async fn generate_quiz_stream(
     data_dir: &Path,
     params: &QuizStreamParams,
     tx: UnboundedSender<QuizStreamEvent>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let note_content = crate::services::fs_service::read_file_content(&params.path)?;
     let truncated_content = note_content_for_prompt(&note_content);
     let settings = crate::services::config::get_settings_path(data_dir)?;
@@ -107,7 +108,7 @@ pub async fn generate_quiz_stream(
         .json(&request_body)
         .send()
         .await
-        .map_err(|e| format!("LLM API request failed: {}", e))?;
+        .map_err(|e| AppError::Llm(format!("LLM API request failed: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -115,7 +116,7 @@ pub async fn generate_quiz_stream(
         let _ = tx.send(QuizStreamEvent::Error {
             message: format!("LLM API error {}: {}", status, body),
         });
-        return Err(format!("LLM API error {}: {}", status, body));
+        return Err(AppError::Llm(format!("LLM API error {}: {}", status, body)));
     }
 
     let mut stream = response.bytes_stream();
@@ -216,21 +217,23 @@ pub async fn generate_quiz_stream(
     Ok(())
 }
 
-fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, String> {
+fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, AppError> {
     let json_str = extract_json_block(raw);
     let parsed: serde_json::Value = serde_json::from_str(&json_str).map_err(|e| {
-        format!(
+        AppError::Internal(format!(
             "JSON parse error: {}. Raw: {}",
             e,
             &raw[..raw.len().min(200)]
-        )
+        ))
     })?;
 
     let questions = parsed["questions"]
         .as_array()
-        .ok_or("Missing 'questions' array in response")?;
+        .ok_or(AppError::InvalidInput("Missing 'questions' array in response".to_string()))?;
     if questions.is_empty() {
-        return Err("Missing non-empty 'questions' array in response".to_string());
+        return Err(AppError::InvalidInput(
+            "Missing non-empty 'questions' array in response".to_string(),
+        ));
     }
 
     let mut result = Vec::new();
@@ -241,7 +244,7 @@ fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, String> {
     Ok(result)
 }
 
-fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> {
+fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, AppError> {
     let id = q["id"]
         .as_str()
         .filter(|value| !value.trim().is_empty())
@@ -271,10 +274,10 @@ fn parse_quiz_question(q: &Value, index: usize) -> Result<QuizQuestion, String> 
 
     if matches!(question_type, QuestionType::Single | QuestionType::Multiple) && options.is_empty()
     {
-        return Err(format!(
+        return Err(AppError::InvalidInput(format!(
             "Question {} options are required for choice questions",
             index + 1
-        ));
+        )));
     }
     validate_choice_answer(&question_type, &options, &answer, index)?;
 
@@ -293,7 +296,7 @@ fn validate_choice_answer(
     options: &[String],
     answer: &str,
     index: usize,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if !matches!(question_type, QuestionType::Single | QuestionType::Multiple) {
         return Ok(());
     }
@@ -301,20 +304,20 @@ fn validate_choice_answer(
     let letters = choice_letters_from_answer(answer);
     if !letters.is_empty() {
         if matches!(question_type, QuestionType::Single) && letters.len() != 1 {
-            return Err(format!(
+            return Err(AppError::InvalidInput(format!(
                 "Question {} single choice answer must contain exactly one option",
                 index + 1
-            ));
+            )));
         }
 
         for letter in letters {
             let option_index = (letter as u8).saturating_sub(b'A') as usize;
             if option_index >= options.len() {
-                return Err(format!(
+                return Err(AppError::InvalidInput(format!(
                     "Question {} answer '{}' is outside the available options",
                     index + 1,
                     answer
-                ));
+                )));
             }
         }
         return Ok(());
@@ -327,10 +330,10 @@ fn validate_choice_answer(
 
     let normalized_answers = split_answer_text(answer, options);
     if matches!(question_type, QuestionType::Single) && normalized_answers.len() != 1 {
-        return Err(format!(
+        return Err(AppError::InvalidInput(format!(
             "Question {} single choice answer must contain exactly one option",
             index + 1
-        ));
+        )));
     }
 
     if normalized_answers
@@ -340,11 +343,11 @@ fn validate_choice_answer(
         return Ok(());
     }
 
-    Err(format!(
+    Err(AppError::InvalidInput(format!(
         "Question {} answer '{}' does not match any available options",
         index + 1,
         answer
-    ))
+    )))
 }
 
 fn option_text_matches(options: &[String], normalized_answer: &str) -> bool {
@@ -450,16 +453,16 @@ fn strip_option_label(option: &str) -> String {
     }
 }
 
-fn parse_question_type(raw: &str, index: usize) -> Result<QuestionType, String> {
+fn parse_question_type(raw: &str, index: usize) -> Result<QuestionType, AppError> {
     match raw.trim().to_ascii_lowercase().as_str() {
         "single" => Ok(QuestionType::Single),
         "multiple" => Ok(QuestionType::Multiple),
         "short" => Ok(QuestionType::Short),
-        other => Err(format!(
+        other => Err(AppError::InvalidInput(format!(
             "Question {} has unsupported question type: {}",
             index + 1,
             other
-        )),
+        ))),
     }
 }
 
@@ -468,13 +471,13 @@ fn required_string(
     field: &str,
     index: usize,
     label: &str,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     value[field]
         .as_str()
         .map(str::trim)
         .filter(|raw| !raw.is_empty())
         .map(String::from)
-        .ok_or_else(|| format!("Question {} missing {}", index + 1, label))
+        .ok_or_else(|| AppError::InvalidInput(format!("Question {} missing {}", index + 1, label)))
 }
 
 fn extract_json_block(raw: &str) -> String {
@@ -526,7 +529,7 @@ pub async fn submit_diagnosis_initial(
     user_reasoning: &str,
     note_path: &str,
     tx: UnboundedSender<DiagnosisStreamEvent>,
-) -> Result<DiagnosisRound, String> {
+) -> Result<DiagnosisRound, AppError> {
     let note_content = crate::services::fs_service::read_file_content(note_path)?;
     let truncated_content = note_content_for_prompt(&note_content);
 
@@ -586,9 +589,9 @@ pub async fn diagnose_follow_up(
     session: &mut DiagnosisSession,
     user_reply: &str,
     tx: UnboundedSender<DiagnosisStreamEvent>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let previous_diagnosis = serde_json::to_string(&session.conversation)
-        .map_err(|e| format!("Failed to serialize diagnosis: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to serialize diagnosis: {}", e)))?;
 
     let mut vars = HashMap::new();
     vars.insert("topic", session.question.clone());
@@ -644,12 +647,12 @@ pub async fn diagnose_follow_up(
 pub async fn generate_diagnosis_report(
     data_dir: &Path,
     session: &DiagnosisSession,
-) -> Result<DiagnosisReport, String> {
+) -> Result<DiagnosisReport, AppError> {
     let note_content = crate::services::fs_service::read_file_content(&session.note_path)?;
     let truncated_content = note_content_for_prompt(&note_content);
 
     let conversation_json = serde_json::to_string(&session.conversation)
-        .map_err(|e| format!("Failed to serialize conversation: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to serialize conversation: {}", e)))?;
 
     let mut vars = HashMap::new();
     vars.insert("diagnosis_conversation_json", conversation_json);
@@ -668,7 +671,7 @@ pub async fn generate_diagnosis_report(
     parse_diagnosis_report(&response_text)
 }
 
-async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Result<String, String> {
+async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Result<String, AppError> {
     let client = http_client();
 
     let mut request_body = serde_json::json!({
@@ -701,23 +704,23 @@ async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Resul
         .json(&request_body)
         .send()
         .await
-        .map_err(|e| format!("LLM API request failed: {}", e))?;
+        .map_err(|e| AppError::Llm(format!("LLM API request failed: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(format!("LLM API error {}: {}", status, body));
+        return Err(AppError::Llm(format!("LLM API error {}: {}", status, body)));
     }
 
     let json: Value = response
         .json()
         .await
-        .map_err(|e| format!("Failed to parse LLM response: {}", e))?;
+        .map_err(|e| AppError::Llm(format!("Failed to parse LLM response: {}", e)))?;
 
     json["choices"][0]["message"]["content"]
         .as_str()
         .map(String::from)
-        .ok_or_else(|| "No content in LLM response".to_string())
+        .ok_or_else(|| AppError::Llm("No content in LLM response".to_string()))
 }
 
 struct InitialDiagnosis {
@@ -726,14 +729,14 @@ struct InitialDiagnosis {
     follow_up_question: Option<String>,
 }
 
-fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, String> {
+fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, AppError> {
     let json_str = extract_json_block(raw);
     let parsed: Value = serde_json::from_str(&json_str).map_err(|e| {
-        format!(
+        AppError::Internal(format!(
             "Failed to parse diagnosis: {}. Raw: {}",
             e,
             &raw[..raw.len().min(200)]
-        )
+        ))
     })?;
 
     Ok(InitialDiagnosis {
@@ -759,17 +762,19 @@ struct FollowUpResponse {
     follow_up_question: String,
 }
 
-fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
+fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, AppError> {
     let json_str = extract_json_block(raw);
-    let parsed: Value =
-        serde_json::from_str(&json_str).map_err(|e| format!("Failed to parse follow-up: {}", e))?;
+    let parsed: Value = serde_json::from_str(&json_str)
+        .map_err(|e| AppError::Internal(format!("Failed to parse follow-up: {}", e)))?;
     let should_continue = parsed["should_continue"]
         .as_bool()
-        .ok_or_else(|| "Diagnosis response missing should_continue".to_string())?;
+        .ok_or_else(|| AppError::InvalidInput("Diagnosis response missing should_continue".to_string()))?;
     let follow_up_question = string_field(&parsed, "follow_up_question").unwrap_or_default();
 
     if should_continue && follow_up_question.is_empty() {
-        return Err("Diagnosis response missing follow_up_question".to_string());
+        return Err(AppError::InvalidInput(
+            "Diagnosis response missing follow_up_question".to_string(),
+        ));
     }
 
     Ok(FollowUpResponse {
@@ -780,10 +785,10 @@ fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, String> {
     })
 }
 
-fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, String> {
+fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, AppError> {
     let json_str = extract_json_block(raw);
-    let parsed: Value =
-        serde_json::from_str(&json_str).map_err(|e| format!("Failed to parse report: {}", e))?;
+    let parsed: Value = serde_json::from_str(&json_str)
+        .map_err(|e| AppError::Internal(format!("Failed to parse report: {}", e)))?;
     let next_steps = parse_non_empty_string_array(&parsed["next_steps"], "next_steps")?;
 
     Ok(DiagnosisReport {
@@ -794,13 +799,13 @@ fn parse_diagnosis_report(raw: &str) -> Result<DiagnosisReport, String> {
     })
 }
 
-fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, String> {
+fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, AppError> {
     let tag = string_field(value, "tag")
         .or_else(|| string_field(value, "type"))
         .or_else(|| string_field(value, "concept"))
-        .ok_or_else(|| format!("Diagnosis response missing {} tag", label))?;
+        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {} tag", label)))?;
     let description = string_field(value, "description")
-        .ok_or_else(|| format!("Diagnosis response missing {} description", label))?;
+        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {} description", label)))?;
 
     Ok(BlindSpot {
         tag,
@@ -811,7 +816,7 @@ fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, String> {
     })
 }
 
-fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
+fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, AppError> {
     if let Some(values) = parsed["blind_spots"].as_array() {
         let spots = values
             .iter()
@@ -820,7 +825,9 @@ fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
             .collect::<Result<Vec<_>, _>>()?;
 
         if spots.is_empty() {
-            Err("Diagnosis response missing blind_spots".to_string())
+            Err(AppError::InvalidInput(
+                "Diagnosis response missing blind_spots".to_string(),
+            ))
         } else {
             Ok(spots)
         }
@@ -829,7 +836,7 @@ fn parse_initial_blind_spots(parsed: &Value) -> Result<Vec<BlindSpot>, String> {
     }
 }
 
-fn parse_blind_spots_array(value: &Value, label: &str) -> Result<Vec<BlindSpot>, String> {
+fn parse_blind_spots_array(value: &Value, label: &str) -> Result<Vec<BlindSpot>, AppError> {
     let Some(values) = value.as_array() else {
         return Ok(vec![]);
     };
@@ -841,13 +848,13 @@ fn parse_blind_spots_array(value: &Value, label: &str) -> Result<Vec<BlindSpot>,
         .collect()
 }
 
-fn required_diagnosis_string(value: &Value, field: &str) -> Result<String, String> {
+fn required_diagnosis_string(value: &Value, field: &str) -> Result<String, AppError> {
     value[field]
         .as_str()
         .map(str::trim)
         .filter(|raw| !raw.is_empty())
         .map(String::from)
-        .ok_or_else(|| format!("Diagnosis response missing {}", field))
+        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {}", field)))
 }
 
 fn string_field(value: &Value, field: &str) -> Option<String> {
@@ -858,10 +865,10 @@ fn string_field(value: &Value, field: &str) -> Option<String> {
         .map(String::from)
 }
 
-fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String>, String> {
+fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String>, AppError> {
     let items = value
         .as_array()
-        .ok_or_else(|| format!("Diagnosis response missing {}", field))?
+        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {}", field)))?
         .iter()
         .filter_map(|item| item.as_str())
         .map(str::trim)
@@ -870,7 +877,10 @@ fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String
         .collect::<Vec<_>>();
 
     if items.is_empty() {
-        Err(format!("Diagnosis response missing {}", field))
+        Err(AppError::InvalidInput(format!(
+            "Diagnosis response missing {}",
+            field
+        )))
     } else {
         Ok(items)
     }

@@ -1,4 +1,5 @@
 mod commands;
+pub mod errors;
 mod models;
 mod services;
 mod utils;

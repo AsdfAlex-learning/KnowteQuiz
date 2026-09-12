@@ -19,6 +19,7 @@ use tokio_stream::StreamExt;
 use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
+use crate::errors::AppError;
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
@@ -81,19 +82,19 @@ fn send_missing_session_error(
 
 // ── Session management (delegated to shared service) ────────────────────────
 
-fn load_diagnosis_session(state: &AppState, session_id: &str) -> Result<DiagnosisSession, String> {
+fn load_diagnosis_session(state: &AppState, session_id: &str) -> Result<DiagnosisSession, AppError> {
     diagnosis_session_service::load_from_cache_or_disk(&state.diagnosis_sessions, &state.data_dir, session_id)
 }
 
-fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
+fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), AppError> {
     diagnosis_session_service::cache_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
-fn discard_diagnosis_session(state: &AppState, session_id: &str) -> Result<(), String> {
+fn discard_diagnosis_session(state: &AppState, session_id: &str) -> Result<(), AppError> {
     diagnosis_session_service::discard_session(&state.diagnosis_sessions, &state.data_dir, session_id)
 }
 
-fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
+fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), AppError> {
     diagnosis_session_service::finish_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
@@ -172,7 +173,7 @@ struct ScanNotesQuery {
 async fn scan_notes_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ScanNotesQuery>,
-) -> Result<Json<Vec<NoteTreeNode>>, String> {
+) -> Result<Json<Vec<NoteTreeNode>>, AppError> {
     let result = fs_service::scan_directory_with_index(&query.root_path, &state.data_dir)?;
     Ok(Json(result))
 }
@@ -190,7 +191,7 @@ struct ReadNoteAssetQuery {
 async fn read_note_handler(
     State(_state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteQuery>,
-) -> Result<Json<NoteContent>, String> {
+) -> Result<Json<NoteContent>, AppError> {
     let content = fs_service::read_file_content(&query.path)?;
     let result = note_service::extract_metadata(&content, &query.path);
     Ok(Json(result))
@@ -198,13 +199,13 @@ async fn read_note_handler(
 
 async fn read_note_asset_handler(
     Query(query): Query<ReadNoteAssetQuery>,
-) -> Result<Response, String> {
+) -> Result<Response, AppError> {
     let path = PathBuf::from(&query.path);
     let content_type = asset_content_type(&path)
-        .ok_or_else(|| format!("Unsupported asset type: {}", query.path))?;
+        .ok_or_else(|| AppError::InvalidInput(format!("Unsupported asset type: {}", query.path)))?;
     let bytes = tokio::fs::read(&path)
         .await
-        .map_err(|err| format!("Failed to read asset {}: {}", query.path, err))?;
+        .map_err(|err| AppError::Internal(format!("Failed to read asset {}: {}", query.path, err)))?;
 
     Ok(([(header::CONTENT_TYPE, content_type)], bytes).into_response())
 }
@@ -229,7 +230,7 @@ fn asset_content_type(path: &Path) -> Option<&'static str> {
 
 async fn get_settings_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<Settings>, String> {
+) -> Result<Json<Settings>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
     Ok(Json(settings))
 }
@@ -237,51 +238,51 @@ async fn get_settings_handler(
 async fn save_settings_handler(
     State(state): State<Arc<AppState>>,
     Json(settings): Json<Settings>,
-) -> Result<Json<bool>, String> {
+) -> Result<Json<bool>, AppError> {
     config::save_settings_path(&state.data_dir, &settings)?;
     Ok(Json(true))
 }
 
 async fn test_connection_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<ConnectionTestResult>, String> {
+) -> Result<Json<ConnectionTestResult>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
     Ok(Json(llm_service::test_connection(&settings.llm).await))
 }
 
 async fn probe_llm_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<llm_service::LlmCapabilities>, String> {
+) -> Result<Json<llm_service::LlmCapabilities>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
     Ok(Json(llm_service::probe_capabilities(&settings.llm).await))
 }
 
 async fn backup_data_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<storage::DataBackupResult>, String> {
+) -> Result<Json<storage::DataBackupResult>, AppError> {
     Ok(Json(storage::backup_data_files_path(&state.data_dir)?))
 }
 
 async fn data_status_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<storage::DataStatus>, String> {
+) -> Result<Json<storage::DataStatus>, AppError> {
     Ok(Json(storage::data_status_path(&state.data_dir)?))
 }
 
 async fn restore_latest_backup_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<storage::DataRestoreResult>, String> {
+) -> Result<Json<storage::DataRestoreResult>, AppError> {
     Ok(Json(storage::restore_latest_backup_path(&state.data_dir)?))
 }
 
-async fn list_prompt_templates_handler() -> Result<Json<Vec<(String, String, String)>>, String> {
+async fn list_prompt_templates_handler() -> Result<Json<Vec<(String, String, String)>>, AppError> {
     Ok(Json(crate::utils::prompt_templates::list_template_sets()))
 }
 
 async fn load_mistakes_handler(
     State(state): State<Arc<AppState>>,
     Query(filter): Query<MistakeFilter>,
-) -> Result<Json<Vec<MistakeEntry>>, String> {
+) -> Result<Json<Vec<MistakeEntry>>, AppError> {
     let mistakes = mistake_service::load_mistakes(&state.data_dir, &filter)?;
     Ok(Json(mistakes))
 }
@@ -289,7 +290,7 @@ async fn load_mistakes_handler(
 async fn save_mistake_handler(
     State(state): State<Arc<AppState>>,
     Json(entry): Json<MistakeEntry>,
-) -> Result<Json<bool>, String> {
+) -> Result<Json<bool>, AppError> {
     mistake_service::save_mistake(&state.data_dir, entry)?;
     Ok(Json(true))
 }
@@ -297,7 +298,7 @@ async fn save_mistake_handler(
 async fn mark_mistake_reviewed_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<serde_json::Value>,
-) -> Result<Json<bool>, String> {
+) -> Result<Json<bool>, AppError> {
     let mistake_id = payload["mistake_id"]
         .as_str()
         .ok_or("Missing mistake_id")?
@@ -427,7 +428,7 @@ async fn submit_diagnosis_handler(
                     final_report: None,
                 };
                 if let Err(err) = cache_diagnosis_session(&app_state, session) {
-                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
                 }
             }
         }
@@ -462,7 +463,7 @@ async fn submit_diagnosis_handler(
                 }
                 Err(err) => {
                     let _ = discard_diagnosis_session(&app_state, &session_id);
-                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
                 }
             }
         });
@@ -508,13 +509,13 @@ async fn diagnose_follow_up_handler(
             )
             .await
             {
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
                 let _ = cache_diagnosis_session(&app_state, session);
                 return;
             }
 
             if let Err(err) = finish_diagnosis_session(&app_state, session) {
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
             }
         });
     } else {
@@ -534,9 +535,9 @@ async fn diagnose_follow_up_handler(
 async fn generate_report_handler(
     State(state): State<Arc<AppState>>,
     AxumPath(session_id): AxumPath<String>,
-) -> Result<Json<DiagnosisReport>, String> {
+) -> Result<Json<DiagnosisReport>, AppError> {
     let mut session = load_diagnosis_session(&state, &session_id)
-        .map_err(|_| format!("Session {} not found", session_id))?;
+        .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
 
     if let Some(ref report) = session.final_report {
         finish_diagnosis_session(&state, session.clone())?;
@@ -551,7 +552,7 @@ async fn generate_report_handler(
 
 async fn cleanup_sessions_handler(
     State(state): State<Arc<AppState>>,
-) -> Result<Json<diagnosis_session_service::SessionCleanupResult>, String> {
+) -> Result<Json<diagnosis_session_service::SessionCleanupResult>, AppError> {
     let result = diagnosis_session_service::cleanup_expired_sessions(&state.data_dir, 7)?;
     Ok(Json(result))
 }

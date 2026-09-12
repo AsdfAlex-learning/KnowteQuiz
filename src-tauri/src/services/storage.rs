@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -42,35 +43,34 @@ pub struct DataStatus {
     pub files: Vec<DataFileStatus>,
 }
 
-pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
+pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     let data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to get app data dir: {}", e)))?;
     let dir = data_dir.join(APP_DATA_SUBDIR);
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
+    fs::create_dir_all(&dir)?;
     Ok(dir)
 }
 
 #[allow(dead_code)]
-pub fn get_data_dir_path(base: &Path) -> Result<PathBuf, String> {
+pub fn get_data_dir_path(base: &Path) -> Result<PathBuf, AppError> {
     let dir = base.join(APP_DATA_SUBDIR);
-    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
+    fs::create_dir_all(&dir)?;
     Ok(dir)
 }
 
-pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> Result<T, String> {
+pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> Result<T, AppError> {
     let path = data_dir.join(filename);
     if !path.exists() {
         return read_json_backup_path(data_dir, filename)
-            .ok_or_else(|| format!("File not found: {}", filename))?;
+            .ok_or_else(|| AppError::NotFound(format!("File not found: {}", filename)));
     }
-    let content =
-        fs::read_to_string(&path).map_err(|e| format!("Failed to read {}: {}", filename, e))?;
+    let content = fs::read_to_string(&path)?;
     match serde_json::from_str(&content) {
         Ok(data) => Ok(data),
         Err(parse_error) => read_json_backup_path(data_dir, filename)
-            .ok_or_else(|| format!("Failed to parse {}: {}", filename, parse_error)),
+            .ok_or_else(|| AppError::Internal(format!("Failed to parse {}: {}", filename, parse_error))),
     }
 }
 
@@ -78,33 +78,26 @@ pub fn write_json_path<T: Serialize>(
     data_dir: &Path,
     filename: &str,
     data: &T,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let path = data_dir.join(filename);
     let tmp_path = data_dir.join(format!("{}.tmp", filename));
     let backup_path = data_dir.join(format!("{}.bak", filename));
-    let content = serde_json::to_string_pretty(data)
-        .map_err(|e| format!("Failed to serialize {}: {}", filename, e))?;
+    let content = serde_json::to_string_pretty(data)?;
 
     {
-        let mut tmp_file = fs::File::create(&tmp_path)
-            .map_err(|e| format!("Failed to create temp file for {}: {}", filename, e))?;
+        let mut tmp_file = fs::File::create(&tmp_path)?;
         use std::io::Write;
-        tmp_file
-            .write_all(content.as_bytes())
-            .map_err(|e| format!("Failed to write temp file for {}: {}", filename, e))?;
-        tmp_file
-            .sync_all()
-            .map_err(|e| format!("Failed to sync temp file for {}: {}", filename, e))?;
+        tmp_file.write_all(content.as_bytes())?;
+        tmp_file.sync_all()?;
     }
 
     if path.exists() {
-        fs::copy(&path, &backup_path)
-            .map_err(|e| format!("Failed to backup {}: {}", filename, e))?;
+        fs::copy(&path, &backup_path)?;
     }
 
     fs::rename(&tmp_path, &path).map_err(|e| {
         let _ = fs::remove_file(&tmp_path);
-        format!("Failed to replace {}: {}", filename, e)
+        AppError::Internal(format!("Failed to replace {}: {}", filename, e))
     })
 }
 
@@ -115,25 +108,24 @@ fn read_json_backup_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -
 }
 
 #[allow(dead_code)]
-pub fn file_exists_path(data_dir: &Path, filename: &str) -> Result<bool, String> {
+pub fn file_exists_path(data_dir: &Path, filename: &str) -> Result<bool, AppError> {
     Ok(data_dir.join(filename).exists())
 }
 
-pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, String> {
-    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
+pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, AppError> {
+    fs::create_dir_all(data_dir)?;
     let backup_dir = data_dir.join("backups").join(format!(
         "{}-{}",
         chrono::Utc::now().format("%Y%m%d-%H%M%S"),
         &uuid::Uuid::new_v4().simple().to_string()[..8]
     ));
-    fs::create_dir_all(&backup_dir).map_err(|e| format!("Failed to create backup dir: {}", e))?;
+    fs::create_dir_all(&backup_dir)?;
 
     let mut files = Vec::new();
     for filename in MANAGED_DATA_FILES {
         let source = data_dir.join(filename);
         if source.exists() {
-            fs::copy(&source, backup_dir.join(filename))
-                .map_err(|e| format!("Failed to backup {}: {}", filename, e))?;
+            fs::copy(&source, backup_dir.join(filename))?;
             files.push(filename.to_string());
         }
     }
@@ -145,12 +137,12 @@ pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, Strin
     })
 }
 
-pub fn backup_data_files(app: &AppHandle) -> Result<DataBackupResult, String> {
+pub fn backup_data_files(app: &AppHandle) -> Result<DataBackupResult, AppError> {
     let dir = get_data_dir(app)?;
     backup_data_files_path(&dir)
 }
 
-pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, String> {
+pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, AppError> {
     let backup_dir = latest_backup_dir(data_dir)?;
     let pre_restore = backup_data_files_path(data_dir)?;
 
@@ -158,18 +150,17 @@ pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, 
     for filename in MANAGED_DATA_FILES {
         let source = backup_dir.join(filename);
         if source.exists() {
-            fs::copy(&source, data_dir.join(filename))
-                .map_err(|e| format!("Failed to restore {}: {}", filename, e))?;
+            fs::copy(&source, data_dir.join(filename))?;
             files.push(filename.to_string());
         }
     }
     files.sort();
 
     if files.is_empty() {
-        return Err(format!(
+        return Err(AppError::NotFound(format!(
             "No managed data files found in backup: {}",
             backup_dir.to_string_lossy()
-        ));
+        )));
     }
 
     Ok(DataRestoreResult {
@@ -179,25 +170,21 @@ pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, 
     })
 }
 
-pub fn restore_latest_backup(app: &AppHandle) -> Result<DataRestoreResult, String> {
+pub fn restore_latest_backup(app: &AppHandle) -> Result<DataRestoreResult, AppError> {
     let dir = get_data_dir(app)?;
     restore_latest_backup_path(&dir)
 }
 
-fn latest_backup_dir(data_dir: &Path) -> Result<PathBuf, String> {
+fn latest_backup_dir(data_dir: &Path) -> Result<PathBuf, AppError> {
     let backups_dir = data_dir.join("backups");
     let mut candidates = Vec::new();
     if !backups_dir.exists() {
-        return Err("No backup directory found".to_string());
+        return Err(AppError::NotFound("No backup directory found".to_string()));
     }
 
-    for entry in
-        fs::read_dir(&backups_dir).map_err(|e| format!("Failed to read backup directory: {}", e))?
-    {
-        let entry = entry.map_err(|e| format!("Failed to inspect backup directory: {}", e))?;
-        let file_type = entry
-            .file_type()
-            .map_err(|e| format!("Failed to inspect backup entry: {}", e))?;
+    for entry in fs::read_dir(&backups_dir)? {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
         if file_type.is_dir() {
             candidates.push(entry.path());
         }
@@ -206,18 +193,17 @@ fn latest_backup_dir(data_dir: &Path) -> Result<PathBuf, String> {
     candidates.sort_by_key(|path| path.file_name().map(|name| name.to_os_string()));
     candidates
         .pop()
-        .ok_or_else(|| "No backup snapshots found".to_string())
+        .ok_or_else(|| AppError::NotFound("No backup snapshots found".to_string()))
 }
 
-pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, String> {
-    fs::create_dir_all(data_dir).map_err(|e| format!("Failed to create data dir: {}", e))?;
+pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, AppError> {
+    fs::create_dir_all(data_dir)?;
     let mut files = Vec::new();
 
     for filename in MANAGED_DATA_FILES {
         let path = data_dir.join(filename);
         if path.exists() {
-            let metadata = fs::metadata(&path)
-                .map_err(|e| format!("Failed to inspect {}: {}", filename, e))?;
+            let metadata = fs::metadata(&path)?;
             let modified_at = metadata
                 .modified()
                 .ok()
@@ -244,26 +230,26 @@ pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, String> {
     })
 }
 
-pub fn data_status(app: &AppHandle) -> Result<DataStatus, String> {
+pub fn data_status(app: &AppHandle) -> Result<DataStatus, AppError> {
     let dir = get_data_dir(app)?;
     data_status_path(&dir)
 }
 
 // Backward-compatible wrappers for Tauri commands
 #[allow(dead_code)]
-pub fn read_json<T: DeserializeOwned>(app: &AppHandle, filename: &str) -> Result<T, String> {
+pub fn read_json<T: DeserializeOwned>(app: &AppHandle, filename: &str) -> Result<T, AppError> {
     let dir = get_data_dir(app)?;
     read_json_path(&dir, filename)
 }
 
 #[allow(dead_code)]
-pub fn write_json<T: Serialize>(app: &AppHandle, filename: &str, data: &T) -> Result<(), String> {
+pub fn write_json<T: Serialize>(app: &AppHandle, filename: &str, data: &T) -> Result<(), AppError> {
     let dir = get_data_dir(app)?;
     write_json_path(&dir, filename, data)
 }
 
 #[allow(dead_code)]
-pub fn file_exists(app: &AppHandle, filename: &str) -> Result<bool, String> {
+pub fn file_exists(app: &AppHandle, filename: &str) -> Result<bool, AppError> {
     let dir = get_data_dir(app)?;
     file_exists_path(&dir, filename)
 }

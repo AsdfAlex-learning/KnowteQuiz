@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::note::{NoteIndex, NoteIndexEntry, NoteTreeNode};
 use crate::services::{note_service, storage};
 use std::collections::HashMap;
@@ -7,13 +8,19 @@ use std::path::Path;
 const NOTE_INDEX_FILENAME: &str = "index.json";
 const NOTE_INDEX_VERSION: &str = "1.0.0";
 
-pub fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, String> {
+pub fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, AppError> {
     let root = Path::new(root_path);
     if !root.exists() {
-        return Err(format!("Directory does not exist: {}", root_path));
+        return Err(AppError::NotFound(format!(
+            "Directory does not exist: {}",
+            root_path
+        )));
     }
     if !root.is_dir() {
-        return Err(format!("Path is not a directory: {}", root_path));
+        return Err(AppError::InvalidInput(format!(
+            "Path is not a directory: {}",
+            root_path
+        )));
     }
     scan_recursive(root, root)
 }
@@ -21,7 +28,7 @@ pub fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, String> {
 pub fn scan_directory_with_index(
     root_path: &str,
     data_dir: &Path,
-) -> Result<Vec<NoteTreeNode>, String> {
+) -> Result<Vec<NoteTreeNode>, AppError> {
     let tree = scan_directory(root_path)?;
 
     // Try to read existing index for incremental scan
@@ -44,7 +51,7 @@ fn build_note_index(
     root_path: &str,
     tree: &[NoteTreeNode],
     old_index: Option<&NoteIndex>,
-) -> Result<NoteIndex, String> {
+) -> Result<NoteIndex, AppError> {
     // Build a lookup map from old index for quick access
     let old_entries: HashMap<&str, &NoteIndexEntry> = old_index
         .map(|idx| idx.notes.iter().map(|e| (e.path.as_str(), e)).collect())
@@ -66,7 +73,7 @@ fn collect_index_entries(
     nodes: &[NoteTreeNode],
     notes: &mut Vec<NoteIndexEntry>,
     old_entries: &HashMap<&str, &NoteIndexEntry>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     for node in nodes {
         if node.is_dir {
             collect_index_entries(&node.children, notes, old_entries)?;
@@ -75,7 +82,7 @@ fn collect_index_entries(
 
         let path = Path::new(&node.path);
         let metadata = fs::metadata(path)
-            .map_err(|e| format!("Failed to inspect note {}: {}", node.path, e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to inspect note {}: {}", node.path, e)))?;
         let modified_at = metadata
             .modified()
             .ok()
@@ -118,16 +125,16 @@ fn fallback_note_title(path: &Path) -> String {
         .to_string()
 }
 
-fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, String> {
+fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, AppError> {
     let mut entries: Vec<NoteTreeNode> = Vec::new();
     let mut dirs: Vec<NoteTreeNode> = Vec::new();
     let mut files: Vec<NoteTreeNode> = Vec::new();
 
     let read_dir = fs::read_dir(dir)
-        .map_err(|e| format!("Failed to read directory {}: {}", dir.display(), e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to read directory {}: {}", dir.display(), e)))?;
 
     for entry in read_dir {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let entry = entry.map_err(|e| AppError::Internal(format!("Failed to read entry: {}", e)))?;
         let path = entry.path();
         let name = path
             .file_name()
@@ -191,12 +198,13 @@ fn is_markdown_file(path: &Path) -> bool {
     )
 }
 
-pub fn read_file_content(path: &str) -> Result<String, String> {
+pub fn read_file_content(path: &str) -> Result<String, AppError> {
     let file_path = Path::new(path);
     if !file_path.exists() {
-        return Err(format!("File does not exist: {}", path));
+        return Err(AppError::NotFound(format!("File does not exist: {}", path)));
     }
-    fs::read_to_string(file_path).map_err(|e| format!("Failed to read file {}: {}", path, e))
+    fs::read_to_string(file_path)
+        .map_err(|e| AppError::Internal(format!("Failed to read file {}: {}", path, e)))
 }
 
 #[cfg(test)]

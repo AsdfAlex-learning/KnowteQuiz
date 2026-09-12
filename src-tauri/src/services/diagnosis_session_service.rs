@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::diagnosis::DiagnosisSession;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -13,7 +14,7 @@ pub fn load_from_cache_or_disk(
     sessions: &Mutex<HashMap<String, DiagnosisSession>>,
     data_dir: &Path,
     session_id: &str,
-) -> Result<DiagnosisSession, String> {
+) -> Result<DiagnosisSession, AppError> {
     if let Ok(mut lock) = sessions.lock() {
         if let Some(session) = lock.remove(session_id) {
             return Ok(session);
@@ -27,11 +28,11 @@ pub fn cache_session(
     sessions: &Mutex<HashMap<String, DiagnosisSession>>,
     data_dir: &Path,
     session: DiagnosisSession,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     save_session(data_dir, &session)?;
     let mut lock = sessions
         .lock()
-        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+        .map_err(|_| AppError::Internal("Failed to lock diagnosis sessions".to_string()))?;
     lock.insert(session.session_id.clone(), session);
     Ok(())
 }
@@ -41,11 +42,11 @@ pub fn discard_session(
     sessions: &Mutex<HashMap<String, DiagnosisSession>>,
     data_dir: &Path,
     session_id: &str,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     delete_session(data_dir, session_id)?;
     let mut lock = sessions
         .lock()
-        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+        .map_err(|_| AppError::Internal("Failed to lock diagnosis sessions".to_string()))?;
     lock.remove(session_id);
     Ok(())
 }
@@ -55,12 +56,12 @@ pub fn finish_session(
     sessions: &Mutex<HashMap<String, DiagnosisSession>>,
     data_dir: &Path,
     session: DiagnosisSession,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if session.final_report.is_some() {
         delete_session(data_dir, &session.session_id)?;
         let mut lock = sessions
             .lock()
-            .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+            .map_err(|_| AppError::Internal("Failed to lock diagnosis sessions".to_string()))?;
         lock.remove(&session.session_id);
         Ok(())
     } else {
@@ -70,29 +71,29 @@ pub fn finish_session(
 
 // ── Low-level persistence ────────────────────────────────────────────────────
 
-pub fn save_session(data_dir: &Path, session: &DiagnosisSession) -> Result<(), String> {
+pub fn save_session(data_dir: &Path, session: &DiagnosisSession) -> Result<(), AppError> {
     let sessions_dir = sessions_dir(data_dir)?;
     let filename = session_filename(&session.session_id)?;
     crate::services::storage::write_json_path(&sessions_dir, &filename, session)
 }
 
-pub fn load_session(data_dir: &Path, session_id: &str) -> Result<DiagnosisSession, String> {
+pub fn load_session(data_dir: &Path, session_id: &str) -> Result<DiagnosisSession, AppError> {
     let sessions_dir = sessions_dir(data_dir)?;
     let filename = session_filename(session_id)?;
     crate::services::storage::read_json_path(&sessions_dir, &filename)
 }
 
-pub fn delete_session(data_dir: &Path, session_id: &str) -> Result<(), String> {
+pub fn delete_session(data_dir: &Path, session_id: &str) -> Result<(), AppError> {
     let sessions_dir = sessions_dir(data_dir)?;
     let filename = session_filename(session_id)?;
     let path = sessions_dir.join(filename);
     remove_file_if_exists(&path, session_id)
 }
 
-fn remove_file_if_exists(path: &Path, session_id: &str) -> Result<(), String> {
+fn remove_file_if_exists(path: &Path, session_id: &str) -> Result<(), AppError> {
     if path.exists() {
         std::fs::remove_file(path)
-            .map_err(|err| format!("Failed to delete diagnosis session {}: {}", session_id, err))?;
+            .map_err(|err| AppError::Internal(format!("Failed to delete diagnosis session {}: {}", session_id, err)))?;
     }
     Ok(())
 }
@@ -103,7 +104,7 @@ pub struct SessionCleanupResult {
     pub remaining_count: u32,
 }
 
-pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<SessionCleanupResult, String> {
+pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<SessionCleanupResult, AppError> {
     let sessions_dir = sessions_dir(data_dir)?;
     let now = std::time::SystemTime::now();
     let cutoff = std::time::Duration::from_secs(max_age_days as u64 * 86400);
@@ -112,7 +113,7 @@ pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<Se
     let mut remaining = 0u32;
 
     let entries = std::fs::read_dir(&sessions_dir)
-        .map_err(|e| format!("Failed to read sessions directory: {}", e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to read sessions directory: {}", e)))?;
 
     for entry in entries {
         let Ok(entry) = entry else { continue };
@@ -148,16 +149,16 @@ pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<Se
     })
 }
 
-fn sessions_dir(data_dir: &Path) -> Result<PathBuf, String> {
+fn sessions_dir(data_dir: &Path) -> Result<PathBuf, AppError> {
     let dir = data_dir.join(SESSIONS_DIR);
     std::fs::create_dir_all(&dir)
-        .map_err(|err| format!("Failed to create diagnosis sessions dir: {}", err))?;
+        .map_err(|err| AppError::Internal(format!("Failed to create diagnosis sessions dir: {}", err)))?;
     Ok(dir)
 }
 
-fn session_filename(session_id: &str) -> Result<String, String> {
+fn session_filename(session_id: &str) -> Result<String, AppError> {
     if session_id.trim().is_empty() || session_id.contains('/') || session_id.contains('\\') {
-        return Err("Invalid diagnosis session id".to_string());
+        return Err(AppError::InvalidInput("Invalid diagnosis session id".to_string()));
     }
     Ok(format!("{}.json", session_id))
 }
@@ -233,7 +234,7 @@ mod tests {
         assert_eq!(result.remaining_count, 0);
 
         let error = load_session(&dir, "old-session").expect_err("deleted session should not load");
-        assert!(error.contains("File not found"));
+        assert!(error.to_string().contains("File not found"));
     }
 
     #[test]

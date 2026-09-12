@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
 use crate::services::{diagnosis_session_service, quiz_engine};
@@ -18,7 +19,7 @@ pub async fn generate_quiz(
     app: AppHandle,
     params: QuizStreamParams,
     on_event: Channel<quiz_engine::QuizStreamEvent>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
@@ -38,7 +39,7 @@ pub async fn submit_answer_advanced(
     user_reasoning: String,
     note_path: String,
     on_event: Channel<quiz_engine::DiagnosisStreamEvent>,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
@@ -86,7 +87,7 @@ pub async fn diagnose_follow_up(
     session_id: String,
     user_reply: String,
     on_event: Channel<quiz_engine::DiagnosisStreamEvent>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
@@ -97,7 +98,7 @@ pub async fn diagnose_follow_up(
 
     let mut session =
         with_sessions(&app, |s| diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id))
-            .map_err(|_| format!("Session {} not found", session_id))?;
+            .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
 
     if let Err(err) =
         quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await
@@ -114,11 +115,11 @@ pub async fn diagnose_follow_up(
 pub async fn generate_diagnosis_report(
     app: AppHandle,
     session_id: String,
-) -> Result<DiagnosisReport, String> {
+) -> Result<DiagnosisReport, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
     let mut session =
         with_sessions(&app, |s| diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id))
-            .map_err(|_| format!("Session {} not found", session_id))?;
+            .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
 
     if let Some(ref report) = session.final_report {
         with_sessions(&app, |s| diagnosis_session_service::finish_session(s, &data_dir, session.clone()))?;
@@ -132,7 +133,7 @@ pub async fn generate_diagnosis_report(
 }
 
 #[tauri::command]
-pub async fn cleanup_sessions(app: AppHandle) -> Result<SessionCleanupResult, String> {
+pub async fn cleanup_sessions(app: AppHandle) -> Result<SessionCleanupResult, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
     diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7)
 }

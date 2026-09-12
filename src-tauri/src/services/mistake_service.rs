@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
@@ -6,18 +7,18 @@ use std::path::Path;
 const MISTAKES_FILE: &str = "mistakes.jsonl";
 const MISTAKES_LEGACY_FILE: &str = "mistakes.json";
 
-pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, String> {
+pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, AppError> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
     Ok(filter_mistakes(&mistakes, filter))
 }
 
-pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), String> {
+pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), AppError> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
     let updated = upsert_mistake(mistakes, entry);
     write_mistakes_jsonl(data_dir, &updated)
 }
 
-pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), String> {
+pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), AppError> {
     let mut mistakes = read_mistakes_or_empty(data_dir)?;
     let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let mut found = false;
@@ -30,13 +31,13 @@ pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), St
         }
     }
     if !found {
-        return Err(format!("Mistake {} not found", mistake_id));
+        return Err(AppError::NotFound(format!("Mistake {} not found", mistake_id)));
     }
     write_mistakes_jsonl(data_dir, &mistakes)
 }
 
 /// Read mistakes from jsonl file, migrating from legacy json if needed.
-fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, String> {
+fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, AppError> {
     let jsonl_path = data_dir.join(MISTAKES_FILE);
     let json_path = data_dir.join(MISTAKES_LEGACY_FILE);
 
@@ -60,19 +61,21 @@ fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, String> 
 }
 
 /// Read mistakes from a jsonl file (one JSON object per line).
-fn read_jsonl(path: &Path) -> Result<Vec<MistakeEntry>, String> {
-    let file = fs::File::open(path).map_err(|e| format!("Failed to open {}: {}", path.display(), e))?;
+fn read_jsonl(path: &Path) -> Result<Vec<MistakeEntry>, AppError> {
+    let file = fs::File::open(path)
+        .map_err(|e| AppError::Internal(format!("Failed to open {}: {}", path.display(), e)))?;
     let reader = BufReader::new(file);
     let mut mistakes = Vec::new();
 
     for (line_num, line) in reader.lines().enumerate() {
-        let line = line.map_err(|e| format!("Failed to read line {}: {}", line_num + 1, e))?;
+        let line = line
+            .map_err(|e| AppError::Internal(format!("Failed to read line {}: {}", line_num + 1, e)))?;
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
         }
         let entry: MistakeEntry = serde_json::from_str(trimmed)
-            .map_err(|e| format!("Failed to parse line {}: {}", line_num + 1, e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to parse line {}: {}", line_num + 1, e)))?;
         mistakes.push(entry);
     }
 
@@ -80,7 +83,7 @@ fn read_jsonl(path: &Path) -> Result<Vec<MistakeEntry>, String> {
 }
 
 /// Write mistakes as jsonl (one JSON object per line) with atomic write.
-fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<(), String> {
+fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<(), AppError> {
     let target = data_dir.join(MISTAKES_FILE);
     let tmp = data_dir.join(format!("{}.tmp", MISTAKES_FILE));
 
@@ -88,7 +91,7 @@ fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<()
     let mut content = String::new();
     for entry in mistakes {
         let line = serde_json::to_string(entry)
-            .map_err(|e| format!("Failed to serialize mistake {}: {}", entry.id, e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to serialize mistake {}: {}", entry.id, e)))?;
         content.push_str(&line);
         content.push('\n');
     }
@@ -96,11 +99,11 @@ fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<()
     // Atomic write: tmp → sync → backup old → rename
     {
         let mut file = fs::File::create(&tmp)
-            .map_err(|e| format!("Failed to create {}: {}", tmp.display(), e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to create {}: {}", tmp.display(), e)))?;
         file.write_all(content.as_bytes())
-            .map_err(|e| format!("Failed to write {}: {}", tmp.display(), e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to write {}: {}", tmp.display(), e)))?;
         file.sync_all()
-            .map_err(|e| format!("Failed to sync {}: {}", tmp.display(), e))?;
+            .map_err(|e| AppError::Internal(format!("Failed to sync {}: {}", tmp.display(), e)))?;
     }
 
     // Backup existing
@@ -111,7 +114,7 @@ fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<()
 
     // Rename tmp → target
     fs::rename(&tmp, &target)
-        .map_err(|e| format!("Failed to rename {} to {}: {}", tmp.display(), target.display(), e))?;
+        .map_err(|e| AppError::Internal(format!("Failed to rename {} to {}: {}", tmp.display(), target.display(), e)))?;
 
     Ok(())
 }
@@ -330,7 +333,7 @@ mod tests {
         let error = load_mistakes(&dir, &MistakeFilter::default())
             .expect_err("corrupt mistakes file should not be treated as empty");
 
-        assert!(error.contains("Failed to parse"));
+        assert!(error.to_string().contains("Failed to parse"));
     }
 
     #[test]
@@ -529,7 +532,7 @@ mod tests {
         let result = mark_mistake_reviewed(&dir, "nonexistent");
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("not found"));
+        assert!(result.unwrap_err().to_string().contains("not found"));
     }
 
     #[test]
