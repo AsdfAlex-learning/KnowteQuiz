@@ -59,7 +59,7 @@ pub async fn generate_quiz_stream(
     params: &QuizStreamParams,
     tx: UnboundedSender<QuizStreamEvent>,
 ) -> Result<(), String> {
-    let note_content = crate::services::fs_service::read_file_content(&params.path)?;
+    let note_content = crate::services::fs_service::read_file_content(&params.path).await?;
     let truncated_content = note_content_for_prompt(&note_content);
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let llm = &settings.llm;
@@ -527,7 +527,7 @@ pub async fn submit_diagnosis_initial(
     note_path: &str,
     tx: UnboundedSender<DiagnosisStreamEvent>,
 ) -> Result<DiagnosisRound, String> {
-    let note_content = crate::services::fs_service::read_file_content(note_path)?;
+    let note_content = crate::services::fs_service::read_file_content(note_path).await?;
     let truncated_content = note_content_for_prompt(&note_content);
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
@@ -645,7 +645,7 @@ pub async fn generate_diagnosis_report(
     data_dir: &Path,
     session: &DiagnosisSession,
 ) -> Result<DiagnosisReport, String> {
-    let note_content = crate::services::fs_service::read_file_content(&session.note_path)?;
+    let note_content = crate::services::fs_service::read_file_content(&session.note_path).await?;
     let truncated_content = note_content_for_prompt(&note_content);
 
     let conversation_json = serde_json::to_string(&session.conversation)
