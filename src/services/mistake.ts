@@ -1,5 +1,6 @@
 import type { MistakeEntry, MistakeFilter } from '../types/mistake';
 import { invoke, isTauri } from './tauri';
+import { throwHttpError, parseJsonResponse } from './http';
 
 export async function saveMistake(entry: MistakeEntry): Promise<boolean> {
   if (isTauri()) {
@@ -22,20 +23,6 @@ export async function loadMistakes(filter?: MistakeFilter): Promise<MistakeEntry
   const res = await fetch(`/api/mistakes${query}`);
   if (!res.ok) await throwHttpError(res);
   return parseJsonResponse<MistakeEntry[]>(res);
-}
-
-async function throwHttpError(res: Response): Promise<never> {
-  const message = await res.text().catch(() => '');
-  throw new Error(message ? `HTTP ${res.status}: ${message}` : `HTTP ${res.status}`);
-}
-
-async function parseJsonResponse<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
-  }
 }
 
 function mistakeFilterQuery(filter?: MistakeFilter): string {

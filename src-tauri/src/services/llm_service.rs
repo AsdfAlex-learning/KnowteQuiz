@@ -1,6 +1,22 @@
 use crate::models::settings::LlmConfig;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
+use std::time::Duration;
+
+/// Global HTTP client with connection pooling and 60-second timeout.
+/// Reused across all LLM requests to avoid per-request client creation.
+static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .timeout(Duration::from_secs(60))
+        .pool_max_idle_per_host(10)
+        .build()
+        .expect("Failed to create HTTP client")
+});
+
+pub fn http_client() -> &'static reqwest::Client {
+    &HTTP_CLIENT
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ConnectionTestResult {
@@ -20,7 +36,7 @@ pub struct LlmCapabilities {
 
 pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
     let base = llm.base_url.trim_end_matches('/');
-    let client = reqwest::Client::new();
+    let client = http_client();
     let mut available_models: Vec<String> = vec![];
     let mut supports_streaming = false;
     let mut supports_response_format = false;
@@ -102,7 +118,6 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
 }
 
 pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
-    let client = reqwest::Client::new();
     let request_body = serde_json::json!({
         "model": llm.model,
         "messages": [
@@ -111,7 +126,7 @@ pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
         "max_tokens": 5,
     });
 
-    match client
+    match http_client()
         .post(format!(
             "{}/chat/completions",
             llm.base_url.trim_end_matches('/')

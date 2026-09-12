@@ -6,20 +6,7 @@ import type {
   Settings,
 } from '../types/settings';
 import { invoke, isTauri } from './tauri';
-
-async function throwHttpError(res: Response): Promise<never> {
-  const body = await res.text();
-  throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
-}
-
-async function parseJsonResponse<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
-  }
-}
+import { throwHttpError, parseJsonResponse } from './http';
 
 export async function getSettings(): Promise<Settings> {
   if (isTauri()) {

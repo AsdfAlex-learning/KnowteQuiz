@@ -108,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useMistakeStore } from '@/stores/mistakes';
 import { useNavigationStore } from '@/stores/navigation';
 import { useI18n } from '@/composables/useI18n';
@@ -172,5 +172,10 @@ function handleBlindSpotFilter() {
 
 onMounted(async () => {
   await mistakeStore.loadPage();
+});
+
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer);
+  if (blindSpotTimer) clearTimeout(blindSpotTimer);
 });
 </script>

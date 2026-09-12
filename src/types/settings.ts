@@ -45,7 +45,7 @@ export interface WorkspaceState {
 
 export interface ConnectionTestResult {
   ok: boolean;
-  kind: 'ok' | 'auth' | 'model' | 'server' | 'network' | 'unknown' | string;
+  kind: 'ok' | 'auth' | 'model' | 'server' | 'network' | 'unknown';
   message: string;
   status?: number | null;
 }

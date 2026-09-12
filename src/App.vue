@@ -69,9 +69,15 @@ const readerMain = ref<HTMLElement | null>(null);
 
 let pendingScrollSave: { path: string; top: number } | null = null;
 let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let activeDragCleanup: (() => void) | null = null;
 
 function startDragLeft(e: MouseEvent) {
   e.preventDefault();
+  // Prevent duplicate listener attachment from rapid clicks
+  if (activeDragCleanup) {
+    activeDragCleanup();
+    activeDragCleanup = null;
+  }
   const startX = e.clientX;
   const startWidth = layoutStore.explorerWidth;
   function onMove(e: MouseEvent) {
@@ -81,14 +87,24 @@ function startDragLeft(e: MouseEvent) {
   function onUp() {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
+    activeDragCleanup = null;
     layoutStore.persistLayout();
   }
+  activeDragCleanup = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
 
 function startDragRight(e: MouseEvent) {
   e.preventDefault();
+  // Prevent duplicate listener attachment from rapid clicks
+  if (activeDragCleanup) {
+    activeDragCleanup();
+    activeDragCleanup = null;
+  }
   const startX = e.clientX;
   const startWidth = layoutStore.readerWidth;
   function onMove(e: MouseEvent) {
@@ -98,8 +114,13 @@ function startDragRight(e: MouseEvent) {
   function onUp() {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
+    activeDragCleanup = null;
     layoutStore.persistLayout();
   }
+  activeDragCleanup = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
@@ -167,6 +188,10 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (activeDragCleanup) {
+    activeDragCleanup();
+    activeDragCleanup = null;
+  }
   document.removeEventListener('keydown', onKeyDown);
   void flushReaderScrollSave();
 });

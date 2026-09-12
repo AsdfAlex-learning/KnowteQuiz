@@ -9,20 +9,7 @@ import type {
 } from '../types';
 import { invoke, isTauri, webStream } from './tauri';
 import { createLocalId } from '../utils/id';
-
-async function throwHttpError(res: Response): Promise<never> {
-  const body = await res.text();
-  throw new Error(body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`);
-}
-
-async function parseJsonResponse<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new Error(text || `HTTP ${res.status}: Response is not valid JSON`);
-  }
-}
+import { throwHttpError, parseJsonResponse } from './http';
 
 export async function generateQuiz(
   params: QuizStreamParams,

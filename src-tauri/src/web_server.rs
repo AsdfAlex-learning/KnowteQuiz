@@ -336,10 +336,25 @@ async fn generate_quiz_handler(
     Json(params): Json<QuizStreamParams>,
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    let data_dir = state.data_dir.clone();
-    tokio::spawn(async move {
-        let _ = quiz_engine::generate_quiz_stream(&data_dir, &params, tx).await;
-    });
+
+    // Validate required fields before spawning
+    let mut validation_error: Option<String> = None;
+    if params.count == 0 || params.count > 100 {
+        validation_error = Some("count must be between 1 and 100".to_string());
+    } else if params.path.trim().is_empty() {
+        validation_error = Some("path must not be empty".to_string());
+    }
+
+    if let Some(err_msg) = validation_error {
+        let _ = tx.send(quiz_engine::QuizStreamEvent::Error {
+            message: err_msg,
+        });
+    } else {
+        let data_dir = state.data_dir.clone();
+        tokio::spawn(async move {
+            let _ = quiz_engine::generate_quiz_stream(&data_dir, &params, tx).await;
+        });
+    }
 
     let stream = UnboundedReceiverStream::new(rx).map(|event| {
         let data = serde_json::to_string(&event).unwrap_or_default();
@@ -353,71 +368,130 @@ async fn submit_diagnosis_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<serde_json::Value>,
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
-    let session_id = payload["session_id"].as_str().unwrap_or("").to_string();
-    let question = payload["question"].as_str().unwrap_or("").to_string();
-    let correct_answer = payload["correct_answer"].as_str().unwrap_or("").to_string();
-    let user_answer = payload["user_answer"].as_str().unwrap_or("").to_string();
-    let user_reasoning = payload["user_reasoning"].as_str().unwrap_or("").to_string();
-    let note_path = payload["note_path"].as_str().unwrap_or("").to_string();
-
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<quiz_engine::DiagnosisStreamEvent>();
-    let app_state = state.clone();
 
-    // Create session upfront so follow_up can find it
-    if let Ok(note_content) = fs_service::read_file_content(&note_path) {
-        let note_body = note_service::extract_body_content(&note_content);
-        if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
-            let session = DiagnosisSession {
-                session_id: session_id.clone(),
-                question: question.clone(),
-                user_answer: user_answer.clone(),
-                user_reasoning: user_reasoning.clone(),
-                note_path: note_path.clone(),
-                note_content: note_body.chars().take(8000).collect(),
-                conversation: vec![],
-                current_round: 0,
-                max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
-                final_report: None,
-            };
-            if let Err(err) = cache_diagnosis_session(&app_state, session) {
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
-            }
-        }
+    // Validate required fields
+    let session_id = payload["session_id"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
+    let question = payload["question"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
+    let correct_answer = payload["correct_answer"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
+    let user_answer = payload["user_answer"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
+    let user_reasoning = payload["user_reasoning"].as_str().unwrap_or("").to_string();
+    let note_path = payload["note_path"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
+
+    // Check all required fields and send errors if any are missing
+    let mut has_error = false;
+    if session_id.is_none() {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: session_id".to_string(),
+        });
+        has_error = true;
+    }
+    if question.is_none() {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: question".to_string(),
+        });
+        has_error = true;
+    }
+    if correct_answer.is_none() {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: correct_answer".to_string(),
+        });
+        has_error = true;
+    }
+    if user_answer.is_none() {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: user_answer".to_string(),
+        });
+        has_error = true;
+    }
+    if note_path.is_none() {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: note_path".to_string(),
+        });
+        has_error = true;
     }
 
-    tokio::spawn(async move {
-        match quiz_engine::submit_diagnosis_initial(
-            &app_state.data_dir,
-            &question,
-            &correct_answer,
-            &user_answer,
-            &user_reasoning,
-            &note_path,
-            tx.clone(),
-        )
-        .await
-        {
-            Ok(initial_round) => {
-                let updated_session =
-                    if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
-                        sessions_lock.get_mut(&session_id).map(|session| {
-                            session.conversation.push(initial_round);
-                            session.clone()
-                        })
-                    } else {
-                        None
-                    };
+    // Only spawn the task if all required fields are present
+    if !has_error {
+        let session_id = session_id.unwrap();
+        let question = question.unwrap();
+        let correct_answer = correct_answer.unwrap();
+        let user_answer = user_answer.unwrap();
+        let note_path = note_path.unwrap();
+        let app_state = state.clone();
 
-                if let Some(session) = updated_session {
-                    let _ = diagnosis_session_service::save_session(&app_state.data_dir, &session);
+        // Create session upfront so follow_up can find it
+        if let Ok(note_content) = fs_service::read_file_content(&note_path) {
+            let note_body = note_service::extract_body_content(&note_content);
+            if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
+                let session = DiagnosisSession {
+                    session_id: session_id.clone(),
+                    question: question.clone(),
+                    user_answer: user_answer.clone(),
+                    user_reasoning: user_reasoning.clone(),
+                    note_path: note_path.clone(),
+                    note_content: note_body.chars().take(8000).collect(),
+                    conversation: vec![],
+                    current_round: 0,
+                    max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
+                    final_report: None,
+                };
+                if let Err(err) = cache_diagnosis_session(&app_state, session) {
+                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
                 }
             }
-            Err(err) => {
-                let _ = discard_diagnosis_session(&app_state, &session_id);
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
-            }
         }
-    });
+
+        tokio::spawn(async move {
+            match quiz_engine::submit_diagnosis_initial(
+                &app_state.data_dir,
+                &question,
+                &correct_answer,
+                &user_answer,
+                &user_reasoning,
+                &note_path,
+                tx.clone(),
+            )
+            .await
+            {
+                Ok(initial_round) => {
+                    let updated_session =
+                        if let Ok(mut sessions_lock) = app_state.diagnosis_sessions.lock() {
+                            sessions_lock.get_mut(&session_id).map(|session| {
+                                session.conversation.push(initial_round);
+                                session.clone()
+                            })
+                        } else {
+                            None
+                        };
+
+                    if let Some(session) = updated_session {
+                        let _ =
+                            diagnosis_session_service::save_session(&app_state.data_dir, &session);
+                    }
+                }
+                Err(err) => {
+                    let _ = discard_diagnosis_session(&app_state, &session_id);
+                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                }
+            }
+        });
+    }
 
     let stream = UnboundedReceiverStream::new(rx).map(|event| {
         let data = serde_json::to_string(&event).unwrap_or_default();
@@ -432,37 +506,47 @@ async fn diagnose_follow_up_handler(
     AxumPath(session_id): AxumPath<String>,
     Json(payload): Json<serde_json::Value>,
 ) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
-    let user_reply = payload["user_reply"].as_str().unwrap_or("").to_string();
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<quiz_engine::DiagnosisStreamEvent>();
 
-    let app_state = state.clone();
+    let user_reply = payload["user_reply"]
+        .as_str()
+        .filter(|s| !s.trim().is_empty())
+        .map(|s| s.to_string());
 
-    tokio::spawn(async move {
-        let mut session = match load_diagnosis_session(&app_state, &session_id) {
-            Ok(session) => session,
-            Err(_) => {
-                send_missing_session_error(&tx, &session_id);
+    if let Some(user_reply) = user_reply {
+        let app_state = state.clone();
+
+        tokio::spawn(async move {
+            let mut session = match load_diagnosis_session(&app_state, &session_id) {
+                Ok(session) => session,
+                Err(_) => {
+                    send_missing_session_error(&tx, &session_id);
+                    return;
+                }
+            };
+
+            if let Err(err) = quiz_engine::diagnose_follow_up(
+                &app_state.data_dir,
+                &mut session,
+                &user_reply,
+                tx.clone(),
+            )
+            .await
+            {
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+                let _ = cache_diagnosis_session(&app_state, session);
                 return;
             }
-        };
 
-        if let Err(err) = quiz_engine::diagnose_follow_up(
-            &app_state.data_dir,
-            &mut session,
-            &user_reply,
-            tx.clone(),
-        )
-        .await
-        {
-            let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
-            let _ = cache_diagnosis_session(&app_state, session);
-            return;
-        }
-
-        if let Err(err) = finish_diagnosis_session(&app_state, session) {
-            let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
-        }
-    });
+            if let Err(err) = finish_diagnosis_session(&app_state, session) {
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err });
+            }
+        });
+    } else {
+        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+            message: "Missing required field: user_reply".to_string(),
+        });
+    }
 
     let stream = UnboundedReceiverStream::new(rx).map(|event| {
         let data = serde_json::to_string(&event).unwrap_or_default();

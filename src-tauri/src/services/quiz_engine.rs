@@ -1,8 +1,8 @@
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
 use crate::models::settings::LlmConfig;
+use crate::services::llm_service::http_client;
 use futures_util::StreamExt;
-use reqwest::Client;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
@@ -85,7 +85,7 @@ pub async fn generate_quiz_stream(
         phase: "requesting_model".to_string(),
     });
 
-    let client = Client::new();
+    let client = http_client();
     let request_body = serde_json::json!({
         "model": llm.model,
         "messages": [
@@ -669,7 +669,7 @@ pub async fn generate_diagnosis_report(
 }
 
 async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Result<String, String> {
-    let client = Client::new();
+    let client = http_client();
 
     let mut request_body = serde_json::json!({
         "model": settings.model,
