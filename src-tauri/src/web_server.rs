@@ -79,47 +79,22 @@ fn send_missing_session_error(
     });
 }
 
+// ── Session management (delegated to shared service) ────────────────────────
+
 fn load_diagnosis_session(state: &AppState, session_id: &str) -> Result<DiagnosisSession, String> {
-    if let Ok(mut sessions) = state.diagnosis_sessions.lock() {
-        if let Some(session) = sessions.remove(session_id) {
-            return Ok(session);
-        }
-    }
-    diagnosis_session_service::load_session(&state.data_dir, session_id)
+    diagnosis_session_service::load_from_cache_or_disk(&state.diagnosis_sessions, &state.data_dir, session_id)
 }
 
 fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
-    diagnosis_session_service::save_session(&state.data_dir, &session)?;
-    let mut sessions = state
-        .diagnosis_sessions
-        .lock()
-        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
-    sessions.insert(session.session_id.clone(), session);
-    Ok(())
+    diagnosis_session_service::cache_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
 fn discard_diagnosis_session(state: &AppState, session_id: &str) -> Result<(), String> {
-    diagnosis_session_service::delete_session(&state.data_dir, session_id)?;
-    let mut sessions = state
-        .diagnosis_sessions
-        .lock()
-        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
-    sessions.remove(session_id);
-    Ok(())
+    diagnosis_session_service::discard_session(&state.diagnosis_sessions, &state.data_dir, session_id)
 }
 
 fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), String> {
-    if session.final_report.is_some() {
-        diagnosis_session_service::delete_session(&state.data_dir, &session.session_id)?;
-        let mut sessions = state
-            .diagnosis_sessions
-            .lock()
-            .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
-        sessions.remove(&session.session_id);
-        Ok(())
-    } else {
-        cache_diagnosis_session(state, session)
-    }
+    diagnosis_session_service::finish_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
 pub async fn start(port: u16) {

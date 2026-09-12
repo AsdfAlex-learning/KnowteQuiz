@@ -1,7 +1,74 @@
 use crate::models::diagnosis::DiagnosisSession;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 const SESSIONS_DIR: &str = "sessions";
+
+// ── Shared session management ────────────────────────────────────────────────
+// Used by both Tauri commands and Axum routes to avoid duplication.
+
+/// Load a diagnosis session: first try the in-memory cache, then fall back to disk.
+pub fn load_from_cache_or_disk(
+    sessions: &Mutex<HashMap<String, DiagnosisSession>>,
+    data_dir: &Path,
+    session_id: &str,
+) -> Result<DiagnosisSession, String> {
+    if let Ok(mut lock) = sessions.lock() {
+        if let Some(session) = lock.remove(session_id) {
+            return Ok(session);
+        }
+    }
+    load_session(data_dir, session_id)
+}
+
+/// Cache a diagnosis session to disk and in-memory.
+pub fn cache_session(
+    sessions: &Mutex<HashMap<String, DiagnosisSession>>,
+    data_dir: &Path,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    save_session(data_dir, &session)?;
+    let mut lock = sessions
+        .lock()
+        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+    lock.insert(session.session_id.clone(), session);
+    Ok(())
+}
+
+/// Discard (delete) a diagnosis session from disk and in-memory.
+pub fn discard_session(
+    sessions: &Mutex<HashMap<String, DiagnosisSession>>,
+    data_dir: &Path,
+    session_id: &str,
+) -> Result<(), String> {
+    delete_session(data_dir, session_id)?;
+    let mut lock = sessions
+        .lock()
+        .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+    lock.remove(session_id);
+    Ok(())
+}
+
+/// Finish a diagnosis session: if it has a final report, delete it; otherwise cache it.
+pub fn finish_session(
+    sessions: &Mutex<HashMap<String, DiagnosisSession>>,
+    data_dir: &Path,
+    session: DiagnosisSession,
+) -> Result<(), String> {
+    if session.final_report.is_some() {
+        delete_session(data_dir, &session.session_id)?;
+        let mut lock = sessions
+            .lock()
+            .map_err(|_| "Failed to lock diagnosis sessions".to_string())?;
+        lock.remove(&session.session_id);
+        Ok(())
+    } else {
+        cache_session(sessions, data_dir, session)
+    }
+}
+
+// ── Low-level persistence ────────────────────────────────────────────────────
 
 pub fn save_session(data_dir: &Path, session: &DiagnosisSession) -> Result<(), String> {
     let sessions_dir = sessions_dir(data_dir)?;

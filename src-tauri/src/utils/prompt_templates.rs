@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 #[derive(Debug, Clone)]
 pub struct PromptTemplateSet {
@@ -365,7 +366,7 @@ fn strict_templates() -> PromptTemplateSet {
     }
 }
 
-pub fn get_template_registry() -> HashMap<String, PromptTemplateSet> {
+static TEMPLATE_REGISTRY: LazyLock<HashMap<String, PromptTemplateSet>> = LazyLock::new(|| {
     let mut registry = HashMap::new();
     let default_set = default_templates();
     registry.insert(default_set.name.clone(), default_set);
@@ -374,10 +375,14 @@ pub fn get_template_registry() -> HashMap<String, PromptTemplateSet> {
     let strict_set = strict_templates();
     registry.insert(strict_set.name.clone(), strict_set);
     registry
+});
+
+pub fn get_template_registry() -> &'static HashMap<String, PromptTemplateSet> {
+    &TEMPLATE_REGISTRY
 }
 
 pub fn get_template_set(name: &str) -> Option<PromptTemplateSet> {
-    get_template_registry().get(name).cloned()
+    TEMPLATE_REGISTRY.get(name).cloned()
 }
 
 pub fn get_default_template_set() -> PromptTemplateSet {

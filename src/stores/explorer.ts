@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import type { NoteTreeNode } from '../types/note';
 import { selectFolder, scanNotes } from '../services/note';
 import { getSettings, saveSettings } from '../services/settings';
+import { useRequestId } from '../composables/useRequestId';
 
 export const useExplorerStore = defineStore('explorer', () => {
   const rootPath = ref<string | null>(null);
@@ -12,7 +13,7 @@ export const useExplorerStore = defineStore('explorer', () => {
   const loading = ref(false);
   const isLoading = loading;
   const error = ref<string | null>(null);
-  let scanRequestId = 0;
+  const scanRequest = useRequestId();
 
   async function chooseFolder() {
     try {
@@ -26,12 +27,12 @@ export const useExplorerStore = defineStore('explorer', () => {
   }
 
   async function openRootPath(path: string) {
-    const requestId = nextScanRequest();
+    const requestId = scanRequest.next();
     loading.value = true;
     error.value = null;
     try {
       const nextTree = await scanNotes(path);
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       const rootChanged = rootPath.value !== path;
       rootPath.value = path;
       if (rootChanged) {
@@ -41,28 +42,32 @@ export const useExplorerStore = defineStore('explorer', () => {
       tree.value = nextTree;
       await persistWorkspace();
     } catch (e) {
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       error.value = String(e);
     } finally {
-      finishScan(requestId);
+      if (scanRequest.isLatest(requestId)) {
+        loading.value = false;
+      }
     }
   }
 
   async function loadTree() {
     if (!rootPath.value) return;
-    const requestId = nextScanRequest();
+    const requestId = scanRequest.next();
     const path = rootPath.value;
     loading.value = true;
     error.value = null;
     try {
       const nextTree = await scanNotes(path);
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       tree.value = nextTree;
     } catch (e) {
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       error.value = String(e);
     } finally {
-      finishScan(requestId);
+      if (scanRequest.isLatest(requestId)) {
+        loading.value = false;
+      }
     }
   }
 
@@ -86,25 +91,27 @@ export const useExplorerStore = defineStore('explorer', () => {
   }
 
   async function restoreWorkspace() {
-    const requestId = nextScanRequest();
+    const requestId = scanRequest.next();
     loading.value = true;
     error.value = null;
     try {
       const settings = await getSettings();
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       rootPath.value = settings.workspace.root_path ?? null;
       expandedDirs.value = new Set(settings.workspace.expanded_dirs ?? []);
       selectedPath.value = settings.workspace.selected_path ?? null;
       if (rootPath.value) {
         const nextTree = await scanNotes(rootPath.value);
-        if (!isLatestScan(requestId)) return;
+        if (!scanRequest.isLatest(requestId)) return;
         tree.value = nextTree;
       }
     } catch (e) {
-      if (!isLatestScan(requestId)) return;
+      if (!scanRequest.isLatest(requestId)) return;
       error.value = String(e);
     } finally {
-      finishScan(requestId);
+      if (scanRequest.isLatest(requestId)) {
+        loading.value = false;
+      }
     }
   }
 
@@ -122,21 +129,6 @@ export const useExplorerStore = defineStore('explorer', () => {
       });
     } catch (e) {
       error.value = String(e);
-    }
-  }
-
-  function nextScanRequest() {
-    scanRequestId += 1;
-    return scanRequestId;
-  }
-
-  function isLatestScan(requestId: number) {
-    return requestId === scanRequestId;
-  }
-
-  function finishScan(requestId: number) {
-    if (isLatestScan(requestId)) {
-      loading.value = false;
     }
   }
 
