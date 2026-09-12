@@ -174,7 +174,7 @@ async fn scan_notes_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ScanNotesQuery>,
 ) -> Result<Json<Vec<NoteTreeNode>>, AppError> {
-    let result = fs_service::scan_directory_with_index(&query.root_path, &state.data_dir)?;
+    let result = fs_service::scan_directory_with_index(&query.root_path, &state.data_dir).await?;
     Ok(Json(result))
 }
 
@@ -192,7 +192,7 @@ async fn read_note_handler(
     State(_state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteQuery>,
 ) -> Result<Json<NoteContent>, AppError> {
-    let content = fs_service::read_file_content(&query.path)?;
+    let content = fs_service::read_file_content(&query.path).await?;
     let result = note_service::extract_metadata(&content, &query.path);
     Ok(Json(result))
 }
@@ -412,7 +412,7 @@ async fn submit_diagnosis_handler(
         let app_state = state.clone();
 
         // Create session upfront so follow_up can find it
-        if let Ok(note_content) = fs_service::read_file_content(&note_path) {
+        if let Ok(note_content) = fs_service::read_file_content(&note_path).await {
             let note_body = note_service::extract_body_content(&note_content);
             if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
                 let session = DiagnosisSession {

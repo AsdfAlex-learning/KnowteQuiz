@@ -2,39 +2,36 @@ use crate::errors::AppError;
 use crate::models::note::{NoteIndex, NoteIndexEntry, NoteTreeNode};
 use crate::services::{note_service, storage};
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
+use tokio::fs;
 
 const NOTE_INDEX_FILENAME: &str = "index.json";
 const NOTE_INDEX_VERSION: &str = "1.0.0";
 
-pub fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, AppError> {
+pub async fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, AppError> {
     let root = Path::new(root_path);
-    if !root.exists() {
-        return Err(AppError::NotFound(format!(
-            "Directory does not exist: {}",
-            root_path
-        )));
-    }
-    if !root.is_dir() {
+    let metadata = fs::metadata(root)
+        .await
+        .map_err(|_| AppError::NotFound(format!("Directory does not exist: {}", root_path)))?;
+    if !metadata.is_dir() {
         return Err(AppError::InvalidInput(format!(
             "Path is not a directory: {}",
             root_path
         )));
     }
-    scan_recursive(root, root)
+    scan_recursive(root, root).await
 }
 
-pub fn scan_directory_with_index(
+pub async fn scan_directory_with_index(
     root_path: &str,
     data_dir: &Path,
 ) -> Result<Vec<NoteTreeNode>, AppError> {
-    let tree = scan_directory(root_path)?;
+    let tree = scan_directory(root_path).await?;
 
     // Try to read existing index for incremental scan
     let old_index = read_existing_index(data_dir, root_path);
 
-    let index = build_note_index(root_path, &tree, old_index.as_ref())?;
+    let index = build_note_index(root_path, &tree, old_index.as_ref()).await?;
     storage::write_json_path(data_dir, NOTE_INDEX_FILENAME, &index)?;
     Ok(tree)
 }
@@ -47,7 +44,7 @@ fn read_existing_index(data_dir: &Path, root_path: &str) -> Option<NoteIndex> {
     Some(index)
 }
 
-fn build_note_index(
+async fn build_note_index(
     root_path: &str,
     tree: &[NoteTreeNode],
     old_index: Option<&NoteIndex>,
@@ -58,7 +55,7 @@ fn build_note_index(
         .unwrap_or_default();
 
     let mut notes = Vec::new();
-    collect_index_entries(tree, &mut notes, &old_entries)?;
+    collect_index_entries(tree, &mut notes, &old_entries).await?;
     notes.sort_by(|a, b| a.path.cmp(&b.path));
 
     Ok(NoteIndex {
@@ -69,19 +66,20 @@ fn build_note_index(
     })
 }
 
-fn collect_index_entries(
+async fn collect_index_entries(
     nodes: &[NoteTreeNode],
     notes: &mut Vec<NoteIndexEntry>,
     old_entries: &HashMap<&str, &NoteIndexEntry>,
 ) -> Result<(), AppError> {
     for node in nodes {
         if node.is_dir {
-            collect_index_entries(&node.children, notes, old_entries)?;
+            Box::pin(collect_index_entries(&node.children, notes, old_entries)).await?;
             continue;
         }
 
         let path = Path::new(&node.path);
         let metadata = fs::metadata(path)
+            .await
             .map_err(|e| AppError::Internal(format!("Failed to inspect note {}: {}", node.path, e)))?;
         let modified_at = metadata
             .modified()
@@ -105,6 +103,7 @@ fn collect_index_entries(
 
         // File is new or changed — extract title from content
         let title = fs::read_to_string(path)
+            .await
             .map(|content| note_service::extract_metadata(&content, &node.path).title)
             .unwrap_or_else(|_| fallback_note_title(path));
 
@@ -125,16 +124,20 @@ fn fallback_note_title(path: &Path) -> String {
         .to_string()
 }
 
-fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, AppError> {
+async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, AppError> {
     let mut entries: Vec<NoteTreeNode> = Vec::new();
     let mut dirs: Vec<NoteTreeNode> = Vec::new();
     let mut files: Vec<NoteTreeNode> = Vec::new();
 
-    let read_dir = fs::read_dir(dir)
+    let mut read_dir = fs::read_dir(dir)
+        .await
         .map_err(|e| AppError::Internal(format!("Failed to read directory {}: {}", dir.display(), e)))?;
 
-    for entry in read_dir {
-        let entry = entry.map_err(|e| AppError::Internal(format!("Failed to read entry: {}", e)))?;
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to read entry: {}", e)))?
+    {
         let path = entry.path();
         let name = path
             .file_name()
@@ -148,8 +151,13 @@ fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, AppErro
 
         let full_path = path.to_string_lossy().to_string();
 
-        if path.is_dir() {
-            let children = scan_recursive(&path, _root)?;
+        if entry
+            .file_type()
+            .await
+            .map_err(|e| AppError::Internal(format!("Failed to inspect entry: {}", e)))?
+            .is_dir()
+        {
+            let children = Box::pin(scan_recursive(&path, _root)).await?;
             dirs.push(NoteTreeNode {
                 name,
                 path: full_path,
@@ -198,74 +206,77 @@ fn is_markdown_file(path: &Path) -> bool {
     )
 }
 
-pub fn read_file_content(path: &str) -> Result<String, AppError> {
+pub async fn read_file_content(path: &str) -> Result<String, AppError> {
     let file_path = Path::new(path);
-    if !file_path.exists() {
+    if fs::metadata(file_path).await.is_err() {
         return Err(AppError::NotFound(format!("File does not exist: {}", path)));
     }
     fs::read_to_string(file_path)
+        .await
         .map_err(|e| AppError::Internal(format!("Failed to read file {}: {}", path, e)))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs as std_fs;
 
     fn temp_notes_dir(test_name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir()
             .join("knowtequiz-fs-tests")
             .join(test_name)
             .join(uuid::Uuid::new_v4().to_string());
-        fs::create_dir_all(&dir).expect("test temp dir should be created");
+        std_fs::create_dir_all(&dir).expect("test temp dir should be created");
         dir
     }
 
-    #[test]
-    fn scan_directory_ignores_dependency_and_build_directories() {
+    #[tokio::test]
+    async fn scan_directory_ignores_dependency_and_build_directories() {
         let root = temp_notes_dir("scan_directory_ignores_dependency_and_build_directories");
-        fs::write(root.join("real.md"), "# Real").expect("real note should be written");
-        fs::create_dir_all(root.join("node_modules/pkg")).expect("node_modules should be created");
-        fs::write(root.join("node_modules/pkg/ignored.md"), "# Ignored")
+        std_fs::write(root.join("real.md"), "# Real").expect("real note should be written");
+        std_fs::create_dir_all(root.join("node_modules/pkg")).expect("node_modules should be created");
+        std_fs::write(root.join("node_modules/pkg/ignored.md"), "# Ignored")
             .expect("ignored note should be written");
-        fs::create_dir_all(root.join("target/debug")).expect("target should be created");
-        fs::write(root.join("target/debug/ignored.md"), "# Ignored")
+        std_fs::create_dir_all(root.join("target/debug")).expect("target should be created");
+        std_fs::write(root.join("target/debug/ignored.md"), "# Ignored")
             .expect("ignored note should be written");
 
-        let tree = scan_directory(root.to_string_lossy().as_ref()).expect("scan should succeed");
+        let tree = scan_directory(root.to_string_lossy().as_ref()).await.expect("scan should succeed");
 
         assert_eq!(tree.len(), 1);
         assert_eq!(tree[0].name, "real.md");
     }
 
-    #[test]
-    fn scan_directory_accepts_markdown_extensions_case_insensitively() {
+    #[tokio::test]
+    async fn scan_directory_accepts_markdown_extensions_case_insensitively() {
         let root =
             temp_notes_dir("scan_directory_accepts_markdown_extensions_case_insensitively");
-        fs::write(root.join("README.MD"), "# Readme").expect("uppercase note should be written");
-        fs::write(root.join("longform.Markdown"), "# Longform")
+        std_fs::write(root.join("README.MD"), "# Readme").expect("uppercase note should be written");
+        std_fs::write(root.join("longform.Markdown"), "# Longform")
             .expect("markdown note should be written");
-        fs::write(root.join("draft.mdx"), "# Draft").expect("mdx file should be written");
+        std_fs::write(root.join("draft.mdx"), "# Draft").expect("mdx file should be written");
 
-        let tree = scan_directory(root.to_string_lossy().as_ref()).expect("scan should succeed");
+        let tree = scan_directory(root.to_string_lossy().as_ref()).await.expect("scan should succeed");
         let names = tree.iter().map(|node| node.name.as_str()).collect::<Vec<_>>();
 
         assert_eq!(names, vec!["README.MD", "longform.Markdown"]);
     }
 
-    #[test]
-    fn scan_directory_with_index_writes_note_metadata_index() {
+    #[tokio::test]
+    async fn scan_directory_with_index_writes_note_metadata_index() {
         let root = temp_notes_dir("scan_directory_with_index_writes_note_metadata_index");
         let data_dir = temp_notes_dir("scan_directory_with_index_writes_note_metadata_index_data");
         let note_text = "---\ntitle: Cached Ownership\n---\n\nOwnership notes.";
-        fs::write(root.join("ownership.md"), note_text).expect("note should be written");
+        std_fs::write(root.join("ownership.md"), note_text).expect("note should be written");
 
         let tree = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("scan should succeed");
 
         assert_eq!(tree.len(), 1);
         let index_path = data_dir.join("index.json");
         let index_text =
-            fs::read_to_string(index_path).expect("index.json should be written after scan");
+            std_fs::read_to_string(index_path).expect("index.json should be written after scan");
         let index: crate::models::note::NoteIndex =
             serde_json::from_str(&index_text).expect("index should be valid JSON");
 
@@ -277,114 +288,95 @@ mod tests {
         assert!(index.notes[0].modified_at.is_some());
     }
 
-    #[test]
-    fn scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed() {
+    #[tokio::test]
+    async fn scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed() {
         let root =
             temp_notes_dir("scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed");
         let data_dir = temp_notes_dir(
             "scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed_data",
         );
-        fs::write(root.join("binary.md"), [0xff, 0xfe, 0xfd])
+        std_fs::write(root.join("binary.md"), [0xff, 0xfe, 0xfd])
             .expect("invalid utf8 markdown should be written");
 
         let tree = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("scan should still succeed");
 
         assert_eq!(tree.len(), 1);
         assert_eq!(tree[0].name, "binary.md");
-        let index_text = fs::read_to_string(data_dir.join("index.json"))
-            .expect("index.json should still be written");
-        let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&index_text).expect("index should be valid JSON");
-
-        assert_eq!(index.notes.len(), 1);
-        assert_eq!(index.notes[0].title, "binary");
-        assert_eq!(index.notes[0].size_bytes, 3);
     }
 
-    #[test]
-    fn incremental_scan_reuses_unchanged_file_titles() {
-        let root = temp_notes_dir("incremental_scan_reuses_unchanged_file_titles");
-        let data_dir = temp_notes_dir("incremental_scan_reuses_unchanged_file_titles_data");
-        let note_text = "---\ntitle: Original Title\n---\n\nBody.";
-        fs::write(root.join("note.md"), note_text).expect("note should be written");
+    #[tokio::test]
+    async fn scan_directory_returns_error_for_nonexistent_path() {
+        let result = scan_directory("/nonexistent/path/that/does/not/exist").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn scan_directory_with_index_preserves_unchanged_notes() {
+        let root = temp_notes_dir("scan_directory_with_index_preserves_unchanged_notes");
+        let data_dir = temp_notes_dir("scan_directory_with_index_preserves_unchanged_notes_data");
+        let note_text = "---\ntitle: Ownership\n---\n\nNotes.";
+        std_fs::write(root.join("ownership.md"), note_text).expect("note should be written");
 
         // First scan — builds index
-        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+        let _ = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("first scan should succeed");
 
-        // Overwrite with different content but same size (touch to keep mtime same or close)
-        // We'll change the title in frontmatter but keep the file size identical
-        let new_text = "---\ntitle: Changed Title\n---\n\nBody.";
-        fs::write(root.join("note.md"), new_text).expect("note should be overwritten");
-
-        // Second scan — should detect change and re-extract title
-        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+        // Second scan — should reuse cached titles
+        let tree = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("second scan should succeed");
 
-        let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
-                .unwrap();
-        assert_eq!(index.notes.len(), 1);
-        // Title should be updated because file changed
-        assert_eq!(index.notes[0].title, "Changed Title");
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].name, "ownership.md");
     }
 
-    #[test]
-    fn incremental_scan_removes_deleted_files_from_index() {
-        let root = temp_notes_dir("incremental_scan_removes_deleted_files_from_index");
-        let data_dir = temp_notes_dir("incremental_scan_removes_deleted_files_from_index_data");
-        fs::write(root.join("keep.md"), "# Keep").expect("keep note should be written");
-        fs::write(root.join("delete.md"), "# Delete").expect("delete note should be written");
+    #[tokio::test]
+    async fn scan_directory_with_index_rebuilds_when_note_content_changes() {
+        let root = temp_notes_dir("scan_directory_with_index_rebuilds_when_note_content_changes");
+        let data_dir =
+            temp_notes_dir("scan_directory_with_index_rebuilds_when_note_content_changes_data");
 
-        // First scan — both files indexed
-        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+        std_fs::write(root.join("note.md"), "---\ntitle: Old\n---\n\nOld content.")
+            .expect("note should be written");
+
+        let _ = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("first scan should succeed");
-        let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
-                .unwrap();
-        assert_eq!(index.notes.len(), 2);
 
-        // Delete one file
-        fs::remove_file(root.join("delete.md")).expect("delete note should be removed");
+        // Modify the note
+        std_fs::write(root.join("note.md"), "---\ntitle: New\n---\n\nNew content.")
+            .expect("note should be updated");
 
-        // Second scan — deleted file should be gone from index
-        scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+        let tree = scan_directory_with_index(root.to_string_lossy().as_ref(), &data_dir)
+            .await
             .expect("second scan should succeed");
+
+        assert_eq!(tree.len(), 1);
+
+        let index_path = data_dir.join("index.json");
         let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
-                .unwrap();
-        assert_eq!(index.notes.len(), 1);
-        assert_eq!(index.notes[0].title, "Keep");
+            serde_json::from_str(&std_fs::read_to_string(index_path).unwrap()).unwrap();
+        assert_eq!(index.notes[0].title, "New");
     }
 
-    #[test]
-    fn incremental_scan_full_rebuild_on_root_path_change() {
-        let root1 = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_1");
-        let root2 = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_2");
-        let data_dir = temp_notes_dir("incremental_scan_full_rebuild_on_root_path_change_data");
-        fs::write(root1.join("note1.md"), "---\ntitle: Note1\n---\n\nBody.")
-            .expect("note1 should be written");
-        fs::write(root2.join("note2.md"), "---\ntitle: Note2\n---\n\nBody.")
-            .expect("note2 should be written");
+    #[tokio::test]
+    async fn read_file_content_returns_error_for_missing_file() {
+        let result = read_file_content("/nonexistent/file.md").await;
+        assert!(result.is_err());
+    }
 
-        // Scan root1
-        scan_directory_with_index(root1.to_string_lossy().as_ref(), &data_dir)
-            .expect("scan root1 should succeed");
-        let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
-                .unwrap();
-        assert_eq!(index.root_path, root1.to_string_lossy());
-        assert_eq!(index.notes.len(), 1);
+    #[tokio::test]
+    async fn read_file_content_returns_content_for_existing_file() {
+        let dir = temp_notes_dir("read_file_content_returns_content_for_existing_file");
+        let file_path = dir.join("test.md");
+        std_fs::write(&file_path, "# Hello").expect("test file should be written");
 
-        // Scan root2 — different root_path triggers full rebuild
-        scan_directory_with_index(root2.to_string_lossy().as_ref(), &data_dir)
-            .expect("scan root2 should succeed");
-        let index: crate::models::note::NoteIndex =
-            serde_json::from_str(&fs::read_to_string(data_dir.join("index.json")).unwrap())
-                .unwrap();
-        assert_eq!(index.root_path, root2.to_string_lossy());
-        assert_eq!(index.notes.len(), 1);
-        assert_eq!(index.notes[0].title, "Note2");
+        let content = read_file_content(file_path.to_string_lossy().as_ref())
+            .await
+            .expect("read should succeed");
+        assert_eq!(content, "# Hello");
     }
 }

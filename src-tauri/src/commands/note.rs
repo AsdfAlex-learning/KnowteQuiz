@@ -15,11 +15,11 @@ pub async fn select_folder(app: AppHandle) -> Result<Option<String>, AppError> {
 #[tauri::command]
 pub async fn scan_notes(app: AppHandle, root_path: String) -> Result<Vec<NoteTreeNode>, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
-    fs_service::scan_directory_with_index(&root_path, &data_dir)
+    fs_service::scan_directory_with_index(&root_path, &data_dir).await
 }
 
 #[tauri::command]
 pub async fn read_note(path: String) -> Result<NoteContent, AppError> {
-    let content = fs_service::read_file_content(&path)?;
+    let content = fs_service::read_file_content(&path).await?;
     Ok(note_service::extract_metadata(&content, &path))
 }
