@@ -43,7 +43,7 @@
       <input
         v-model="reply"
         class="flex-1 bg-[var(--bg-base)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[#585b70] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
-        placeholder="Type your reply..."
+        :placeholder="t('quiz.reply_placeholder')"
         @keydown.enter="handleSubmit"
       />
       <button
@@ -51,7 +51,7 @@
         :disabled="!reply.trim() || submitting"
         @click="handleSubmit"
       >
-        {{ submitting ? '...' : t('quiz.submit') }}
+        {{ submitting ? t('common.loading') : t('quiz.submit') }}
       </button>
     </div>
 
@@ -61,7 +61,7 @@
       class="w-full py-1.5 rounded-md text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
       @click="$emit('endDiagnosis')"
     >
-      End Diagnosis & View Report
+      {{ t('quiz.end_diagnosis_and_view_report') }}
     </button>
   </div>
 </template>

@@ -21,7 +21,7 @@
     <!-- Settings button -->
     <button
       class="px-3 py-2.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-      title="Settings"
+      :title="t('panel.settings')"
       @click="$emit('openSettings')"
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -35,6 +35,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useI18n } from '@/composables/useI18n';
+
 interface TabDef {
   key: 'quiz' | 'mistakes';
   label: string;
@@ -49,8 +52,10 @@ defineEmits<{
   openSettings: [];
 }>();
 
-const tabs: TabDef[] = [
-  { key: 'quiz', label: 'Quiz' },
-  { key: 'mistakes', label: 'Mistakes' },
-];
+const { t } = useI18n();
+
+const tabs = computed<TabDef[]>(() => [
+  { key: 'quiz', label: t('panel.quiz') },
+  { key: 'mistakes', label: t('panel.mistakes') },
+]);
 </script>

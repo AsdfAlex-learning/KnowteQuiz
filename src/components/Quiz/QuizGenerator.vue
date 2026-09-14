@@ -28,7 +28,7 @@
     <!-- Count slider -->
     <label class="block">
       <span class="text-xs text-[var(--text-muted)] mb-1 flex justify-between">
-        Number of Questions
+        {{ t('settings_page.question_count') }}
         <span class="text-[var(--text-primary)]">{{ count }}</span>
       </span>
       <input
@@ -43,28 +43,28 @@
 
     <!-- Difficulty -->
     <label class="block">
-      <span class="text-xs text-[var(--text-muted)] mb-1 block">Difficulty</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.difficulty') }}</span>
       <select
         v-model="difficulty"
         class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
       >
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
+        <option value="easy">{{ t('settings_page.easy') }}</option>
+        <option value="medium">{{ t('settings_page.medium') }}</option>
+        <option value="hard">{{ t('settings_page.hard') }}</option>
       </select>
     </label>
 
     <!-- Language -->
     <label class="block">
-      <span class="text-xs text-[var(--text-muted)] mb-1 block">Language</span>
+      <span class="text-xs text-[var(--text-muted)] mb-1 block">{{ t('settings_page.language') }}</span>
       <select
         v-model="lang"
         class="w-full bg-[var(--bg-base)] border border-[var(--border-default)] rounded-md px-3 py-1.5 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--border-focus)] transition-colors"
       >
-        <option value="en">English</option>
-        <option value="zh">中文</option>
-        <option value="ja">日本語</option>
-        <option value="ko">한국어</option>
+        <option value="en">{{ t('languages.en') }}</option>
+        <option value="zh">{{ t('languages.zh') }}</option>
+        <option value="ja">{{ t('languages.ja') }}</option>
+        <option value="ko">{{ t('languages.ko') }}</option>
       </select>
     </label>
 

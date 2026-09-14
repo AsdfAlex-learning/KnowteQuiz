@@ -39,15 +39,23 @@
     "phase_requesting": "请求模型中...",
     "phase_parsing": "解析响应中...",
     "no_questions": "未生成题目",
-    "reasoning_placeholder": "请写出你的推理过程...",
+    "reasoning_placeholder": "解释你的推理过程。你为什么选择这个答案？使用了什么逻辑或公式？",
     "submit_diagnosis": "提交并诊断",
-    "diagnosis": "诊断中...",
+    "diagnosis": "诊断",
     "end_diagnosis": "结束诊断",
+    "end_diagnosis_and_view_report": "结束诊断并查看报告",
     "diagnosis_report": "诊断报告",
     "blind_spots": "知识盲区",
     "overall_level": "整体水平",
     "next_steps": "建议下一步",
-    "save_to_mistakes": "保存到错题本"
+    "next_steps_label": "下一步",
+    "save_to_mistakes": "保存到错题本",
+    "loaded_count": "{count} 已加载",
+    "answer_placeholder": "输入你的答案...",
+    "your_reasoning": "你的推理",
+    "not_sure": "不确定",
+    "not_sure_hint": "我对这个答案不确定。",
+    "reply_placeholder": "输入你的回复..."
   },
   "settings_page": {
     "title": "设置",
@@ -62,7 +70,9 @@
     "temperature": "温度",
     "max_tokens": "最大 Token 数",
     "test_connection": "测试连接",
+    "testing": "测试中...",
     "probe_llm": "探测 LLM 能力",
+    "probing": "探测中...",
     "connected": "已连接",
     "disconnected": "未连接",
     "quiz_defaults": "答题默认设置",
@@ -81,6 +91,7 @@
     "confirm_restore": "恢复将覆盖当前设置和错题。恢复前会自动创建快照。确定继续？",
     "open_data_dir": "打开文件夹",
     "cleanup_sessions": "清理旧会话",
+    "cleaning_up": "清理中...",
     "data_files": "数据文件",
     "refresh": "刷新",
     "single_choice": "单选",
@@ -90,7 +101,15 @@
     "advanced": "高级",
     "easy": "简单",
     "medium": "中等",
-    "hard": "困难"
+    "hard": "困难",
+    "removed_sessions": "已删除 {count} 个旧会话",
+    "kept_sessions": "保留了 {count} 个会话",
+    "backed_up_files": "已备份 {count} 个文件",
+    "restored_files": "已恢复 {count} 个文件",
+    "streaming": "流式传输",
+    "json_object": "json_object",
+    "available_models": "可用",
+    "settings_error": "设置错误"
   },
   "error_book": {
     "title": "错题本",
@@ -98,6 +117,10 @@
     "filter_mode": "按模式",
     "filter_note": "按笔记",
     "filter_blind_spot": "按盲区",
+    "filter_blind_spot_placeholder": "按盲点标签筛选...",
+    "filter_all": "全部",
+    "filter_basic": "基础",
+    "filter_advanced": "高级",
     "export_json": "导出 JSON",
     "export_markdown": "导出 Markdown",
     "mark_reviewed": "标记已复习",
@@ -106,8 +129,15 @@
     "open_note": "打开笔记",
     "your_answer": "你的答案",
     "correct_answer": "正确答案",
+    "correct": "正确答案：",
     "explanation": "解析",
-    "reasoning": "推理过程"
+    "reasoning": "推理过程",
+    "items_count": "{count} 条",
+    "load_failed": "加载错题失败",
+    "empty_hint": "答错的题目会显示在这里",
+    "load_more": "加载更多",
+    "back_to_list": "返回列表",
+    "last_reviewed": "上次：{date}"
   },
   "status": {
     "llm_connected": "LLM 已连接",
@@ -121,6 +151,13 @@
     "retry": "重试",
     "loading": "加载中...",
     "error": "错误",
-    "success": "成功"
+    "success": "成功",
+    "missing": "缺失"
+  },
+  "languages": {
+    "en": "英语",
+    "zh": "中文",
+    "ja": "日语",
+    "ko": "韩语"
   }
 }

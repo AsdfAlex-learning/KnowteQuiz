@@ -39,15 +39,23 @@
     "phase_requesting": "Requesting model...",
     "phase_parsing": "Parsing response...",
     "no_questions": "No questions generated",
-    "reasoning_placeholder": "Write your reasoning...",
+    "reasoning_placeholder": "Explain your reasoning. Why did you choose this answer? What logic or formula did you use?",
     "submit_diagnosis": "Submit & Diagnose",
-    "diagnosis": "Diagnosing...",
+    "diagnosis": "Diagnosis",
     "end_diagnosis": "End Diagnosis",
+    "end_diagnosis_and_view_report": "End Diagnosis & View Report",
     "diagnosis_report": "Diagnosis Report",
     "blind_spots": "Blind Spots",
     "overall_level": "Overall Level",
     "next_steps": "Suggested Next Steps",
-    "save_to_mistakes": "Save to Mistakes"
+    "next_steps_label": "Next Steps",
+    "save_to_mistakes": "Save to Mistakes",
+    "loaded_count": "{count} loaded",
+    "answer_placeholder": "Type your answer...",
+    "your_reasoning": "Your Reasoning",
+    "not_sure": "Not sure",
+    "not_sure_hint": "I am not sure about this answer.",
+    "reply_placeholder": "Type your reply..."
   },
   "settings_page": {
     "title": "Settings",
@@ -62,7 +70,9 @@
     "temperature": "Temperature",
     "max_tokens": "Max Tokens",
     "test_connection": "Test Connection",
+    "testing": "Testing...",
     "probe_llm": "Probe LLM Capabilities",
+    "probing": "Probing...",
     "connected": "Connected",
     "disconnected": "Disconnected",
     "quiz_defaults": "Quiz Defaults",
@@ -81,6 +91,7 @@
     "confirm_restore": "Restore will overwrite current settings and mistakes. A pre-restore snapshot is taken automatically. Continue?",
     "open_data_dir": "Open Folder",
     "cleanup_sessions": "Clean Up Old Sessions",
+    "cleaning_up": "Cleaning up...",
     "data_files": "Data Files",
     "refresh": "Refresh",
     "single_choice": "Single Choice",
@@ -90,7 +101,15 @@
     "advanced": "Advanced",
     "easy": "Easy",
     "medium": "Medium",
-    "hard": "Hard"
+    "hard": "Hard",
+    "removed_sessions": "Removed {count} old session(s)",
+    "kept_sessions": "{count} session(s) kept",
+    "backed_up_files": "Backed up {count} files",
+    "restored_files": "Restored {count} files",
+    "streaming": "Streaming",
+    "json_object": "json_object",
+    "available_models": "Available",
+    "settings_error": "Settings error"
   },
   "error_book": {
     "title": "Error Book",
@@ -98,6 +117,10 @@
     "filter_mode": "Filter by mode",
     "filter_note": "Filter by note",
     "filter_blind_spot": "Filter by blind spot",
+    "filter_blind_spot_placeholder": "Filter blind spot tag...",
+    "filter_all": "All",
+    "filter_basic": "Basic",
+    "filter_advanced": "Advanced",
     "export_json": "Export JSON",
     "export_markdown": "Export Markdown",
     "mark_reviewed": "Mark Reviewed",
@@ -106,8 +129,15 @@
     "open_note": "Open Note",
     "your_answer": "Your Answer",
     "correct_answer": "Correct Answer",
+    "correct": "Correct:",
     "explanation": "Explanation",
-    "reasoning": "Reasoning"
+    "reasoning": "Reasoning",
+    "items_count": "{count} items",
+    "load_failed": "Failed to load mistakes",
+    "empty_hint": "Wrong answers will appear here",
+    "load_more": "Load more",
+    "back_to_list": "Back to list",
+    "last_reviewed": "Last: {date}"
   },
   "status": {
     "llm_connected": "LLM connected",
@@ -121,6 +151,13 @@
     "retry": "Retry",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "missing": "Missing"
+  },
+  "languages": {
+    "en": "English",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어"
   }
 }

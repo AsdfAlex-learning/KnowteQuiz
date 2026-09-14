@@ -13,8 +13,10 @@
     <!-- Generating state -->
     <div v-if="quizStore.isGenerating" class="flex-1 flex flex-col items-center justify-center gap-3 p-4">
       <div class="w-8 h-8 border-2 border-[var(--border-focus)] border-t-transparent rounded-full animate-spin" />
-      <p class="text-sm text-[var(--text-muted)]">Generating questions...</p>
-      <p class="text-xs text-[var(--text-faint)]">{{ quizStore.questions.length }} loaded</p>
+      <p class="text-sm text-[var(--text-muted)]">{{ t('quiz.generating') }}</p>
+      <p class="text-xs text-[var(--text-faint)]">
+        {{ t('quiz.loaded_count', { count: quizStore.questions.length }) }}
+      </p>
     </div>
 
     <!-- Answering state -->
@@ -58,7 +60,7 @@
         <template v-else>
           <!-- Explanation after submit -->
           <div v-if="currentQuestion.explanation" class="bg-[var(--bg-base)] rounded-lg p-3">
-            <p class="text-xs text-[var(--text-muted)] mb-1">Explanation</p>
+            <p class="text-xs text-[var(--text-muted)] mb-1">{{ t('quiz.explanation') }}</p>
             <p class="text-sm text-[var(--text-secondary)] leading-relaxed">
               {{ currentQuestion.explanation }}
             </p>
@@ -76,7 +78,9 @@
 
     <!-- Diagnosing state (advanced mode) -->
     <div v-else-if="quizStore.quizState === 'diagnosing'" class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">Diagnosis</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--accent-purple)]">
+        {{ t('quiz.diagnosis') }}
+      </h3>
       <DiagnosisChat
         :messages="quizStore.diagnosisMessages"
         :active="true"

@@ -1,6 +1,8 @@
 <template>
   <div class="space-y-4">
-    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">LLM Configuration</h3>
+    <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      {{ t('settings_page.llm_config') }}
+    </h3>
 
     <div class="space-y-3">
       <label class="block">

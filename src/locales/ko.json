@@ -5,18 +5,18 @@
   },
   "sidebar": {
     "explorer": "탐색기",
-    "open_folder": "폴더 열기",
-    "enter_path": "노트 폴더 경로 입력...",
+    "open_folder": "폭다 열기",
+    "enter_path": "노트 폭다 경로 입력...",
     "no_files": "Markdown 파일을 찾을 수 없습니다",
     "refresh": "새로고침"
   },
   "reader": {
-    "no_file": "파일이 열려 있지 않습니다",
+    "no_file": "파일이 열여 있지 않습니다",
     "loading": "노트 로딩 중...",
     "words": "{count} 단어",
     "find_in_note": "노트에서 찾기...",
     "outline": "목차",
-    "no_content": "왼쪽에서 노트를 선택하여 읽기를 시작하거나, 폴더를 열어 Markdown 파일을 탐색하세요."
+    "no_content": "왼쪽에서 노트를 선택하여 읽기를 시작하거나, 폭다를 열어 Markdown 파일을 탐색하세요."
   },
   "panel": {
     "quiz": "퀴즈",
@@ -39,15 +39,23 @@
     "phase_requesting": "모델 요청 중...",
     "phase_parsing": "응답 분석 중...",
     "no_questions": "문제가 생성되지 않았습니다",
-    "reasoning_placeholder": "추론 과정을 작성해 주세요...",
+    "reasoning_placeholder": "추론 과정을 설명하세요. 왜 이 답을 선택했나요? 어떤 논리나 공식을 사용했나요?",
     "submit_diagnosis": "제출 및 진단",
-    "diagnosis": "진단 중...",
+    "diagnosis": "진단",
     "end_diagnosis": "진단 종료",
+    "end_diagnosis_and_view_report": "진단 종료 및 보고서 보기",
     "diagnosis_report": "진단 보고서",
     "blind_spots": "지식盲区",
     "overall_level": "전체 수준",
     "next_steps": "추천 학습 방향",
-    "save_to_mistakes": "오답노트에 저장"
+    "next_steps_label": "다음 단계",
+    "save_to_mistakes": "오답노트에 저장",
+    "loaded_count": "{count}개 로드됨",
+    "answer_placeholder": "답안을 입력하세요...",
+    "your_reasoning": "당신의 추론",
+    "not_sure": "잘 모르겠음",
+    "not_sure_hint": "이 답에 대해 확신이 없습니다.",
+    "reply_placeholder": "답변을 입력하세요..."
   },
   "settings_page": {
     "title": "설정",
@@ -62,7 +70,9 @@
     "temperature": "온도",
     "max_tokens": "최대 토큰 수",
     "test_connection": "연결 테스트",
+    "testing": "테스트 중...",
     "probe_llm": "LLM 기능 탐지",
+    "probing": "탐지 중...",
     "connected": "연결됨",
     "disconnected": "연결 안 됨",
     "quiz_defaults": "퀴즈 기본 설정",
@@ -79,8 +89,9 @@
     "restore": "최신 백업 복원",
     "restoring": "복원 중...",
     "confirm_restore": "복원하면 현재 설정과 오답이 덮어쓰여집니다. 복원 전 자동 스냅샷이 생성됩니다. 계속하시겠습니까?",
-    "open_data_dir": "폴더 열기",
+    "open_data_dir": "폭다 열기",
     "cleanup_sessions": "오래된 세션 정리",
+    "cleaning_up": "정리 중...",
     "data_files": "데이터 파일",
     "refresh": "새로고침",
     "single_choice": "단일 선택",
@@ -90,7 +101,15 @@
     "advanced": "심화",
     "easy": "쉬움",
     "medium": "보통",
-    "hard": "어려움"
+    "hard": "어려움",
+    "removed_sessions": "{count}개의 오래된 세션 삭제됨",
+    "kept_sessions": "{count}개의 세션 유지됨",
+    "backed_up_files": "{count}개의 파일 백업됨",
+    "restored_files": "{count}개의 파일 복원됨",
+    "streaming": "스트리밍",
+    "json_object": "json_object",
+    "available_models": "사용 가능",
+    "settings_error": "설정 오류"
   },
   "error_book": {
     "title": "오답노트",
@@ -98,16 +117,27 @@
     "filter_mode": "모드별 필터",
     "filter_note": "노트별 필터",
     "filter_blind_spot": "취약점별 필터",
-    "export_json": "JSON 내보내기",
-    "export_markdown": "Markdown 내보내기",
+    "filter_blind_spot_placeholder": "취약점 태그 필터...",
+    "filter_all": "전체",
+    "filter_basic": "기본",
+    "filter_advanced": "심화",
+    "export_json": "JSON 낳바내기",
+    "export_markdown": "Markdown 낳바내기",
     "mark_reviewed": "복습 완료로 표시",
     "review_count": "{count}회 복습",
     "no_mistakes": "오답이 아직 없습니다",
     "open_note": "노트 열기",
     "your_answer": "내 답안",
     "correct_answer": "정답",
+    "correct": "정답:",
     "explanation": "해설",
-    "reasoning": "추론 과정"
+    "reasoning": "추론 과정",
+    "items_count": "{count}개 항목",
+    "load_failed": "오답 로드 실패",
+    "empty_hint": "틀린 답안이 여기에 표시됩니다",
+    "load_more": "더 불러오기",
+    "back_to_list": "목록으로 돌아가기",
+    "last_reviewed": "마지막: {date}"
   },
   "status": {
     "llm_connected": "LLM 연결됨",
@@ -121,6 +151,13 @@
     "retry": "재시도",
     "loading": "로딩 중...",
     "error": "오류",
-    "success": "성공"
+    "success": "성공",
+    "missing": "누락"
+  },
+  "languages": {
+    "en": "영어",
+    "zh": "중국어",
+    "ja": "일본어",
+    "ko": "한국어"
   }
 }
