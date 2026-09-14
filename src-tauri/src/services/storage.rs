@@ -53,13 +53,6 @@ pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     Ok(dir)
 }
 
-#[allow(dead_code)]
-pub fn get_data_dir_path(base: &Path) -> Result<PathBuf, AppError> {
-    let dir = base.join(APP_DATA_SUBDIR);
-    fs::create_dir_all(&dir)?;
-    Ok(dir)
-}
-
 pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> Result<T, AppError> {
     let path = data_dir.join(filename);
     if !path.exists() {
@@ -105,11 +98,6 @@ fn read_json_backup_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -
     let backup_path = data_dir.join(format!("{}.bak", filename));
     let content = fs::read_to_string(backup_path).ok()?;
     serde_json::from_str(&content).ok()
-}
-
-#[allow(dead_code)]
-pub fn file_exists_path(data_dir: &Path, filename: &str) -> Result<bool, AppError> {
-    Ok(data_dir.join(filename).exists())
 }
 
 pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, AppError> {
@@ -233,25 +221,6 @@ pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, AppError> {
 pub fn data_status(app: &AppHandle) -> Result<DataStatus, AppError> {
     let dir = get_data_dir(app)?;
     data_status_path(&dir)
-}
-
-// Backward-compatible wrappers for Tauri commands
-#[allow(dead_code)]
-pub fn read_json<T: DeserializeOwned>(app: &AppHandle, filename: &str) -> Result<T, AppError> {
-    let dir = get_data_dir(app)?;
-    read_json_path(&dir, filename)
-}
-
-#[allow(dead_code)]
-pub fn write_json<T: Serialize>(app: &AppHandle, filename: &str, data: &T) -> Result<(), AppError> {
-    let dir = get_data_dir(app)?;
-    write_json_path(&dir, filename, data)
-}
-
-#[allow(dead_code)]
-pub fn file_exists(app: &AppHandle, filename: &str) -> Result<bool, AppError> {
-    let dir = get_data_dir(app)?;
-    file_exists_path(&dir, filename)
 }
 
 #[cfg(test)]

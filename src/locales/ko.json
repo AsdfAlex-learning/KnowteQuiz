@@ -66,6 +66,7 @@
     "connected": "연결됨",
     "disconnected": "연결 안 됨",
     "quiz_defaults": "퀴즈 기본 설정",
+    "templates_load_error": "템플릿 로드 실패",
     "question_types": "문제 유형",
     "question_count": "문제 수",
     "difficulty": "난이도",

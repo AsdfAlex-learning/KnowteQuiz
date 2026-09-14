@@ -19,6 +19,9 @@
         <span v-if="selectedTemplate" class="text-[10px] text-[var(--text-muted)] mt-1 block">{{
           selectedTemplate.description
         }}</span>
+        <p v-if="templatesError" class="text-xs text-[var(--color-warning)] mt-1">
+          {{ t('settings_page.templates_load_error') }}: {{ templatesError }}
+        </p>
       </label>
 
       <div>
@@ -103,6 +106,7 @@ const emit = defineEmits<{
 }>();
 
 const templates = ref<Array<{ name: string; label: string; description: string }>>([]);
+const templatesError = ref<string | null>(null);
 
 const selectedTemplate = computed(() => {
   return templates.value.find((tmpl) => tmpl.name === props.modelValue.prompt_template);
@@ -134,8 +138,9 @@ function update<K extends keyof SettingsQuiz>(key: K, value: SettingsQuiz[K]) {
 onMounted(async () => {
   try {
     templates.value = await listPromptTemplates();
+    templatesError.value = null;
   } catch (e) {
-    console.error('Failed to load prompt templates:', e);
+    templatesError.value = e instanceof Error ? e.message : String(e);
     templates.value = [
       { name: 'default', label: 'Default', description: 'Balanced, comprehensive question generation' },
       { name: 'creative', label: 'Creative', description: 'Generates open-ended, scenario-based questions' },
