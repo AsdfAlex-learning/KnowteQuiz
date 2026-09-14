@@ -76,6 +76,7 @@
     "connected": "已连接",
     "disconnected": "未连接",
     "quiz_defaults": "答题默认设置",
+    "templates_load_error": "加载模板失败",
     "question_types": "题目类型",
     "question_count": "题目数量",
     "difficulty": "难度",

@@ -76,6 +76,7 @@
     "connected": "Connected",
     "disconnected": "Disconnected",
     "quiz_defaults": "Quiz Defaults",
+    "templates_load_error": "Failed to load templates",
     "question_types": "Question Types",
     "question_count": "Question Count",
     "difficulty": "Difficulty",

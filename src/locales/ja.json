@@ -76,6 +76,7 @@
     "connected": "接続済み",
     "disconnected": "未接続",
     "quiz_defaults": "クイズのデフォルト設定",
+    "templates_load_error": "テンプレートの読み込みに失敗しました",
     "question_types": "問題タイプ",
     "question_count": "問題数",
     "difficulty": "難易度",
