@@ -27,14 +27,14 @@ pub async fn list_prompt_templates() -> Result<Vec<(String, String, String)>, Ap
 pub async fn test_connection(app: AppHandle) -> Result<ConnectionTestResult, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;
-    Ok(llm_service::test_connection(&settings.llm).await)
+    llm_service::test_connection(&settings.llm).await
 }
 
 #[tauri::command]
 pub async fn probe_llm(app: AppHandle) -> Result<LlmCapabilities, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;
-    Ok(llm_service::probe_capabilities(&settings.llm).await)
+    llm_service::probe_capabilities(&settings.llm).await
 }
 
 #[tauri::command]

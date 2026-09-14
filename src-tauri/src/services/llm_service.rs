@@ -1,3 +1,4 @@
+use crate::errors::AppError;
 use crate::models::settings::LlmConfig;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -34,7 +35,7 @@ pub struct LlmCapabilities {
     pub default_model: String,
 }
 
-pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
+pub async fn probe_capabilities(llm: &LlmConfig) -> Result<LlmCapabilities, AppError> {
     let base = llm.base_url.trim_end_matches('/');
     let client = http_client();
     let mut available_models: Vec<String> = vec![];
@@ -42,24 +43,23 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
     let mut supports_response_format = false;
 
     // Probe models endpoint
-    if let Ok(resp) = client
+    let resp = client
         .get(format!("{}/models", base))
         .header("Authorization", format!("Bearer {}", llm.api_key))
         .send()
         .await
-    {
-        if resp.status().is_success() {
-            if let Ok(body) = resp.text().await {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
-                    if let Some(models) = json["data"].as_array() {
-                        available_models = models
-                            .iter()
-                            .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
-                            .collect();
-                        available_models.sort();
-                        available_models.truncate(20); // cap at 20 models
-                    }
-                }
+        .map_err(|e| AppError::Llm(format!("Failed to probe models endpoint: {}", e)))?;
+    if resp.status().is_success() {
+        let body = resp.text().await
+            .map_err(|e| AppError::Llm(format!("Failed to read models response: {}", e)))?;
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+            if let Some(models) = json["data"].as_array() {
+                available_models = models
+                    .iter()
+                    .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
+                    .collect();
+                available_models.sort();
+                available_models.truncate(20); // cap at 20 models
             }
         }
     }
@@ -71,19 +71,18 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
         "stream": true,
         "max_tokens": 5,
     });
-    if let Ok(resp) = client
+    let resp = client
         .post(format!("{}/chat/completions", base))
         .header("Authorization", format!("Bearer {}", llm.api_key))
         .header("Content-Type", "application/json")
         .json(&stream_body)
         .send()
         .await
-    {
-        if resp.status().is_success() {
-            let text = resp.text().await.unwrap_or_default();
-            // Streaming responses contain "data:" lines
-            supports_streaming = text.contains("data:");
-        }
+        .map_err(|e| AppError::Llm(format!("Failed to probe streaming: {}", e)))?;
+    if resp.status().is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        // Streaming responses contain "data:" lines
+        supports_streaming = text.contains("data:");
     }
 
     // Probe response_format support
@@ -93,31 +92,30 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> LlmCapabilities {
         "response_format": {"type": "json_object"},
         "max_tokens": 10,
     });
-    if let Ok(resp) = client
+    let resp = client
         .post(format!("{}/chat/completions", base))
         .header("Authorization", format!("Bearer {}", llm.api_key))
         .header("Content-Type", "application/json")
         .json(&json_body)
         .send()
         .await
-    {
-        if resp.status().is_success() {
-            if let Ok(body) = resp.text().await {
-                // Check if response is valid JSON (indicates response_format worked)
-                supports_response_format = serde_json::from_str::<serde_json::Value>(&body).is_ok();
-            }
+        .map_err(|e| AppError::Llm(format!("Failed to probe response_format: {}", e)))?;
+    if resp.status().is_success() {
+        if let Ok(body) = resp.text().await {
+            // Check if response is valid JSON (indicates response_format worked)
+            supports_response_format = serde_json::from_str::<serde_json::Value>(&body).is_ok();
         }
     }
 
-    LlmCapabilities {
+    Ok(LlmCapabilities {
         available_models,
         supports_streaming,
         supports_response_format,
         default_model: llm.model.clone(),
-    }
+    })
 }
 
-pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
+pub async fn test_connection(llm: &LlmConfig) -> Result<ConnectionTestResult, AppError> {
     let request_body = serde_json::json!({
         "model": llm.model,
         "messages": [
@@ -126,7 +124,7 @@ pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
         "max_tokens": 5,
     });
 
-    match http_client()
+    let response = http_client()
         .post(format!(
             "{}/chat/completions",
             llm.base_url.trim_end_matches('/')
@@ -136,19 +134,11 @@ pub async fn test_connection(llm: &LlmConfig) -> ConnectionTestResult {
         .json(&request_body)
         .send()
         .await
-    {
-        Ok(response) => {
-            let status = response.status();
-            let body = response.text().await.unwrap_or_default();
-            classify_connection_status(status, &body)
-        }
-        Err(error) => ConnectionTestResult {
-            ok: false,
-            kind: "network".to_string(),
-            message: format!("Could not reach LLM endpoint: {}", error),
-            status: None,
-        },
-    }
+        .map_err(|e| AppError::Llm(format!("Could not reach LLM endpoint: {}", e)))?;
+
+    let status = response.status();
+    let body = response.text().await.unwrap_or_default();
+    Ok(classify_connection_status(status, &body))
 }
 
 pub fn classify_connection_status(status: StatusCode, body: &str) -> ConnectionTestResult {

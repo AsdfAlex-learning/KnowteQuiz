@@ -247,14 +247,14 @@ async fn test_connection_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<ConnectionTestResult>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
-    Ok(Json(llm_service::test_connection(&settings.llm).await))
+    Ok(Json(llm_service::test_connection(&settings.llm).await?))
 }
 
 async fn probe_llm_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<llm_service::LlmCapabilities>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
-    Ok(Json(llm_service::probe_capabilities(&settings.llm).await))
+    Ok(Json(llm_service::probe_capabilities(&settings.llm).await?))
 }
 
 async fn backup_data_handler(
