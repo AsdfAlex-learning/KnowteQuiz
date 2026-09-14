@@ -98,11 +98,11 @@ fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Resu
     diagnosis_session_service::finish_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
-pub async fn start(port: u16) {
+pub async fn start(port: u16) -> Result<(), AppError> {
     let data_dir = dirs::data_dir()
-        .expect("Failed to get data directory")
+        .ok_or_else(|| AppError::Internal("Failed to get data directory".to_string()))?
         .join("knowtequiz");
-    std::fs::create_dir_all(&data_dir).expect("Failed to create data directory");
+    std::fs::create_dir_all(&data_dir)?;
 
     let app_state = Arc::new(AppState {
         data_dir,
@@ -158,11 +158,15 @@ pub async fn start(port: u16) {
 
     let listener = tokio::net::TcpListener::bind(listener_addr(port))
         .await
-        .expect("Failed to bind TCP listener");
+        .map_err(|e| AppError::Internal(format!("Failed to bind TCP listener: {}", e)))?;
 
     println!("KnowteQuiz web server running on http://localhost:{}", port);
 
-    axum::serve(listener, app).await.expect("Server error");
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
+
+    Ok(())
 }
 
 #[derive(Deserialize)]
