@@ -6,7 +6,12 @@
         {{ t('sidebar.explorer') }}
       </h2>
       <div class="flex items-center gap-1">
-        <button class="icon-btn" title="Refresh" :disabled="explorerStore.isLoading" @click="explorerStore.loadTree()">
+        <button
+          class="icon-btn"
+          :title="t('sidebar.refresh')"
+          :disabled="explorerStore.isLoading"
+          @click="explorerStore.loadTree()"
+        >
           <svg
             width="14"
             height="14"

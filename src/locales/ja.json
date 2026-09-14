@@ -39,15 +39,23 @@
     "phase_requesting": "モデルにリクエスト中...",
     "phase_parsing": "レスポンスを解析中...",
     "no_questions": "問題が生成されませんでした",
-    "reasoning_placeholder": "推理過程を書いてください...",
+    "reasoning_placeholder": "推理過程を説明してください。なぜその答えを選びましたか？どのような論理や公式を使いましたか？",
     "submit_diagnosis": "回答して診断",
-    "diagnosis": "診断中...",
+    "diagnosis": "診断",
     "end_diagnosis": "診断終了",
+    "end_diagnosis_and_view_report": "診断を終了してレポートを表示",
     "diagnosis_report": "診断レポート",
     "blind_spots": "知識の盲点",
     "overall_level": "全体レベル",
     "next_steps": "推奨される次のステップ",
-    "save_to_mistakes": "間違い帳に保存"
+    "next_steps_label": "次のステップ",
+    "save_to_mistakes": "間違い帳に保存",
+    "loaded_count": "{count} 問読み込み済み",
+    "answer_placeholder": "答えを入力...",
+    "your_reasoning": "あなたの推理",
+    "not_sure": "わからない",
+    "not_sure_hint": "この答えについて自信がありません。",
+    "reply_placeholder": "返信を入力..."
   },
   "settings_page": {
     "title": "設定",
@@ -62,7 +70,9 @@
     "temperature": "温度",
     "max_tokens": "最大トークン数",
     "test_connection": "接続テスト",
+    "testing": "テスト中...",
     "probe_llm": "LLM 能力を検出",
+    "probing": "検出中...",
     "connected": "接続済み",
     "disconnected": "未接続",
     "quiz_defaults": "クイズのデフォルト設定",
@@ -81,6 +91,7 @@
     "confirm_restore": "復元すると現在の設定と間違い帳が上書きされます。復元前に自動スナップショットが作成されます。続行しますか？",
     "open_data_dir": "フォルダを開く",
     "cleanup_sessions": "古いセッションを整理",
+    "cleaning_up": "整理中...",
     "data_files": "データファイル",
     "refresh": "更新",
     "single_choice": "単一選択",
@@ -90,7 +101,15 @@
     "advanced": "アドバンス",
     "easy": "簡単",
     "medium": "普通",
-    "hard": "難しい"
+    "hard": "難しい",
+    "removed_sessions": "{count} 個の古いセッションを削除",
+    "kept_sessions": "{count} 個のセッションを保持",
+    "backed_up_files": "{count} 個のファイルをバックアップ",
+    "restored_files": "{count} 個のファイルを復元",
+    "streaming": "ストリーミング",
+    "json_object": "json_object",
+    "available_models": "利用可能",
+    "settings_error": "設定エラー"
   },
   "error_book": {
     "title": "間違い帳",
@@ -98,6 +117,10 @@
     "filter_mode": "モードでフィルタ",
     "filter_note": "ノートでフィルタ",
     "filter_blind_spot": "盲点でフィルタ",
+    "filter_blind_spot_placeholder": "盲点タグでフィルタ...",
+    "filter_all": "すべて",
+    "filter_basic": "ベーシック",
+    "filter_advanced": "アドバンス",
     "export_json": "JSON エクスポート",
     "export_markdown": "Markdown エクスポート",
     "mark_reviewed": "復習済みにする",
@@ -106,8 +129,15 @@
     "open_note": "ノートを開く",
     "your_answer": "あなたの回答",
     "correct_answer": "正解",
+    "correct": "正解：",
     "explanation": "解説",
-    "reasoning": "推理過程"
+    "reasoning": "推理過程",
+    "items_count": "{count} 件",
+    "load_failed": "間違いの読み込みに失敗しました",
+    "empty_hint": "間違った回答がここに表示されます",
+    "load_more": "もっと読み込む",
+    "back_to_list": "リストに戻る",
+    "last_reviewed": "最終：{date}"
   },
   "status": {
     "llm_connected": "LLM 接続済み",
@@ -121,6 +151,13 @@
     "retry": "再試行",
     "loading": "読み込み中...",
     "error": "エラー",
-    "success": "成功"
+    "success": "成功",
+    "missing": "欠落"
+  },
+  "languages": {
+    "en": "英語",
+    "zh": "中国語",
+    "ja": "日本語",
+    "ko": "韓国語"
   }
 }

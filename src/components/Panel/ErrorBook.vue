@@ -15,7 +15,9 @@
       >
         {{ f.label }}
       </button>
-      <span class="ml-auto text-[11px] text-[var(--text-faint)]"> {{ mistakeStore.items.length }} items </span>
+      <span class="ml-auto text-[11px] text-[var(--text-faint)]">
+        {{ t('error_book.items_count', { count: mistakeStore.items.length }) }}
+      </span>
       <div class="flex items-center gap-1">
         <button
           class="px-2 py-0.5 text-[10px] rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -48,14 +50,14 @@
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="Search mistakes..."
+        :placeholder="t('error_book.search')"
         class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
         @input="handleSearch"
       />
       <input
         v-model="blindSpotQuery"
         type="text"
-        placeholder="Filter blind spot tag..."
+        :placeholder="t('error_book.filter_blind_spot_placeholder')"
         class="w-full px-2.5 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none placeholder:text-[var(--text-faint)]"
         @input="handleBlindSpotFilter"
       />
@@ -72,13 +74,13 @@
         v-if="mistakeStore.loading && mistakeStore.items.length === 0"
         class="flex items-center justify-center py-8 text-sm text-[var(--text-faint)]"
       >
-        Loading...
+        {{ t('common.loading') }}
       </div>
       <div
         v-else-if="mistakeStore.listError"
         class="flex flex-col items-center justify-center py-12 text-[var(--color-error)]"
       >
-        <p class="text-sm">Failed to load mistakes</p>
+        <p class="text-sm">{{ t('error_book.load_failed') }}</p>
         <p class="text-xs mt-1">{{ mistakeStore.listError }}</p>
       </div>
       <div
@@ -86,7 +88,7 @@
         class="flex flex-col items-center justify-center py-12 text-[var(--text-faint)]"
       >
         <p class="text-sm">{{ t('error_book.no_mistakes') }}</p>
-        <p class="text-xs mt-1">Wrong answers will appear here</p>
+        <p class="text-xs mt-1">{{ t('error_book.empty_hint') }}</p>
       </div>
       <MistakeItem
         v-for="m in mistakeStore.items"
@@ -101,7 +103,7 @@
         :disabled="mistakeStore.loading"
         @click="mistakeStore.loadNextPage()"
       >
-        {{ mistakeStore.loading ? 'Loading...' : 'Load more' }}
+        {{ mistakeStore.loading ? t('common.loading') : t('error_book.load_more') }}
       </button>
     </div>
   </div>
@@ -120,11 +122,11 @@ type FilterValue = 'all' | 'basic' | 'advanced';
 
 const { t } = useI18n();
 
-const filters: { value: FilterValue; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'basic', label: 'Basic' },
-  { value: 'advanced', label: 'Advanced' },
-];
+const filters = computed<{ value: FilterValue; label: string }[]>(() => [
+  { value: 'all', label: t('error_book.filter_all') },
+  { value: 'basic', label: t('error_book.filter_basic') },
+  { value: 'advanced', label: t('error_book.filter_advanced') },
+]);
 
 const selectedId = ref<string | null>(null);
 const searchQuery = ref('');

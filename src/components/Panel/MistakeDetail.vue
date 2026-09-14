@@ -4,7 +4,7 @@
       class="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
       @click="$emit('back')"
     >
-      <span class="text-sm">&larr;</span> Back to list
+      <span class="text-sm">&larr;</span> {{ t('error_book.back_to_list') }}
     </button>
 
     <div class="space-y-3">
@@ -30,7 +30,7 @@
           <span class="text-sm text-[var(--text-primary)]">{{ mistake.user_answer }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-xs text-[var(--accent-green)] font-medium">Correct:</span>
+          <span class="text-xs text-[var(--accent-green)] font-medium">{{ t('error_book.correct') }}</span>
           <span class="text-sm text-[var(--text-primary)]">{{ mistake.correct_answer }}</span>
         </div>
       </div>
@@ -54,7 +54,9 @@
       </div>
 
       <div v-if="parsedDiagnosis" class="bg-[var(--bg-base)] rounded-lg p-3 space-y-3">
-        <h4 class="text-xs font-semibold text-[var(--accent-purple)] uppercase tracking-wider">Diagnosis</h4>
+        <h4 class="text-xs font-semibold text-[var(--accent-purple)] uppercase tracking-wider">
+          {{ t('quiz.diagnosis') }}
+        </h4>
 
         <div v-if="parsedDiagnosis.summary" class="text-sm text-[var(--text-primary)] leading-relaxed">
           {{ parsedDiagnosis.summary }}
@@ -86,7 +88,7 @@
         </div>
 
         <div v-if="parsedDiagnosis.next_steps?.length">
-          <h5 class="text-xs text-[var(--text-muted)] mb-1">Next Steps</h5>
+          <h5 class="text-xs text-[var(--text-muted)] mb-1">{{ t('quiz.next_steps_label') }}</h5>
           <ul class="text-xs text-[var(--text-secondary)] space-y-0.5 list-disc list-inside">
             <li v-for="(step, i) in parsedDiagnosis.next_steps" :key="i">{{ step }}</li>
           </ul>
@@ -122,7 +124,7 @@
       {{ reviewError }}
     </p>
     <span v-if="mistake.last_reviewed_at" class="text-[11px] text-[var(--text-faint)]">
-      Last: {{ formatLastReviewed(mistake.last_reviewed_at) }}
+      {{ t('error_book.last_reviewed', { date: formatLastReviewed(mistake.last_reviewed_at) }) }}
     </span>
   </div>
 </template>

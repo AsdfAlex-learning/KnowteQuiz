@@ -2,7 +2,7 @@
   <div class="p-4 space-y-6">
     <!-- Language selector -->
     <div class="space-y-2">
-      <label class="text-xs font-medium text-[var(--text-secondary)]">Language / 语言</label>
+      <label class="text-xs font-medium text-[var(--text-secondary)]">{{ t('settings_page.language') }}</label>
       <select
         :value="settings.ui_language"
         class="w-full px-2 py-1.5 text-sm bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
@@ -35,7 +35,7 @@
         :disabled="testing"
         @click="handleTestConnection"
       >
-        {{ testing ? 'Testing...' : 'Test Connection' }}
+        {{ testing ? t('settings_page.testing') : t('settings_page.test_connection') }}
       </button>
 
       <div
@@ -47,7 +47,9 @@
             : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'
         "
       >
-        <span>{{ connectionResult.ok ? '\u2713 Connected' : '\u2717 ' + connectionResult.message }}</span>
+        <span>{{
+          connectionResult.ok ? '\u2713 ' + t('settings_page.connected') : '\u2717 ' + connectionResult.message
+        }}</span>
       </div>
 
       <button
@@ -55,7 +57,7 @@
         :disabled="probing"
         @click="handleProbeLlm"
       >
-        {{ probing ? 'Probing...' : 'Probe LLM Capabilities' }}
+        {{ probing ? t('settings_page.probing') : t('settings_page.probe_llm') }}
       </button>
 
       <div
@@ -63,19 +65,27 @@
         class="rounded-md border border-[var(--border-default)] bg-[var(--bg-base)] p-3 space-y-1"
       >
         <p class="text-xs font-medium text-[var(--text-primary)]">
-          Model: {{ settingsStore.llmCapabilities.default_model }}
+          {{ t('settings_page.model') }}: {{ settingsStore.llmCapabilities.default_model }}
         </p>
         <p class="text-xs text-[var(--text-muted)]">
-          Streaming: {{ settingsStore.llmCapabilities.supports_streaming ? '✓ Yes' : '✗ No' }}
+          {{ t('settings_page.streaming') }}:
+          {{
+            settingsStore.llmCapabilities.supports_streaming ? '✓ ' + t('common.confirm') : '✗ ' + t('common.cancel')
+          }}
         </p>
         <p class="text-xs text-[var(--text-muted)]">
-          json_object: {{ settingsStore.llmCapabilities.supports_response_format ? '✓ Yes' : '✗ No' }}
+          {{ t('settings_page.json_object') }}:
+          {{
+            settingsStore.llmCapabilities.supports_response_format
+              ? '✓ ' + t('common.confirm')
+              : '✗ ' + t('common.cancel')
+          }}
         </p>
         <p
           v-if="settingsStore.llmCapabilities.available_models.length > 0"
           class="text-xs text-[var(--text-muted)] mt-1"
         >
-          Available: {{ settingsStore.llmCapabilities.available_models.join(', ') }}
+          {{ t('settings_page.available_models') }}: {{ settingsStore.llmCapabilities.available_models.join(', ') }}
         </p>
       </div>
       <div v-if="settingsStore.probeErr" class="text-xs text-[var(--color-error)]">
@@ -92,7 +102,7 @@
         :disabled="saving"
         @click="handleSave"
       >
-        {{ saving ? 'Saving...' : 'Save Settings' }}
+        {{ saving ? t('settings_page.saving') : t('settings_page.save') }}
       </button>
 
       <button
@@ -105,7 +115,7 @@
         :disabled="backingUp"
         @click="handleBackup"
       >
-        {{ backingUp ? 'Backing up...' : 'Backup Data Now' }}
+        {{ backingUp ? t('settings_page.backing_up') : t('settings_page.backup') }}
       </button>
 
       <button
@@ -118,7 +128,7 @@
         :disabled="restoring"
         @click="handleRestore"
       >
-        {{ restoring ? 'Restoring...' : 'Restore Latest Backup' }}
+        {{ restoring ? t('settings_page.restoring') : t('settings_page.restore') }}
       </button>
 
       <button
@@ -131,7 +141,7 @@
         :disabled="settingsStore.isCleaningUp"
         @click="handleCleanupSessions"
       >
-        {{ settingsStore.isCleaningUp ? 'Cleaning up...' : 'Clean Up Old Sessions' }}
+        {{ settingsStore.isCleaningUp ? t('settings_page.cleaning_up') : t('settings_page.cleanup_sessions') }}
       </button>
 
       <div
@@ -139,10 +149,10 @@
         class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
       >
         <p class="text-xs font-medium text-[var(--accent-green)]">
-          Removed {{ settingsStore.cleanupResult.deleted_count }} old session(s)
+          {{ t('settings_page.removed_sessions', { count: settingsStore.cleanupResult.deleted_count }) }}
         </p>
         <p class="mt-1 text-xs text-[var(--text-muted)]">
-          {{ settingsStore.cleanupResult.remaining_count }} session(s) kept
+          {{ t('settings_page.kept_sessions', { count: settingsStore.cleanupResult.remaining_count }) }}
         </p>
       </div>
 
@@ -155,7 +165,7 @@
         class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
       >
         <p class="text-xs font-medium text-[var(--accent-green)]">
-          Backed up {{ settingsStore.lastBackupResult.files.length }} files
+          {{ t('settings_page.backed_up_files', { count: settingsStore.lastBackupResult.files.length }) }}
         </p>
         <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
           {{ backupFolderName(settingsStore.lastBackupResult.backup_dir) }}
@@ -167,7 +177,7 @@
         class="rounded-md border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
       >
         <p class="text-xs font-medium text-[var(--accent-green)]">
-          Restored {{ settingsStore.lastRestoreResult.files.length }} files
+          {{ t('settings_page.restored_files', { count: settingsStore.lastRestoreResult.files.length }) }}
         </p>
         <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
           {{ backupFolderName(settingsStore.lastRestoreResult.backup_dir) }}
@@ -177,7 +187,7 @@
       <div class="space-y-2 rounded-md border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-xs font-medium text-[var(--text-primary)]">Data Files</p>
+            <p class="text-xs font-medium text-[var(--text-primary)]">{{ t('settings_page.data_files') }}</p>
             <p v-if="settingsStore.dataStatus" class="mt-1 truncate text-[11px] text-[var(--text-muted)]">
               {{ settingsStore.dataStatus.data_dir }}
             </p>
@@ -185,16 +195,16 @@
           <div class="flex items-center gap-1">
             <button
               class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-active)]"
-              title="Open data directory"
+              :title="t('settings_page.open_data_dir')"
               @click="handleOpenDataDir"
             >
-              Open Folder
+              {{ t('settings_page.open_data_dir') }}
             </button>
             <button
               class="shrink-0 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-active)]"
               @click="settingsStore.loadDataStatus()"
             >
-              Refresh
+              {{ t('settings_page.refresh') }}
             </button>
           </div>
         </div>
@@ -207,7 +217,7 @@
           >
             <span class="truncate text-[var(--text-primary)]">{{ file.name }}</span>
             <span :class="file.exists ? 'text-[var(--text-muted)]' : 'text-[var(--color-error)]'">
-              {{ file.exists ? formatFileSize(file.size_bytes) : 'Missing' }}
+              {{ file.exists ? formatFileSize(file.size_bytes) : t('common.missing') }}
             </span>
             <span
               v-if="file.exists && file.modified_at"
@@ -230,7 +240,7 @@
         v-if="settingsStore.error"
         class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
       >
-        <p class="text-xs font-medium text-[var(--color-error)]">Settings error</p>
+        <p class="text-xs font-medium text-[var(--color-error)]">{{ t('settings_page.settings_error') }}</p>
         <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
           {{ settingsStore.error }}
         </p>
@@ -249,7 +259,7 @@ import type { ConnectionTestResult, SettingsLLM, SettingsQuiz } from '@/types/se
 
 const settingsStore = useSettingsStore();
 const settings = settingsStore.settings;
-const { availableLocales, setLocale } = useI18n();
+const { t, availableLocales, setLocale } = useI18n();
 const testing = ref(false);
 const backingUp = ref(false);
 const restoring = ref(false);
@@ -310,11 +320,7 @@ async function handleBackup() {
 }
 
 async function handleRestore() {
-  if (
-    !window.confirm(
-      'Restore will overwrite current settings and mistakes from the latest backup. A pre-restore snapshot is taken automatically. Continue?'
-    )
-  ) {
+  if (!window.confirm(t('settings_page.confirm_restore'))) {
     return;
   }
   restoring.value = true;

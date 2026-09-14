@@ -4,7 +4,7 @@ export function defaultSettings(): Settings {
   return {
     version: '1.0.0',
     theme: 'obsidian-dark',
-    ui_language: 'zh-CN',
+    ui_language: 'en',
     llm: {
       provider: 'openai-compatible',
       base_url: 'http://localhost:11434/v1',
