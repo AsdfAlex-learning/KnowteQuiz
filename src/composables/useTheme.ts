@@ -1,6 +1,7 @@
 import { watch, onMounted, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import type { ThemeConfig } from '@/types/settings';
+import { isTauri, convertFileSrc } from '@/services/tauri';
 
 const CSS_VAR_BG_BASE = '--bg-base';
 const CSS_VAR_ACCENT_PURPLE = '--accent-purple';
@@ -39,6 +40,11 @@ function applyBackgroundImage(theme: ThemeConfig) {
     existingLayer.remove();
   }
 
+  // Don't show static background image if video is active
+  if (theme.background_video) {
+    return;
+  }
+
   if (!theme.background_image) {
     return;
   }
@@ -53,6 +59,17 @@ function applyBackgroundImage(theme: ThemeConfig) {
   layer.style.backgroundPosition = 'center';
   layer.style.backgroundRepeat = 'no-repeat';
   document.body.appendChild(layer);
+}
+
+function getVideoUrl(videoPath: string | null): string {
+  if (!videoPath) return '';
+  if (videoPath.startsWith('data:') || videoPath.startsWith('http')) {
+    return videoPath;
+  }
+  if (isTauri()) {
+    return convertFileSrc(videoPath);
+  }
+  return videoPath;
 }
 
 export function useTheme() {
@@ -80,4 +97,8 @@ export function useTheme() {
   onUnmounted(() => {
     unwatch();
   });
+
+  return {
+    getVideoUrl,
+  };
 }

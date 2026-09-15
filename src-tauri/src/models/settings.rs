@@ -124,6 +124,12 @@ pub struct ThemeConfig {
     pub background_image: Option<String>,
     #[serde(default)]
     pub glassmorphism: GlassmorphismConfig,
+    #[serde(default)]
+    pub background_video: Option<String>,
+    #[serde(default = "default_video_playing")]
+    pub video_playing: bool,
+    #[serde(default = "default_video_time")]
+    pub video_time: f64,
 }
 
 impl Default for ThemeConfig {
@@ -133,8 +139,19 @@ impl Default for ThemeConfig {
             accent_color: default_accent_color(),
             background_image: None,
             glassmorphism: GlassmorphismConfig::default(),
+            background_video: None,
+            video_playing: default_video_playing(),
+            video_time: default_video_time(),
         }
     }
+}
+
+fn default_video_playing() -> bool {
+    true
+}
+
+fn default_video_time() -> f64 {
+    0.0
 }
 
 fn default_bg_color() -> String {

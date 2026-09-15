@@ -49,6 +49,9 @@ export function defaultSettings(): Settings {
         opacity: 20,
         scope: 'global',
       },
+      background_video: null,
+      video_playing: true,
+      video_time: 0,
     },
   };
 }

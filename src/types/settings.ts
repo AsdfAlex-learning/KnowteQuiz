@@ -84,6 +84,9 @@ export interface ThemeConfig {
   accent_color: string;
   background_image: string | null;
   glassmorphism: GlassmorphismConfig;
+  background_video: string | null;
+  video_playing: boolean;
+  video_time: number;
 }
 
 export interface Settings {

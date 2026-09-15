@@ -62,6 +62,107 @@
       </p>
     </div>
 
+    <!-- Background Video -->
+    <div class="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
+      <div class="flex items-center justify-between">
+        <label class="text-sm font-medium text-[var(--text-primary)]">
+          {{ t('appearance.background_video') }}
+        </label>
+        <span v-if="modelValue.background_video" class="text-xs px-2 py-0.5 rounded-full" :class="videoStatusClass">
+          {{ videoStatusText }}
+        </span>
+      </div>
+
+      <!-- Video file input -->
+      <div class="flex items-center gap-2">
+        <input ref="videoInput" type="file" accept="video/mp4" class="hidden" @change="handleVideoSelect" />
+        <button
+          class="px-3 py-2 rounded-lg text-sm bg-[var(--bg-base)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+          @click="videoInput?.click()"
+        >
+          {{ t('appearance.choose_video') }}
+        </button>
+        <button
+          v-if="modelValue.background_video"
+          class="px-3 py-2 rounded-lg text-sm text-[var(--color-error)] hover:bg-[var(--color-error)]/10 transition-colors"
+          @click="clearVideo"
+        >
+          {{ t('appearance.clear_video') }}
+        </button>
+      </div>
+
+      <p v-if="modelValue.background_video" class="text-xs text-[var(--text-muted)] truncate">
+        {{ modelValue.background_video }}
+      </p>
+
+      <!-- Playback controls -->
+      <template v-if="modelValue.background_video">
+        <div class="flex items-center gap-2 pt-2 border-t border-[var(--border-default)]">
+          <button
+            v-if="!modelValue.video_playing"
+            class="p-2 rounded-lg bg-[var(--bg-base)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            :title="t('appearance.play')"
+            @click="playVideo"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </button>
+          <button
+            v-else
+            class="p-2 rounded-lg bg-[var(--bg-base)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            :title="t('appearance.pause')"
+            @click="pauseVideo"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+            </svg>
+          </button>
+          <button
+            class="p-2 rounded-lg bg-[var(--bg-base)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            :title="t('appearance.stop')"
+            @click="stopVideo"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 6h12v12H6z" />
+            </svg>
+          </button>
+          <button
+            class="p-2 rounded-lg bg-[var(--bg-base)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            :title="t('appearance.resume')"
+            @click="resumeVideo"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Current time display -->
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-[var(--text-muted)]">
+            {{ t('appearance.current_time') }}: {{ formatTime(modelValue.video_time) }}
+          </span>
+        </div>
+
+        <!-- Switch buttons -->
+        <div class="flex gap-2 pt-2 border-t border-[var(--border-default)]">
+          <button
+            class="flex-1 px-3 py-2 rounded-lg text-xs bg-[var(--bg-base)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            @click="switchToStatic"
+          >
+            {{ t('appearance.switch_static') }}
+          </button>
+          <button
+            class="flex-1 px-3 py-2 rounded-lg text-xs bg-[var(--bg-base)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors border border-[var(--border-default)]"
+            @click="switchToWallpaper"
+          >
+            {{ t('appearance.switch_wallpaper') }}
+          </button>
+        </div>
+      </template>
+    </div>
+
     <!-- Glassmorphism -->
     <div class="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
       <div class="flex items-center justify-between">
@@ -152,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import type { ThemeConfig } from '@/types/settings';
 
@@ -166,6 +267,26 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const fileInput = ref<HTMLInputElement | null>(null);
+const videoInput = ref<HTMLInputElement | null>(null);
+
+const videoStatusText = computed(() => {
+  if (!props.modelValue.background_video) return '';
+  if (props.modelValue.video_playing) return t('appearance.status_playing');
+  return t('appearance.status_paused');
+});
+
+const videoStatusClass = computed(() => {
+  if (props.modelValue.video_playing) {
+    return 'bg-green-500/20 text-green-400';
+  }
+  return 'bg-yellow-500/20 text-yellow-400';
+});
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
 
 function updateBackgroundColor(e: Event) {
   const target = e.target as HTMLInputElement;
@@ -206,6 +327,81 @@ function clearImage() {
   if (fileInput.value) {
     fileInput.value.value = '';
   }
+}
+
+function handleVideoSelect(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    emit('update:modelValue', {
+      ...props.modelValue,
+      background_video: reader.result as string,
+      video_playing: true,
+      video_time: 0,
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearVideo() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    background_video: null,
+    video_playing: true,
+    video_time: 0,
+  });
+  if (videoInput.value) {
+    videoInput.value.value = '';
+  }
+}
+
+function playVideo() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    video_playing: true,
+  });
+}
+
+function pauseVideo() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    video_playing: false,
+  });
+}
+
+function stopVideo() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    video_playing: false,
+  });
+}
+
+function resumeVideo() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    video_playing: true,
+  });
+}
+
+function switchToStatic() {
+  // Stop video first (the BackgroundLayer will capture screenshot)
+  emit('update:modelValue', {
+    ...props.modelValue,
+    video_playing: false,
+  });
+}
+
+function switchToWallpaper() {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    background_video: null,
+    video_playing: true,
+    video_time: 0,
+    background_image: props.modelValue.background_image,
+  });
 }
 
 function toggleGlassmorphism() {
@@ -249,6 +445,9 @@ function resetToDefaults() {
       opacity: 20,
       scope: 'global',
     },
+    background_video: null,
+    video_playing: true,
+    video_time: 0,
   });
 }
 </script>
