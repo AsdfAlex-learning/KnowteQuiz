@@ -40,6 +40,7 @@ fn default_settings() -> Settings {
             },
         },
         workspace: WorkspaceState::default(),
+        theme_config: ThemeConfig::default(),
     }
 }
 

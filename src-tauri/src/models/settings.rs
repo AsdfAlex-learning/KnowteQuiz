@@ -87,6 +87,65 @@ pub struct WorkspaceState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GlassmorphismConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_glass_opacity")]
+    pub opacity: u32,
+    #[serde(default = "default_glass_scope")]
+    pub scope: String,
+}
+
+impl Default for GlassmorphismConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            opacity: default_glass_opacity(),
+            scope: default_glass_scope(),
+        }
+    }
+}
+
+fn default_glass_opacity() -> u32 {
+    20
+}
+
+fn default_glass_scope() -> String {
+    "global".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ThemeConfig {
+    #[serde(default = "default_bg_color")]
+    pub background_color: String,
+    #[serde(default = "default_accent_color")]
+    pub accent_color: String,
+    #[serde(default)]
+    pub background_image: Option<String>,
+    #[serde(default)]
+    pub glassmorphism: GlassmorphismConfig,
+}
+
+impl Default for ThemeConfig {
+    fn default() -> Self {
+        Self {
+            background_color: default_bg_color(),
+            accent_color: default_accent_color(),
+            background_image: None,
+            glassmorphism: GlassmorphismConfig::default(),
+        }
+    }
+}
+
+fn default_bg_color() -> String {
+    "#1e1e2e".to_string()
+}
+
+fn default_accent_color() -> String {
+    "#cba6f7".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub version: String,
     pub theme: String,
@@ -97,6 +156,8 @@ pub struct Settings {
     pub quiz: QuizDefaults,
     #[serde(default)]
     pub workspace: WorkspaceState,
+    #[serde(default)]
+    pub theme_config: ThemeConfig,
 }
 
 fn default_ui_language() -> String {

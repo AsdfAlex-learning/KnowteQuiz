@@ -110,7 +110,24 @@
     "streaming": "流式传输",
     "json_object": "json_object",
     "available_models": "可用",
-    "settings_error": "设置错误"
+    "settings_error": "设置错误",
+    "general_tab": "常规",
+    "appearance_tab": "外观"
+  },
+  "appearance": {
+    "background_color": "背景颜色",
+    "accent_color": "强调色",
+    "background_image": "背景图片",
+    "choose_image": "选择图片",
+    "clear_image": "清除",
+    "glassmorphism": "玻璃拟态",
+    "opacity": "不透明度",
+    "scope": "作用范围",
+    "scope_global": "全局",
+    "scope_content": "内容区域",
+    "presets": "预设主题",
+    "presets_coming_soon": "预设主题即将推出",
+    "reset_defaults": "恢复默认"
   },
   "error_book": {
     "title": "错题本",

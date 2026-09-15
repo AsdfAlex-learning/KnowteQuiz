@@ -110,7 +110,24 @@
     "streaming": "스트리밍",
     "json_object": "json_object",
     "available_models": "사용 가능",
-    "settings_error": "설정 오류"
+    "settings_error": "설정 오류",
+    "general_tab": "일반",
+    "appearance_tab": "외형"
+  },
+  "appearance": {
+    "background_color": "배경색",
+    "accent_color": "강조색",
+    "background_image": "배경 이미지",
+    "choose_image": "이미지 선택",
+    "clear_image": "지우기",
+    "glassmorphism": "글래스모피즘",
+    "opacity": "불투명도",
+    "scope": "적용 범위",
+    "scope_global": "전역",
+    "scope_content": "콘텐츠 영역",
+    "presets": "프리셋 테마",
+    "presets_coming_soon": "프리셋 테마 준비 중",
+    "reset_defaults": "기본값으로 재설정"
   },
   "error_book": {
     "title": "오답노트",

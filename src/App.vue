@@ -1,5 +1,6 @@
 <template>
-  <div class="h-screen w-screen flex flex-col bg-[var(--bg-base)] text-[var(--text-primary)] overflow-hidden">
+  <div class="h-screen w-screen flex flex-col text-[var(--text-primary)] overflow-hidden" :class="appBgClass">
+    <BackgroundLayer />
     <TitleBar>
       <template #center>
         {{ readerStore.currentNote?.title || '' }}
@@ -11,6 +12,7 @@
         v-show="layoutStore.leftPanelOpen"
         class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-r border-[var(--border-default)]"
         :style="{ width: layoutStore.explorerWidth + 'px' }"
+        data-glass-panel="sidebar"
       >
         <FolderSelector />
         <FileTree />
@@ -22,7 +24,12 @@
       />
 
       <!-- Center panel -->
-      <main ref="readerMain" class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]" @scroll="onReaderScroll">
+      <main
+        ref="readerMain"
+        class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]"
+        data-glass-panel="content"
+        @scroll="onReaderScroll"
+      >
         <MarkdownRenderer v-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
         <EmptyState v-else />
       </main>
@@ -37,6 +44,7 @@
         v-show="layoutStore.rightPanelOpen"
         class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-l border-[var(--border-default)]"
         :style="{ width: layoutStore.readerWidth + 'px' }"
+        data-glass-panel="sidebar"
       >
         <PanelContainer />
       </aside>
@@ -46,14 +54,16 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue';
 import { useLayoutStore } from './stores/layout';
 import { useReaderStore } from './stores/reader';
 import { useExplorerStore } from './stores/explorer';
 import { useSettingsStore } from './stores/settings';
 import { useNavigationStore } from './stores/navigation';
+import { useTheme } from './composables/useTheme';
 import TitleBar from './components/Layout/TitleBar.vue';
 import StatusBar from './components/Layout/StatusBar.vue';
+import BackgroundLayer from './components/Layout/BackgroundLayer.vue';
 import FolderSelector from './components/Explorer/FolderSelector.vue';
 import FileTree from './components/Explorer/FileTree.vue';
 import MarkdownRenderer from './components/Reader/MarkdownRenderer.vue';
@@ -66,6 +76,16 @@ const explorerStore = useExplorerStore();
 const settingsStore = useSettingsStore();
 const navigationStore = useNavigationStore();
 const readerMain = ref<HTMLElement | null>(null);
+
+useTheme();
+
+const appBgClass = computed(() => {
+  const theme = settingsStore.settings.theme_config;
+  if (!theme) return 'bg-[var(--bg-base)]';
+  const hasCustomBg = theme.background_image || (theme.background_color && theme.background_color !== '#1e1e2e');
+  const hasGlass = theme.glassmorphism?.enabled;
+  return hasCustomBg || hasGlass ? 'bg-transparent' : 'bg-[var(--bg-base)]';
+});
 
 let pendingScrollSave: { path: string; top: number } | null = null;
 let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;

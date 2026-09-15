@@ -73,6 +73,19 @@ export interface DataStatus {
   files: DataFileStatus[];
 }
 
+export interface GlassmorphismConfig {
+  enabled: boolean;
+  opacity: number;
+  scope: 'global' | 'content';
+}
+
+export interface ThemeConfig {
+  background_color: string;
+  accent_color: string;
+  background_image: string | null;
+  glassmorphism: GlassmorphismConfig;
+}
+
 export interface Settings {
   version: string;
   theme: string;
@@ -81,4 +94,5 @@ export interface Settings {
   ui: { layout: UiLayout };
   quiz: QuizDefaults;
   workspace: WorkspaceState;
+  theme_config: ThemeConfig;
 }

@@ -110,7 +110,24 @@
     "streaming": "Streaming",
     "json_object": "json_object",
     "available_models": "Available",
-    "settings_error": "Settings error"
+    "settings_error": "Settings error",
+    "general_tab": "General",
+    "appearance_tab": "Appearance"
+  },
+  "appearance": {
+    "background_color": "Background Color",
+    "accent_color": "Accent Color",
+    "background_image": "Background Image",
+    "choose_image": "Choose Image",
+    "clear_image": "Clear",
+    "glassmorphism": "Glassmorphism",
+    "opacity": "Opacity",
+    "scope": "Scope",
+    "scope_global": "Global",
+    "scope_content": "Content Area",
+    "presets": "Preset Themes",
+    "presets_coming_soon": "Preset themes coming soon",
+    "reset_defaults": "Reset to Defaults"
   },
   "error_book": {
     "title": "Error Book",

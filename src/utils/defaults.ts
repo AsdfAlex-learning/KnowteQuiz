@@ -40,5 +40,15 @@ export function defaultSettings(): Settings {
       selected_path: null,
       scroll_positions: {},
     },
+    theme_config: {
+      background_color: '#1e1e2e',
+      accent_color: '#cba6f7',
+      background_image: null,
+      glassmorphism: {
+        enabled: false,
+        opacity: 20,
+        scope: 'global',
+      },
+    },
   };
 }

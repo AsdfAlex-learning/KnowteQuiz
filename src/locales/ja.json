@@ -110,7 +110,24 @@
     "streaming": "ストリーミング",
     "json_object": "json_object",
     "available_models": "利用可能",
-    "settings_error": "設定エラー"
+    "settings_error": "設定エラー",
+    "general_tab": "一般",
+    "appearance_tab": "外観"
+  },
+  "appearance": {
+    "background_color": "背景色",
+    "accent_color": "アクセントカラー",
+    "background_image": "背景画像",
+    "choose_image": "画像を選択",
+    "clear_image": "クリア",
+    "glassmorphism": "グラスモーフィズム",
+    "opacity": "不透明度",
+    "scope": "適用範囲",
+    "scope_global": "全体",
+    "scope_content": "コンテンツ領域",
+    "presets": "プリセットテーマ",
+    "presets_coming_soon": "プリセットテーマは近日公開",
+    "reset_defaults": "デフォルトに戻す"
   },
   "error_book": {
     "title": "間違い帳",

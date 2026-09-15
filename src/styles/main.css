@@ -235,3 +235,16 @@ input[type='range']::-moz-range-thumb {
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
+
+/* ---- Glassmorphism ---- */
+[data-glassmorphism='global'] [data-glass-panel] {
+  background-color: color-mix(in srgb, var(--bg-base) calc(var(--glass-opacity, 0.2) * 100%), transparent);
+}
+
+[data-glassmorphism='global'] [data-glass-panel='sidebar'] {
+  background-color: color-mix(in srgb, var(--bg-sidebar) calc(var(--glass-opacity, 0.2) * 100%), transparent);
+}
+
+[data-glassmorphism='content'] [data-glass-panel='content'] {
+  background-color: color-mix(in srgb, var(--bg-base) calc(var(--glass-opacity, 0.2) * 100%), transparent);
+}
