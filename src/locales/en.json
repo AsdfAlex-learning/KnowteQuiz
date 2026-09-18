@@ -75,6 +75,7 @@
     "probing": "Probing...",
     "connected": "Connected",
     "disconnected": "Disconnected",
+    "connection_failed": "Connection failed",
     "quiz_defaults": "Quiz Defaults",
     "templates_load_error": "Failed to load templates",
     "question_types": "Question Types",

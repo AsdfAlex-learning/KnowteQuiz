@@ -321,7 +321,7 @@ async function handleSaveMistakeFromDiagnosis() {
 }
 
 function handleNewQuiz() {
-  quizStore.resetQuiz();
+  quizStore.reset();
   submitted.value = false;
   selectedOptions.value = [];
   shortAnswer.value = '';
