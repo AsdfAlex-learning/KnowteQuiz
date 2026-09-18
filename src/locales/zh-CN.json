@@ -137,6 +137,8 @@
     "scope": "作用范围",
     "scope_global": "全局",
     "scope_content": "内容区域",
+    "image_too_large": "图片大小不能超过 5 MB",
+    "video_too_large": "视频大小不能超过 50 MB",
     "presets": "预设主题",
     "presets_coming_soon": "预设主题即将推出",
     "reset_defaults": "恢复默认"

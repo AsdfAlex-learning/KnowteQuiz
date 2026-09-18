@@ -61,16 +61,25 @@ function stop() {
 
   video.pause();
 
-  // Capture current frame to canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth || 1920;
-  canvas.height = video.videoHeight || 1080;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/png');
-    emit('stopped', dataUrl);
+  // Only attempt capture when a frame is actually available
+  if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        emit('stopped', canvas.toDataURL('image/png'));
+        return;
+      }
+    } catch {
+      /* fall through to stopped-without-screenshot */
+    }
   }
+
+  // Fallback: still signal stopped so the video unmounts and memory is released
+  emit('stopped', '');
 }
 
 function resume() {

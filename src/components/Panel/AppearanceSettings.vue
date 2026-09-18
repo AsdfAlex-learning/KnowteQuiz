@@ -60,6 +60,9 @@
       <p v-if="modelValue.background_image" class="text-xs text-[var(--text-muted)] truncate">
         {{ modelValue.background_image }}
       </p>
+      <p v-if="imageError" class="text-xs text-[var(--color-error)]">
+        {{ imageError }}
+      </p>
     </div>
 
     <!-- Background Video -->
@@ -93,6 +96,9 @@
 
       <p v-if="modelValue.background_video" class="text-xs text-[var(--text-muted)] truncate">
         {{ modelValue.background_video }}
+      </p>
+      <p v-if="videoError" class="text-xs text-[var(--color-error)]">
+        {{ videoError }}
       </p>
 
       <!-- Playback controls -->
@@ -255,7 +261,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
+import { requestStop, requestResume, resetVideoState } from '@/composables/useVideoBackground';
 import type { ThemeConfig } from '@/types/settings';
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
 const props = defineProps<{
   modelValue: ThemeConfig;
@@ -268,6 +278,8 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const fileInput = ref<HTMLInputElement | null>(null);
 const videoInput = ref<HTMLInputElement | null>(null);
+const imageError = ref<string | null>(null);
+const videoError = ref<string | null>(null);
 
 const videoStatusText = computed(() => {
   if (!props.modelValue.background_video) return '';
@@ -309,6 +321,13 @@ function handleImageSelect(e: Event) {
   const file = target.files?.[0];
   if (!file) return;
 
+  if (file.size > MAX_IMAGE_BYTES) {
+    imageError.value = t('appearance.image_too_large');
+    target.value = '';
+    return;
+  }
+  imageError.value = null;
+
   const reader = new FileReader();
   reader.onload = () => {
     emit('update:modelValue', {
@@ -320,6 +339,7 @@ function handleImageSelect(e: Event) {
 }
 
 function clearImage() {
+  imageError.value = null;
   emit('update:modelValue', {
     ...props.modelValue,
     background_image: null,
@@ -334,6 +354,14 @@ function handleVideoSelect(e: Event) {
   const file = target.files?.[0];
   if (!file) return;
 
+  if (file.size > MAX_VIDEO_BYTES) {
+    videoError.value = t('appearance.video_too_large');
+    target.value = '';
+    return;
+  }
+  videoError.value = null;
+  resetVideoState();
+
   const reader = new FileReader();
   reader.onload = () => {
     emit('update:modelValue', {
@@ -347,10 +375,12 @@ function handleVideoSelect(e: Event) {
 }
 
 function clearVideo() {
+  videoError.value = null;
+  resetVideoState();
   emit('update:modelValue', {
     ...props.modelValue,
     background_video: null,
-    video_playing: true,
+    video_playing: false,
     video_time: 0,
   });
   if (videoInput.value) {
@@ -373,6 +403,7 @@ function pauseVideo() {
 }
 
 function stopVideo() {
+  requestStop();
   emit('update:modelValue', {
     ...props.modelValue,
     video_playing: false,
@@ -380,6 +411,7 @@ function stopVideo() {
 }
 
 function resumeVideo() {
+  requestResume();
   emit('update:modelValue', {
     ...props.modelValue,
     video_playing: true,
@@ -387,7 +419,7 @@ function resumeVideo() {
 }
 
 function switchToStatic() {
-  // Stop video first (the BackgroundLayer will capture screenshot)
+  requestStop();
   emit('update:modelValue', {
     ...props.modelValue,
     video_playing: false,
@@ -395,10 +427,11 @@ function switchToStatic() {
 }
 
 function switchToWallpaper() {
+  requestStop();
   emit('update:modelValue', {
     ...props.modelValue,
     background_video: null,
-    video_playing: true,
+    video_playing: false,
     video_time: 0,
     background_image: props.modelValue.background_image,
   });
@@ -436,6 +469,9 @@ function updateScope(scope: 'global' | 'content') {
 }
 
 function resetToDefaults() {
+  imageError.value = null;
+  videoError.value = null;
+  resetVideoState();
   emit('update:modelValue', {
     background_color: '#1e1e2e',
     accent_color: '#cba6f7',
@@ -446,7 +482,7 @@ function resetToDefaults() {
       scope: 'global',
     },
     background_video: null,
-    video_playing: true,
+    video_playing: false,
     video_time: 0,
   });
 }

@@ -137,6 +137,8 @@
     "scope": "Scope",
     "scope_global": "Global",
     "scope_content": "Content Area",
+    "image_too_large": "Image must be smaller than 5 MB",
+    "video_too_large": "Video must be smaller than 50 MB",
     "presets": "Preset Themes",
     "presets_coming_soon": "Preset themes coming soon",
     "reset_defaults": "Reset to Defaults"
