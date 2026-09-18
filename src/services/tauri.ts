@@ -1,7 +1,13 @@
 export { convertFileSrc, invoke } from '@tauri-apps/api/core';
 
+declare global {
+  interface Window {
+    __TAURI_INTERNALS__?: unknown;
+  }
+}
+
 export function isTauri(): boolean {
-  return typeof window !== 'undefined' && (window as any).__TAURI_INTERNALS__ !== undefined;
+  return typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
 }
 
 export async function webStream<T>(path: string, body: unknown, onMessage: (msg: T) => void): Promise<void> {

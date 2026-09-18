@@ -155,7 +155,7 @@ function toggleType(type: QuestionType) {
 
 async function handleGenerate() {
   if (!notePath.value || quizStore.isGenerating) return;
-  quizStore.resetQuiz();
+  quizStore.reset();
   quizStore.setMode(mode.value);
   mistakeStore.clearSaveState();
 

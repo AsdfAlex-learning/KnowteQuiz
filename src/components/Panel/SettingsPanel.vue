@@ -289,7 +289,7 @@ async function handleTestConnection() {
     connectionResult.value = {
       ok: false,
       kind: 'network',
-      message: 'Connection failed',
+      message: t('settings_page.connection_failed'),
       status: null,
     };
   } finally {

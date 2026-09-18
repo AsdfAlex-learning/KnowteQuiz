@@ -75,6 +75,7 @@
     "probing": "検出中...",
     "connected": "接続済み",
     "disconnected": "未接続",
+    "connection_failed": "接続に失敗しました",
     "quiz_defaults": "クイズのデフォルト設定",
     "templates_load_error": "テンプレートの読み込みに失敗しました",
     "question_types": "問題タイプ",

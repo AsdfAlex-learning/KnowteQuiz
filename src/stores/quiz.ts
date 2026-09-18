@@ -253,8 +253,6 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  const resetQuiz = reset;
-
   return {
     mode,
     quizState,
@@ -281,7 +279,6 @@ export const useQuizStore = defineStore('quiz', () => {
     score,
     setMode,
     reset,
-    resetQuiz,
     addQuestion,
     setAnswer,
     submitAnswer,
