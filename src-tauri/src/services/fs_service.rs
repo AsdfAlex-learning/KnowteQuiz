@@ -164,7 +164,7 @@ async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, A
                 is_dir: true,
                 children,
             });
-        } else if is_markdown_file(&path) {
+        } else if is_markdown_path(&path) {
             files.push(NoteTreeNode {
                 name,
                 path: full_path,
@@ -196,7 +196,7 @@ fn should_ignore_entry(name: &str) -> bool {
     ) || name.starts_with('.')
 }
 
-fn is_markdown_file(path: &Path) -> bool {
+pub(crate) fn is_markdown_path(path: &Path) -> bool {
     matches!(
         path.extension()
             .and_then(|ext| ext.to_str())

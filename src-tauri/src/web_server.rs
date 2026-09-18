@@ -192,26 +192,61 @@ struct ReadNoteAssetQuery {
     path: String,
 }
 
+async fn resolve_note_path(data_dir: &Path, candidate: &str) -> Result<PathBuf, AppError> {
+    let settings = config::get_settings_path(data_dir)?;
+    let root = settings
+        .workspace
+        .root_path
+        .ok_or_else(|| AppError::InvalidInput("No note root configured".to_string()))?;
+    let root_canon = tokio::fs::canonicalize(&root)
+        .await
+        .map_err(|e| AppError::InvalidInput(format!("Invalid note root: {e}")))?;
+    let target_canon = tokio::fs::canonicalize(candidate)
+        .await
+        .map_err(|_| AppError::NotFound(format!("File does not exist: {candidate}")))?;
+    if !target_canon.starts_with(&root_canon) {
+        return Err(AppError::InvalidInput(
+            "Path is outside the configured note root".to_string(),
+        ));
+    }
+    Ok(target_canon)
+}
+
 async fn read_note_handler(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteQuery>,
 ) -> Result<Json<NoteContent>, AppError> {
-    let content = fs_service::read_file_content(&query.path).await?;
+    let canonical = resolve_note_path(&state.data_dir, &query.path).await?;
+    if !fs_service::is_markdown_path(&canonical) {
+        return Err(AppError::InvalidInput(format!(
+            "Not a Markdown file: {}",
+            query.path
+        )));
+    }
+    let content = fs_service::read_file_content(&canonical.to_string_lossy()).await?;
     let result = note_service::extract_metadata(&content, &query.path);
     Ok(Json(result))
 }
 
 async fn read_note_asset_handler(
+    State(state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteAssetQuery>,
 ) -> Result<Response, AppError> {
-    let path = PathBuf::from(&query.path);
-    let content_type = asset_content_type(&path)
+    let canonical = resolve_note_path(&state.data_dir, &query.path).await?;
+    let content_type = asset_content_type(&canonical)
         .ok_or_else(|| AppError::InvalidInput(format!("Unsupported asset type: {}", query.path)))?;
-    let bytes = tokio::fs::read(&path)
+    let bytes = tokio::fs::read(&canonical)
         .await
         .map_err(|err| AppError::Internal(format!("Failed to read asset {}: {}", query.path, err)))?;
 
-    Ok(([(header::CONTENT_TYPE, content_type)], bytes).into_response())
+    Ok(([
+        (header::CONTENT_TYPE, HeaderValue::from_static(content_type)),
+        (
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ),
+    ], bytes)
+        .into_response())
 }
 
 fn asset_content_type(path: &Path) -> Option<&'static str> {
@@ -728,5 +763,133 @@ mod tests {
             max_rounds: 3,
             final_report: None,
         }
+    }
+
+    #[tokio::test]
+    async fn resolve_note_path_accepts_file_inside_root() {
+        let data_dir = temp_data_dir("resolve_note_path_accepts_file_inside_root_data");
+        let root = temp_data_dir("resolve_note_path_accepts_file_inside_root_notes");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("note.md"), "# Hello").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let result = resolve_note_path(&data_dir, &root.join("note.md").to_string_lossy()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn resolve_note_path_rejects_file_outside_root() {
+        let data_dir = temp_data_dir("resolve_note_path_rejects_file_outside_root_data");
+        let root = temp_data_dir("resolve_note_path_rejects_file_outside_root_notes");
+        let outside = temp_data_dir("resolve_note_path_rejects_file_outside_root_outside");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("secret.txt"), "secret").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let result = resolve_note_path(&data_dir, &outside.join("secret.txt").to_string_lossy()).await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("outside the configured note root"));
+    }
+
+    #[tokio::test]
+    async fn resolve_note_path_rejects_dotdot_traversal() {
+        let data_dir = temp_data_dir("resolve_note_path_rejects_dotdot_traversal_data");
+        let root = temp_data_dir("resolve_note_path_rejects_dotdot_traversal_notes");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("note.md"), "# Hello").unwrap();
+
+        // Place a file in the parent directory of root (outside root)
+        let outside_file = root.parent().unwrap().join("outside_secret.txt");
+        std::fs::write(&outside_file, "secret").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let traversal = root.join("..").join("outside_secret.txt");
+        let result = resolve_note_path(&data_dir, &traversal.to_string_lossy()).await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("outside the configured note root"));
+    }
+
+    #[tokio::test]
+    async fn read_note_handler_accepts_markdown_file() {
+        let data_dir = temp_data_dir("read_note_handler_accepts_markdown_file_data");
+        let root = temp_data_dir("read_note_handler_accepts_markdown_file_notes");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("note.md"), "# Hello").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let query = ReadNoteQuery {
+            path: root.join("note.md").to_string_lossy().to_string(),
+        };
+        let result = read_note_handler(State(state), Query(query)).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().0.content, "# Hello");
+    }
+
+    #[tokio::test]
+    async fn read_note_handler_rejects_non_markdown_file() {
+        let data_dir = temp_data_dir("read_note_handler_rejects_non_markdown_file_data");
+        let root = temp_data_dir("read_note_handler_rejects_non_markdown_file_notes");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("secret.txt"), "secret").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let query = ReadNoteQuery {
+            path: root.join("secret.txt").to_string_lossy().to_string(),
+        };
+        let result = read_note_handler(State(state), Query(query)).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Not a Markdown file"));
+    }
+
+    fn write_settings_with_root(data_dir: &Path, root: &Path) {
+        let settings = serde_json::json!({
+            "version": "1.0.0",
+            "theme": "obsidian-dark",
+            "ui_language": "zh-CN",
+            "llm": {
+                "provider": "openai-compatible",
+                "base_url": "http://localhost:11434/v1",
+                "api_key": "",
+                "model": "qwen2.5:7b",
+                "max_tokens": 4096,
+                "temperature": 0.7
+            },
+            "ui": {
+                "layout": {
+                    "left_visible": true,
+                    "right_visible": true,
+                    "left_width": 280,
+                    "right_width": 360
+                }
+            },
+            "quiz": {
+                "default_types": ["single", "short"],
+                "default_language": "zh",
+                "default_count": 5,
+                "default_mode": "basic",
+                "default_difficulty": "medium",
+                "prompt_template": "default",
+                "advanced": {
+                    "max_diagnosis_rounds": 3,
+                    "require_reasoning": true,
+                    "show_diagnosis_report": true
+                }
+            },
+            "workspace": {
+                "root_path": root.to_string_lossy().to_string()
+            }
+        });
+        std::fs::write(data_dir.join("settings.json"), settings.to_string()).unwrap();
     }
 }
