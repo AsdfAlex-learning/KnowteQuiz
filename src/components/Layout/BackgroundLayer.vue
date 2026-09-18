@@ -23,6 +23,8 @@
 import { computed, ref, watch, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useVideoBackground } from '@/composables/useVideoBackground';
+import { getAssetUrl } from '@/composables/useTheme';
+import { withAlpha } from '@/utils/color';
 import VideoBackground from './VideoBackground.vue';
 
 const settingsStore = useSettingsStore();
@@ -44,7 +46,7 @@ const layerStyle = computed(() => {
 
   // Background image (only when no video is active or video is stopped without screenshot)
   if (t.background_image && (!t.background_video || (isStopped.value && !screenshotUrl.value))) {
-    styles.backgroundImage = `url(${t.background_image})`;
+    styles.backgroundImage = `url(${getAssetUrl(t.background_image)})`;
     styles.backgroundSize = 'cover';
     styles.backgroundPosition = 'center';
     styles.backgroundRepeat = 'no-repeat';
@@ -55,7 +57,7 @@ const layerStyle = computed(() => {
     const opacity = (t.glassmorphism.opacity ?? 20) / 100;
     styles.backdropFilter = 'blur(12px) saturate(180%)';
     styles.WebkitBackdropFilter = 'blur(12px) saturate(180%)';
-    styles.backgroundColor = `rgba(30, 30, 46, ${opacity})`;
+    styles.backgroundColor = withAlpha(t.background_color || '#1e1e2e', opacity);
   }
 
   return styles;
