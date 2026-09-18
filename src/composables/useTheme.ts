@@ -2,6 +2,7 @@ import { watch, onMounted, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import type { ThemeConfig } from '@/types/settings';
 import { isTauri, convertFileSrc } from '@/services/tauri';
+import { clampBlur } from '@/utils/glass';
 
 const CSS_VAR_BG_BASE = '--bg-base';
 const CSS_VAR_ACCENT_PURPLE = '--accent-purple';
@@ -34,6 +35,13 @@ function applyThemeToRoot(theme: ThemeConfig) {
     root.style.setProperty('--glass-opacity', String(theme.glassmorphism.opacity / 100));
   } else {
     root.style.removeProperty('--glass-opacity');
+  }
+
+  // Set glassmorphism blur radius CSS variable (clamped to the supported 0-30 px range)
+  if (theme.glassmorphism?.enabled) {
+    root.style.setProperty('--glass-blur', `${clampBlur(theme.glassmorphism.blur)}px`);
+  } else {
+    root.style.removeProperty('--glass-blur');
   }
 }
 

@@ -76,6 +76,7 @@ export interface DataStatus {
 export interface GlassmorphismConfig {
   enabled: boolean;
   opacity: number;
+  blur: number;
   scope: 'global' | 'content';
 }
 

@@ -2,6 +2,7 @@
   <div
     class="h-9 flex items-center justify-between px-3 bg-[var(--bg-sidebar)] border-b border-[var(--border-default)] select-none"
     data-tauri-drag-region
+    data-glass-panel="sidebar"
   >
     <!-- Left: App identity -->
     <div class="flex items-center gap-2 min-w-0" data-tauri-drag-region>

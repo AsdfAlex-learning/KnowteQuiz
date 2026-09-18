@@ -92,6 +92,8 @@ pub struct GlassmorphismConfig {
     pub enabled: bool,
     #[serde(default = "default_glass_opacity")]
     pub opacity: u32,
+    #[serde(default = "default_glass_blur")]
+    pub blur: u32,
     #[serde(default = "default_glass_scope")]
     pub scope: String,
 }
@@ -101,6 +103,7 @@ impl Default for GlassmorphismConfig {
         Self {
             enabled: false,
             opacity: default_glass_opacity(),
+            blur: default_glass_blur(),
             scope: default_glass_scope(),
         }
     }
@@ -108,6 +111,10 @@ impl Default for GlassmorphismConfig {
 
 fn default_glass_opacity() -> u32 {
     20
+}
+
+fn default_glass_blur() -> u32 {
+    12
 }
 
 fn default_glass_scope() -> String {

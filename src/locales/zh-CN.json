@@ -135,6 +135,7 @@
     "switch_wallpaper": "切换为壁纸",
     "glassmorphism": "玻璃拟态",
     "opacity": "不透明度",
+    "blur": "模糊半径",
     "scope": "作用范围",
     "scope_global": "全局",
     "scope_content": "内容区域",

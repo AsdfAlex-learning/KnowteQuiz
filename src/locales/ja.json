@@ -135,6 +135,7 @@
     "switch_wallpaper": "壁紙に切り替え",
     "glassmorphism": "グラスモーフィズム",
     "opacity": "不透明度",
+    "blur": "ぼかし半径",
     "scope": "適用範囲",
     "scope_global": "全体",
     "scope_content": "コンテンツ領域",

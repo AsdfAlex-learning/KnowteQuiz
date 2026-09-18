@@ -47,6 +47,7 @@ export function defaultSettings(): Settings {
       glassmorphism: {
         enabled: false,
         opacity: 20,
+        blur: 12,
         scope: 'global',
       },
       background_video: null,

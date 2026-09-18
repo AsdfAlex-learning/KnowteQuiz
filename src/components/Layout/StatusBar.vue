@@ -1,6 +1,7 @@
 <template>
   <div
     class="h-[var(--statusbar-height)] flex items-center justify-between px-3 bg-[var(--bg-sidebar)] border-t border-[var(--border-subtle)] text-[var(--text-xs)] text-[var(--text-muted)]"
+    data-glass-panel="sidebar"
   >
     <!-- Left: Current note path -->
     <div class="flex items-center gap-2 min-w-0 flex-1">

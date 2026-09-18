@@ -24,7 +24,6 @@ import { computed, ref, watch, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useVideoBackground } from '@/composables/useVideoBackground';
 import { getAssetUrl } from '@/composables/useTheme';
-import { withAlpha } from '@/utils/color';
 import VideoBackground from './VideoBackground.vue';
 
 const settingsStore = useSettingsStore();
@@ -39,6 +38,10 @@ const layerStyle = computed(() => {
 
   const styles: Record<string, string> = {};
 
+  // While a video wallpaper is playing, keep the base layer transparent so the
+  // video underneath stays visible (frosted-glass panels blur it themselves).
+  if (t.background_video && !isStopped.value) return styles;
+
   // Background color
   if (t.background_color) {
     styles.backgroundColor = t.background_color;
@@ -50,14 +53,6 @@ const layerStyle = computed(() => {
     styles.backgroundSize = 'cover';
     styles.backgroundPosition = 'center';
     styles.backgroundRepeat = 'no-repeat';
-  }
-
-  // Glassmorphism overlay
-  if (t.glassmorphism?.enabled) {
-    const opacity = (t.glassmorphism.opacity ?? 20) / 100;
-    styles.backdropFilter = 'blur(12px) saturate(180%)';
-    styles.WebkitBackdropFilter = 'blur(12px) saturate(180%)';
-    styles.backgroundColor = withAlpha(t.background_color || '#1e1e2e', opacity);
   }
 
   return styles;

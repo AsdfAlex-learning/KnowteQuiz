@@ -199,6 +199,40 @@
           <input type="range" min="0" max="100" :value="modelValue.glassmorphism.opacity" @input="updateOpacity" />
         </div>
 
+        <!-- Blur Radius -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-[var(--text-muted)]">
+              {{ t('appearance.blur') }}
+            </label>
+            <div class="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                max="30"
+                step="1"
+                class="w-16 px-2 py-1 rounded-md text-xs font-mono bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)]"
+                :value="modelValue.glassmorphism.blur"
+                @input="updateBlur"
+              />
+              <span class="text-xs text-[var(--text-muted)]">px</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-[var(--text-muted)] font-mono">0px</span>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              step="1"
+              class="flex-1"
+              :value="modelValue.glassmorphism.blur"
+              @input="updateBlur"
+            />
+            <span class="text-xs text-[var(--text-muted)] font-mono">30px</span>
+          </div>
+        </div>
+
         <!-- Scope Selector -->
         <div class="space-y-2">
           <label class="text-xs text-[var(--text-muted)]">
@@ -262,6 +296,7 @@
 import { ref, computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import { requestStop, requestResume, resetVideoState } from '@/composables/useVideoBackground';
+import { clampBlur } from '@/utils/glass';
 import type { ThemeConfig } from '@/types/settings';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -458,6 +493,17 @@ function updateOpacity(e: Event) {
   });
 }
 
+function updateBlur(e: Event) {
+  const target = e.target as HTMLInputElement;
+  emit('update:modelValue', {
+    ...props.modelValue,
+    glassmorphism: {
+      ...props.modelValue.glassmorphism,
+      blur: clampBlur(target.value),
+    },
+  });
+}
+
 function updateScope(scope: 'global' | 'content') {
   emit('update:modelValue', {
     ...props.modelValue,
@@ -479,6 +525,7 @@ function resetToDefaults() {
     glassmorphism: {
       enabled: false,
       opacity: 20,
+      blur: 12,
       scope: 'global',
     },
     background_video: null,

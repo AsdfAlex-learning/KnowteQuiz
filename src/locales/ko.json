@@ -135,6 +135,7 @@
     "switch_wallpaper": "배경화면으로 전환",
     "glassmorphism": "글래스모피즘",
     "opacity": "불투명도",
+    "blur": "흐림 반경",
     "scope": "적용 범위",
     "scope_global": "전역",
     "scope_content": "콘텐츠 영역",

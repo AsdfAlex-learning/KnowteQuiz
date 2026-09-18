@@ -135,6 +135,7 @@
     "switch_wallpaper": "Switch to Wallpaper",
     "glassmorphism": "Glassmorphism",
     "opacity": "Opacity",
+    "blur": "Blur Radius",
     "scope": "Scope",
     "scope_global": "Global",
     "scope_content": "Content Area",
