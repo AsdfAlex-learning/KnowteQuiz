@@ -299,19 +299,31 @@ async fn probe_llm_handler(
 async fn backup_data_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataBackupResult>, AppError> {
-    Ok(Json(storage::backup_data_files_path(&state.data_dir)?))
+    let data_dir = state.data_dir.clone();
+    let result = tokio::task::spawn_blocking(move || storage::backup_data_files_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Backup task failed: {e}")))??;
+    Ok(Json(result))
 }
 
 async fn data_status_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataStatus>, AppError> {
-    Ok(Json(storage::data_status_path(&state.data_dir)?))
+    let data_dir = state.data_dir.clone();
+    let result = tokio::task::spawn_blocking(move || storage::data_status_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Data status task failed: {e}")))??;
+    Ok(Json(result))
 }
 
 async fn restore_latest_backup_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataRestoreResult>, AppError> {
-    Ok(Json(storage::restore_latest_backup_path(&state.data_dir)?))
+    let data_dir = state.data_dir.clone();
+    let result = tokio::task::spawn_blocking(move || storage::restore_latest_backup_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Restore task failed: {e}")))??;
+    Ok(Json(result))
 }
 
 async fn list_prompt_templates_handler() -> Result<Json<Vec<(String, String, String)>>, AppError> {
@@ -592,7 +604,10 @@ async fn generate_report_handler(
 async fn cleanup_sessions_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<diagnosis_session_service::SessionCleanupResult>, AppError> {
-    let result = diagnosis_session_service::cleanup_expired_sessions(&state.data_dir, 7)?;
+    let data_dir = state.data_dir.clone();
+    let result = tokio::task::spawn_blocking(move || diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7))
+        .await
+        .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))??;
     Ok(Json(result))
 }
 

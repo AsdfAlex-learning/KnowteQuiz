@@ -3,9 +3,22 @@ use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
+use std::sync::Mutex;
 
 const MISTAKES_FILE: &str = "mistakes.jsonl";
 const MISTAKES_LEGACY_FILE: &str = "mistakes.json";
+
+/// Serializes read-modify-write cycles on `mistakes.jsonl`.
+///
+/// `write_mistakes_jsonl` replaces the entire file, so two concurrent writers
+/// would otherwise read the same state and one entry would be silently lost.
+static MISTAKES_WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+fn lock_mistakes_write() -> Result<std::sync::MutexGuard<'static, ()>, AppError> {
+    MISTAKES_WRITE_LOCK
+        .lock()
+        .map_err(|_| AppError::Internal("Mistake write lock poisoned".to_string()))
+}
 
 pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, AppError> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
@@ -13,12 +26,14 @@ pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<Mist
 }
 
 pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), AppError> {
+    let _guard = lock_mistakes_write()?;
     let mistakes = read_mistakes_or_empty(data_dir)?;
     let updated = upsert_mistake(mistakes, entry);
     write_mistakes_jsonl(data_dir, &updated)
 }
 
 pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), AppError> {
+    let _guard = lock_mistakes_write()?;
     let mut mistakes = read_mistakes_or_empty(data_dir)?;
     let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
     let mut found = false;
@@ -560,5 +575,31 @@ mod tests {
         assert_eq!(mistakes.len(), 2);
         assert_eq!(mistakes[0].id, "m2"); // front = most recent
         assert_eq!(mistakes[1].id, "m1");
+    }
+
+    #[test]
+    fn concurrent_saves_do_not_lose_entries() {
+        let dir = temp_data_dir("concurrent_saves_do_not_lose_entries");
+
+        // Every thread performs a full read-modify-write against the same file.
+        // Without the write lock the last writer wins and entries are lost.
+        std::thread::scope(|scope| {
+            for index in 0..16 {
+                let dir = dir.clone();
+                scope.spawn(move || {
+                    let entry = mistake(
+                        &format!("m{index}"),
+                        "/notes/concurrent.md",
+                        &format!("Q{index}?"),
+                        MistakeMode::Basic,
+                        "2026-01-01T00:00:00Z",
+                    );
+                    save_mistake(&dir, entry).expect("concurrent save should succeed");
+                });
+            }
+        });
+
+        let mistakes = read_mistakes_or_empty(&dir).expect("read should succeed");
+        assert_eq!(mistakes.len(), 16, "every concurrent save must be persisted");
     }
 }
