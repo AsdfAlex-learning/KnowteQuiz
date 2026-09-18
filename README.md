@@ -14,6 +14,8 @@
   - **Advanced Mode**: Submit your reasoning → AI asks follow-up questions → Receive a detailed blind-spot report.
 - **Purely local** — All data (notes, mistakes, settings) stays on your machine. Connect to any OpenAI-compatible endpoint (Ollama by default).
 - **Three-pane workspace** — Explorer | Reader | Quiz & Diagnosis panel, with resizable columns and toggle shortcuts (`Ctrl+B` / `Ctrl+Shift+B`).
+- **Custom appearance** — Pick your own background color, accent color, and background image, with an adjustable glassmorphism effect (global or content-area scope).
+- **Dynamic backgrounds** — Use an MP4 as a looping background, with play / pause / stop controls. Stopping captures the current frame as a static wallpaper and releases the video from memory; resuming restarts from the saved position.
 - **Cross-platform** — Built with Tauri v2 for Windows, macOS, and Linux.
 - **Dual runtime** — Same app runs as a Tauri desktop window **or** as a standalone web server (Axum).
 
@@ -166,15 +168,18 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **66 Rust unit tests** and **152 frontend tests** covering:
+The project includes **83 Rust unit tests** and **175 frontend tests** covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation
 - Answer normalization and scoring
 - Note scanning, indexing, and frontmatter extraction
 - Mistake filtering, search, and review flow
+- Concurrent mistake writes (no lost updates)
+- Web path validation (reads bound to the configured note root)
 - SSE stream parsing
 - Settings persistence
+- Theme color helpers and video-background controls
 
 ```bash
 cd src-tauri && cargo test     # Rust tests
