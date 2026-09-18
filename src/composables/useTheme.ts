@@ -7,19 +7,20 @@ const CSS_VAR_BG_BASE = '--bg-base';
 const CSS_VAR_ACCENT_PURPLE = '--accent-purple';
 const CSS_VAR_BORDER_FOCUS = '--border-focus';
 
+const DEFAULT_BG_BASE = '#1e1e2e';
+const DEFAULT_ACCENT_PURPLE = '#cba6f7';
+const DEFAULT_BORDER_FOCUS = '#cba6f7';
+
 function applyThemeToRoot(theme: ThemeConfig) {
   const root = document.documentElement;
 
   // Apply background color
-  if (theme.background_color) {
-    root.style.setProperty(CSS_VAR_BG_BASE, theme.background_color);
-  }
+  root.style.setProperty(CSS_VAR_BG_BASE, theme.background_color || DEFAULT_BG_BASE);
 
   // Apply accent color
-  if (theme.accent_color) {
-    root.style.setProperty(CSS_VAR_ACCENT_PURPLE, theme.accent_color);
-    root.style.setProperty(CSS_VAR_BORDER_FOCUS, theme.accent_color);
-  }
+  const accent = theme.accent_color || DEFAULT_ACCENT_PURPLE;
+  root.style.setProperty(CSS_VAR_ACCENT_PURPLE, accent);
+  root.style.setProperty(CSS_VAR_BORDER_FOCUS, accent);
 
   // Handle glassmorphism data attribute
   if (theme.glassmorphism?.enabled) {
@@ -29,47 +30,22 @@ function applyThemeToRoot(theme: ThemeConfig) {
   }
 
   // Set glassmorphism opacity CSS variable
-  if (theme.glassmorphism?.opacity !== undefined) {
+  if (theme.glassmorphism?.enabled && theme.glassmorphism?.opacity !== undefined) {
     root.style.setProperty('--glass-opacity', String(theme.glassmorphism.opacity / 100));
+  } else {
+    root.style.removeProperty('--glass-opacity');
   }
 }
 
-function applyBackgroundImage(theme: ThemeConfig) {
-  const existingLayer = document.getElementById('theme-background-image');
-  if (existingLayer) {
-    existingLayer.remove();
-  }
-
-  // Don't show static background image if video is active
-  if (theme.background_video) {
-    return;
-  }
-
-  if (!theme.background_image) {
-    return;
-  }
-
-  const layer = document.createElement('div');
-  layer.id = 'theme-background-image';
-  layer.style.position = 'fixed';
-  layer.style.inset = '0';
-  layer.style.zIndex = '-2';
-  layer.style.backgroundImage = `url(${theme.background_image})`;
-  layer.style.backgroundSize = 'cover';
-  layer.style.backgroundPosition = 'center';
-  layer.style.backgroundRepeat = 'no-repeat';
-  document.body.appendChild(layer);
-}
-
-function getVideoUrl(videoPath: string | null): string {
-  if (!videoPath) return '';
-  if (videoPath.startsWith('data:') || videoPath.startsWith('http')) {
-    return videoPath;
+export function getAssetUrl(assetPath: string | null): string {
+  if (!assetPath) return '';
+  if (assetPath.startsWith('data:') || assetPath.startsWith('http')) {
+    return assetPath;
   }
   if (isTauri()) {
-    return convertFileSrc(videoPath);
+    return convertFileSrc(assetPath);
   }
-  return videoPath;
+  return assetPath;
 }
 
 export function useTheme() {
@@ -79,7 +55,6 @@ export function useTheme() {
     const theme = settingsStore.settings.theme_config;
     if (!theme) return;
     applyThemeToRoot(theme);
-    applyBackgroundImage(theme);
   }
 
   onMounted(() => {
@@ -99,6 +74,6 @@ export function useTheme() {
   });
 
   return {
-    getVideoUrl,
+    getAssetUrl,
   };
 }
