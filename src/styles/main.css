@@ -254,3 +254,13 @@ input[type='range']::-moz-range-thumb {
   -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
   backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
 }
+
+/*
+ * Full-bleed surface containers nested inside a frosted panel must not paint
+ * their own opaque background, or they hide the panel's translucent surface.
+ * Only applies in `global` scope: in `content` scope the side panels stay
+ * opaque on purpose, so their children keep their own colour.
+ */
+[data-glassmorphism='global'] [data-glass-fill] {
+  background-color: transparent;
+}

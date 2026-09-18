@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full bg-[var(--bg-sidebar)]">
+  <div class="flex flex-col h-full bg-[var(--bg-sidebar)]" data-glass-fill>
     <!-- Header -->
     <div class="flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]">
       <h2 class="text-[var(--text-xs)] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
