@@ -241,18 +241,21 @@ input[type='range']::-moz-range-thumb {
   background-color: color-mix(in srgb, var(--bg-base) calc(var(--glass-opacity, 0.2) * 100%), transparent);
   -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
   backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
+  contain: content;
 }
 
 [data-glassmorphism='global'] [data-glass-panel='sidebar'] {
   background-color: color-mix(in srgb, var(--bg-sidebar) calc(var(--glass-opacity, 0.2) * 100%), transparent);
   -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
   backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
+  contain: content;
 }
 
 [data-glassmorphism='content'] [data-glass-panel='content'] {
   background-color: color-mix(in srgb, var(--bg-base) calc(var(--glass-opacity, 0.2) * 100%), transparent);
   -webkit-backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
   backdrop-filter: blur(var(--glass-blur, 12px)) saturate(180%);
+  contain: content;
 }
 
 /*
