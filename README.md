@@ -168,7 +168,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **83 Rust unit tests** and **175 frontend tests** covering:
+The project includes **83 Rust unit tests** and **180 frontend tests** covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation
