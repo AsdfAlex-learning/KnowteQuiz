@@ -56,7 +56,14 @@
     <!-- Actions -->
     <div class="space-y-2">
       <button
+        v-if="wrongCount > 0"
         class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)] transition-colors btn-press"
+        @click="$emit('retryWrong')"
+      >
+        {{ t('quiz.retry_wrong') }} ({{ wrongCount }})
+      </button>
+      <button
+        class="w-full py-2.5 rounded-md text-sm font-semibold bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors btn-press"
         @click="$emit('newQuiz')"
       >
         {{ t('quiz.retry') }}
@@ -89,6 +96,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   newQuiz: [];
+  retryWrong: [];
 }>();
 
 const quizStore = useQuizStore();
@@ -101,6 +109,7 @@ const answers = computed(() => quizStore.userAnswers);
 const total = computed(() => questions.value.length);
 
 const correctCount = computed(() => questions.value.filter((q) => isCorrect(q)).length);
+const wrongCount = computed(() => total.value - correctCount.value);
 
 const scorePercent = computed(() => (total.value > 0 ? (correctCount.value / total.value) * 100 : 0));
 

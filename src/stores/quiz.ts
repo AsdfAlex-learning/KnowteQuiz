@@ -66,6 +66,17 @@ export const useQuizStore = defineStore('quiz', () => {
     generatingPhase.value = null;
   }
 
+  function retryWrongAnswers() {
+    const wrongQuestions = questions.value.filter((q) => {
+      const userAnswer = answers.value.get(q.id);
+      return !isQuizAnswerCorrect(q, userAnswer);
+    });
+    if (wrongQuestions.length === 0) return;
+    reset();
+    questions.value = wrongQuestions;
+    quizState.value = 'answering';
+  }
+
   function addQuestion(q: QuizQuestion) {
     questions.value.push(q);
   }
@@ -279,6 +290,7 @@ export const useQuizStore = defineStore('quiz', () => {
     score,
     setMode,
     reset,
+    retryWrongAnswers,
     addQuestion,
     setAnswer,
     submitAnswer,

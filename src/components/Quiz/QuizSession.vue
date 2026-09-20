@@ -138,6 +138,7 @@
         :reasoning="reasoning"
         :diagnosis-report="quizStore.diagnosisReport"
         @new-quiz="handleNewQuiz"
+        @retry-wrong="handleRetryWrong"
       />
     </div>
 
@@ -322,6 +323,15 @@ async function handleSaveMistakeFromDiagnosis() {
 
 function handleNewQuiz() {
   quizStore.reset();
+  submitted.value = false;
+  selectedOptions.value = [];
+  shortAnswer.value = '';
+  reasoning.value = '';
+  quizStore.clearDiagnosis();
+}
+
+function handleRetryWrong() {
+  quizStore.retryWrongAnswers();
   submitted.value = false;
   selectedOptions.value = [];
   shortAnswer.value = '';
