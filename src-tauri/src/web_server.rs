@@ -354,7 +354,10 @@ async fn mark_mistake_reviewed_handler(
         .as_str()
         .ok_or("Missing mistake_id")?
         .to_string();
-    mistake_service::mark_mistake_reviewed(&state.data_dir, &mistake_id)?;
+    let quality = payload["quality"]
+        .as_u64()
+        .ok_or("Missing quality")? as u32;
+    mistake_service::mark_mistake_reviewed(&state.data_dir, &mistake_id, quality)?;
     Ok(Json(true))
 }
 

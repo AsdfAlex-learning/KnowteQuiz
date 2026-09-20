@@ -28,13 +28,22 @@
       >
         ✓{{ mistake.review_count }}
       </span>
+      <span
+        v-if="isDue"
+        class="ml-2 px-1 py-0.5 rounded text-[10px] font-medium bg-[var(--color-error)]/20 text-[var(--color-error)]"
+      >
+        {{ t('mistakes.due') }}
+      </span>
     </p>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '@/composables/useI18n';
 import type { MistakeEntry } from '@/types/mistake';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   mistake: MistakeEntry;
@@ -53,5 +62,14 @@ const formattedDate = computed(() => {
     hour: '2-digit',
     minute: '2-digit',
   });
+});
+
+const isDue = computed(() => {
+  if (!props.mistake.next_review_date) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const next = new Date(props.mistake.next_review_date);
+  next.setHours(0, 0, 0, 0);
+  return next <= today;
 });
 </script>

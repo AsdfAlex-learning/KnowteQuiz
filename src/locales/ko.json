@@ -192,6 +192,15 @@
     "success": "성공",
     "missing": "누락"
   },
+  "mistakes": {
+    "again": "다시",
+    "hard": "어려움",
+    "good": "보통",
+    "easy": "쉬움",
+    "due": "복습 예정",
+    "due_count": "{count}개의 복습 예정 오답",
+    "next_review": "다음 복습"
+  },
   "languages": {
     "en": "영어",
     "zh": "중국어",

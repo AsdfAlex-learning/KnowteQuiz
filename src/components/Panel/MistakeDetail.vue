@@ -102,30 +102,73 @@
     >
       {{ t('error_book.open_note') }}
     </button>
-    <button
-      class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors"
-      :class="
-        isReviewing
-          ? 'border-[var(--border-default)] text-[var(--text-muted)] cursor-wait'
-          : 'border-[var(--accent-green)]/30 text-[var(--accent-green)] hover:bg-[var(--accent-green)]/10'
-      "
-      :disabled="isReviewing"
-      @click="handleMarkReviewed"
-    >
-      {{
-        isReviewing
-          ? t('common.loading')
-          : mistake.review_count > 0
-            ? t('error_book.review_count', { count: mistake.review_count })
-            : t('error_book.mark_reviewed')
-      }}
-    </button>
-    <p v-if="reviewError" class="text-[11px] text-[var(--color-error)]">
-      {{ reviewError }}
-    </p>
-    <span v-if="mistake.last_reviewed_at" class="text-[11px] text-[var(--text-faint)]">
-      {{ t('error_book.last_reviewed', { date: formatLastReviewed(mistake.last_reviewed_at) }) }}
-    </span>
+
+    <div class="space-y-2">
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-[var(--text-muted)]">{{
+          t('error_book.review_count', { count: mistake.review_count })
+        }}</span>
+        <span v-if="mistake.next_review_date" class="text-[11px] text-[var(--text-faint)]">
+          {{ t('mistakes.next_review') }}: {{ formatNextReview(mistake.next_review_date) }}
+        </span>
+      </div>
+      <div class="flex gap-2">
+        <button
+          class="flex-1 py-1.5 rounded-md text-[10px] font-medium border transition-colors disabled:cursor-wait"
+          :class="
+            isReviewing
+              ? 'border-[var(--border-default)] text-[var(--text-muted)]'
+              : 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+          "
+          :disabled="isReviewing"
+          @click="handleRate(0)"
+        >
+          {{ t('mistakes.again') }}
+        </button>
+        <button
+          class="flex-1 py-1.5 rounded-md text-[10px] font-medium border transition-colors disabled:cursor-wait"
+          :class="
+            isReviewing
+              ? 'border-[var(--border-default)] text-[var(--text-muted)]'
+              : 'border-orange-500/30 text-orange-400 hover:bg-orange-500/10'
+          "
+          :disabled="isReviewing"
+          @click="handleRate(1)"
+        >
+          {{ t('mistakes.hard') }}
+        </button>
+        <button
+          class="flex-1 py-1.5 rounded-md text-[10px] font-medium border transition-colors disabled:cursor-wait"
+          :class="
+            isReviewing
+              ? 'border-[var(--border-default)] text-[var(--text-muted)]'
+              : 'border-green-500/30 text-green-400 hover:bg-green-500/10'
+          "
+          :disabled="isReviewing"
+          @click="handleRate(2)"
+        >
+          {{ t('mistakes.good') }}
+        </button>
+        <button
+          class="flex-1 py-1.5 rounded-md text-[10px] font-medium border transition-colors disabled:cursor-wait"
+          :class="
+            isReviewing
+              ? 'border-[var(--border-default)] text-[var(--text-muted)]'
+              : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
+          "
+          :disabled="isReviewing"
+          @click="handleRate(3)"
+        >
+          {{ t('mistakes.easy') }}
+        </button>
+      </div>
+      <p v-if="reviewError" class="text-[11px] text-[var(--color-error)]">
+        {{ reviewError }}
+      </p>
+      <span v-if="mistake.last_reviewed_at" class="text-[11px] text-[var(--text-faint)]">
+        {{ t('error_book.last_reviewed', { date: formatLastReviewed(mistake.last_reviewed_at) }) }}
+      </span>
+    </div>
   </div>
 </template>
 
@@ -151,11 +194,19 @@ const mistakeStore = useMistakeStore();
 const isReviewing = computed(() => mistakeStore.isReviewing(props.mistake.id));
 const reviewError = computed(() => mistakeStore.reviewErrorFor(props.mistake.id));
 
-async function handleMarkReviewed() {
-  await mistakeStore.markReviewed(props.mistake.id);
+async function handleRate(quality: number) {
+  await mistakeStore.markReviewed(props.mistake.id, quality);
 }
 
 function formatLastReviewed(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatNextReview(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString(undefined, {
     month: 'short',

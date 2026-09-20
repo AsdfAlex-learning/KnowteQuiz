@@ -22,6 +22,9 @@ export interface MistakeEntry {
   created_at: string;
   review_count: number;
   last_reviewed_at?: string;
+  ease_factor: number;
+  interval_days: number;
+  next_review_date?: string;
 }
 
 export interface MistakeFilter {
@@ -31,4 +34,5 @@ export interface MistakeFilter {
   blind_spot_tag?: string;
   offset?: number;
   limit?: number;
+  due_only?: boolean;
 }

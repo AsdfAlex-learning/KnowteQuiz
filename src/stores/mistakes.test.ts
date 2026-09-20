@@ -23,6 +23,8 @@ function mistake(id = 'm1', mode: MistakeMode = 'basic'): MistakeEntry {
     mode,
     created_at: '2026-01-01T00:00:00.000Z',
     review_count: 0,
+    ease_factor: 2.5,
+    interval_days: 0,
   };
 }
 
@@ -278,12 +280,15 @@ describe('mistake store save state', () => {
     const store = useMistakeStore();
     store.items = [mistake('m1'), mistake('m2')];
 
-    const result = await store.markReviewed('m1');
+    const result = await store.markReviewed('m1', 2);
 
     expect(result).toBe(true);
-    expect(mistakeService.markMistakeReviewed).toHaveBeenCalledWith('m1');
+    expect(mistakeService.markMistakeReviewed).toHaveBeenCalledWith('m1', 2);
     expect(store.items[0].review_count).toBe(1);
     expect(store.items[0].last_reviewed_at).toBe('2026-06-26T12:30:00.000Z');
+    expect(store.items[0].ease_factor).toBe(2.5);
+    expect(store.items[0].interval_days).toBe(1);
+    expect(store.items[0].next_review_date).toBeDefined();
     expect(store.items[1].review_count).toBe(0);
   });
 
@@ -291,7 +296,7 @@ describe('mistake store save state', () => {
     vi.mocked(mistakeService.markMistakeReviewed).mockRejectedValue(new Error('disk full'));
     const store = useMistakeStore();
 
-    const result = await store.markReviewed('m1');
+    const result = await store.markReviewed('m1', 2);
 
     expect(result).toBe(false);
     expect(store.isReviewing('m1')).toBe(false);

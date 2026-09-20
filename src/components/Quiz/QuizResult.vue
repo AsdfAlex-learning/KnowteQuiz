@@ -149,6 +149,8 @@ async function handleSaveMistake(q: QuizQuestion) {
     diagnosis: questionDiagnosis,
     created_at: new Date().toISOString(),
     review_count: 0,
+    ease_factor: 2.5,
+    interval_days: 0,
   };
 
   await mistakeStore.saveEntry(q.id, entry);

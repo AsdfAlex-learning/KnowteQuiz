@@ -32,6 +32,7 @@ function mistakeFilterQuery(filter?: MistakeFilter): string {
   if (filter.note_path) params.set('note_path', filter.note_path);
   if (filter.search_text) params.set('search_text', filter.search_text);
   if (filter.blind_spot_tag) params.set('blind_spot_tag', filter.blind_spot_tag);
+  if (filter.due_only !== undefined) params.set('due_only', String(filter.due_only));
   if (filter.offset !== undefined) params.set('offset', String(filter.offset));
   if (filter.limit !== undefined) params.set('limit', String(filter.limit));
   const query = params.toString();
@@ -49,14 +50,14 @@ export async function listPromptTemplates(): Promise<Array<{ name: string; label
   return result.map(([name, label, description]) => ({ name, label, description }));
 }
 
-export async function markMistakeReviewed(mistakeId: string): Promise<boolean> {
+export async function markMistakeReviewed(mistakeId: string, quality: number): Promise<boolean> {
   if (isTauri()) {
-    return invoke<boolean>('mark_mistake_reviewed', { mistakeId });
+    return invoke<boolean>('mark_mistake_reviewed', { mistakeId, quality });
   }
   const res = await fetch('/api/mistakes/review', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mistake_id: mistakeId }),
+    body: JSON.stringify({ mistake_id: mistakeId, quality }),
   });
   if (!res.ok) await throwHttpError(res);
   return parseJsonResponse<boolean>(res);

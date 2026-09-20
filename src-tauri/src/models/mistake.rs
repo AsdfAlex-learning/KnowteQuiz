@@ -34,6 +34,16 @@ pub struct MistakeEntry {
     pub review_count: u32,
     #[serde(default)]
     pub last_reviewed_at: Option<String>,
+    #[serde(default = "default_ease_factor")]
+    pub ease_factor: f64,
+    #[serde(default)]
+    pub interval_days: u32,
+    #[serde(default)]
+    pub next_review_date: Option<String>,
+}
+
+fn default_ease_factor() -> f64 {
+    2.5
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -47,4 +57,6 @@ pub struct MistakeFilter {
     #[serde(default)]
     pub offset: Option<u32>,
     pub limit: Option<u32>,
+    #[serde(default)]
+    pub due_only: Option<bool>,
 }

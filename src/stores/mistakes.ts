@@ -6,6 +6,7 @@ import {
   markMistakeReviewed,
   saveMistake,
 } from '../services/mistake';
+import { sm2Update } from '../utils/sm2';
 import type { MistakeEntry, MistakeMode } from '../types/mistake';
 
 const PAGE_SIZE = 20;
@@ -17,6 +18,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
   const modeFilter = ref<MistakeMode | undefined>(undefined);
   const searchText = ref<string | undefined>(undefined);
   const blindSpotTag = ref<string | undefined>(undefined);
+  const dueFilter = ref<boolean | undefined>(undefined);
   const hasMore = ref(false);
   const savingIds = ref(new Set<string>());
   const savedIds = ref(new Set<string>());
@@ -87,6 +89,7 @@ export const useMistakeStore = defineStore('mistakes', () => {
         mode: modeFilter.value,
         search_text: searchText.value,
         blind_spot_tag: blindSpotTag.value,
+        due_only: dueFilter.value,
         offset,
         limit: PAGE_SIZE,
       });
@@ -121,13 +124,18 @@ export const useMistakeStore = defineStore('mistakes', () => {
     await loadPage(0);
   }
 
-  async function markReviewed(mistakeId: string): Promise<boolean> {
+  async function setDueFilter(due: boolean | undefined): Promise<void> {
+    dueFilter.value = due;
+    await loadPage(0);
+  }
+
+  async function markReviewed(mistakeId: string, quality: number): Promise<boolean> {
     if (isReviewing(mistakeId)) return false;
 
     reviewingIds.value.add(mistakeId);
     reviewErrors.value.delete(mistakeId);
     try {
-      const reviewed = await markMistakeReviewed(mistakeId);
+      const reviewed = await markMistakeReviewed(mistakeId, quality);
       if (!reviewed) {
         reviewErrors.value.set(mistakeId, 'Mistake was not marked reviewed');
         return false;
@@ -136,10 +144,14 @@ export const useMistakeStore = defineStore('mistakes', () => {
       const reviewedAt = new Date().toISOString();
       items.value = items.value.map((item) => {
         if (item.id !== mistakeId) return item;
+        const sm2 = sm2Update(item.ease_factor, item.interval_days, quality);
         return {
           ...item,
           review_count: item.review_count + 1,
           last_reviewed_at: reviewedAt,
+          ease_factor: sm2.easeFactor,
+          interval_days: sm2.intervalDays,
+          next_review_date: sm2.nextReviewDate,
         };
       });
       return true;
@@ -228,9 +240,11 @@ export const useMistakeStore = defineStore('mistakes', () => {
     setModeFilter,
     setSearchText,
     setBlindSpotTag,
+    setDueFilter,
     markReviewed,
     searchText,
     blindSpotTag,
+    dueFilter,
     exportMistakes,
     isExporting,
     exportError,

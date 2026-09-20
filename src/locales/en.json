@@ -192,6 +192,15 @@
     "success": "Success",
     "missing": "Missing"
   },
+  "mistakes": {
+    "again": "Again",
+    "hard": "Hard",
+    "good": "Good",
+    "easy": "Easy",
+    "due": "Due",
+    "due_count": "{count} mistakes due for review",
+    "next_review": "Next review"
+  },
   "languages": {
     "en": "English",
     "zh": "中文",

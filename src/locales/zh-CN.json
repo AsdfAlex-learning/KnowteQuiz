@@ -192,6 +192,15 @@
     "success": "成功",
     "missing": "缺失"
   },
+  "mistakes": {
+    "again": "忘了",
+    "hard": "困难",
+    "good": "一般",
+    "easy": "简单",
+    "due": "待复习",
+    "due_count": "{count} 道错题待复习",
+    "next_review": "下次复习"
+  },
   "languages": {
     "en": "英语",
     "zh": "中文",

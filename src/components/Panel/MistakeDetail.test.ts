@@ -19,6 +19,11 @@ vi.mock('@/composables/useI18n', () => ({
         'error_book.mark_reviewed': 'Mark Reviewed',
         'error_book.review_count': `Reviewed ${params?.count ?? 0}x`,
         'common.loading': 'Marking...',
+        'mistakes.again': 'Again',
+        'mistakes.hard': 'Hard',
+        'mistakes.good': 'Good',
+        'mistakes.easy': 'Easy',
+        'mistakes.next_review': 'Next review',
       };
       return translations[key] || key;
     },
@@ -59,6 +64,8 @@ function advancedMistake(): MistakeEntry {
     },
     created_at: '2026-01-01T00:00:00.000Z',
     review_count: 0,
+    ease_factor: 2.5,
+    interval_days: 0,
   };
 }
 
@@ -96,9 +103,12 @@ describe('MistakeDetail', () => {
     const store = useMistakeStore();
     store.markReviewed = vi.fn().mockResolvedValue(true);
 
-    await wrapper.get('button:last-of-type').trigger('click');
+    // Click the "Good" rating button (3rd in the group)
+    const goodButton = wrapper.findAll('button').find((b) => b.text() === 'Good');
+    expect(goodButton).toBeDefined();
+    await goodButton!.trigger('click');
 
-    expect(store.markReviewed).toHaveBeenCalledWith('m1');
+    expect(store.markReviewed).toHaveBeenCalledWith('m1', 2);
   });
 
   it('disables the review button while the mistake is being reviewed', () => {
@@ -114,9 +124,10 @@ describe('MistakeDetail', () => {
       },
     });
 
-    const button = wrapper.get('button:last-of-type');
-    expect(button.attributes('disabled')).toBeDefined();
-    expect(button.text()).toBe('Marking...');
+    const goodButton = wrapper.findAll('button').find((b) => b.text() === 'Good');
+    expect(goodButton).toBeDefined();
+    expect(goodButton!.attributes('disabled')).toBeDefined();
+    expect(goodButton!.text()).toBe('Good');
   });
 
   it('shows the review error for the visible mistake', () => {

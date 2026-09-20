@@ -14,6 +14,8 @@ function mockMistake(id = 'm1'): MistakeEntry {
     mode: 'basic',
     created_at: '2026-01-01T00:00:00.000Z',
     review_count: 0,
+    ease_factor: 2.5,
+    interval_days: 0,
   };
 }
 
@@ -127,13 +129,13 @@ describe('mistake service', () => {
     }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await markMistakeReviewed('m1');
+    const result = await markMistakeReviewed('m1', 2);
 
     expect(result).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith('/api/mistakes/review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mistake_id: 'm1' }),
+      body: JSON.stringify({ mistake_id: 'm1', quality: 2 }),
     });
   });
 });

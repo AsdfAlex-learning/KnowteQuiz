@@ -192,6 +192,15 @@
     "success": "成功",
     "missing": "欠落"
   },
+  "mistakes": {
+    "again": "もう一度",
+    "hard": "難しい",
+    "good": "普通",
+    "easy": "簡単",
+    "due": "復習予定",
+    "due_count": "{count} 問の復習予定",
+    "next_review": "次回復習"
+  },
   "languages": {
     "en": "英語",
     "zh": "中国語",

@@ -1,5 +1,13 @@
 <template>
   <div class="h-full flex flex-col">
+    <!-- Due summary -->
+    <div
+      v-if="dueCount > 0"
+      class="px-3 py-1.5 text-[11px] font-medium text-[var(--color-error)] bg-[var(--color-error)]/10 border-b border-[var(--border-default)]"
+    >
+      {{ t('mistakes.due_count', { count: dueCount }) }}
+    </div>
+
     <!-- Filter bar -->
     <div class="px-3 py-2 border-b border-[var(--border-default)] flex items-center gap-2">
       <button
@@ -118,7 +126,7 @@ import MistakeItem from './MistakeItem.vue';
 import MistakeDetail from './MistakeDetail.vue';
 import type { MistakeMode } from '@/types/mistake';
 
-type FilterValue = 'all' | 'basic' | 'advanced';
+type FilterValue = 'all' | 'basic' | 'advanced' | 'due';
 
 const { t } = useI18n();
 
@@ -126,6 +134,7 @@ const filters = computed<{ value: FilterValue; label: string }[]>(() => [
   { value: 'all', label: t('error_book.filter_all') },
   { value: 'basic', label: t('error_book.filter_basic') },
   { value: 'advanced', label: t('error_book.filter_advanced') },
+  { value: 'due', label: t('mistakes.due') },
 ]);
 
 const selectedId = ref<string | null>(null);
@@ -135,14 +144,31 @@ const mistakeStore = useMistakeStore();
 const navigationStore = useNavigationStore();
 
 const activeFilter = computed<FilterValue>(() => {
+  if (mistakeStore.dueFilter) return 'due';
   return mistakeStore.modeFilter ?? 'all';
+});
+
+const dueCount = computed(() => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return mistakeStore.items.filter((m) => {
+    if (!m.next_review_date) return false;
+    const next = new Date(m.next_review_date);
+    next.setHours(0, 0, 0, 0);
+    return next <= today;
+  }).length;
 });
 
 const selectedMistake = computed(() => mistakeStore.items.find((m) => m.id === selectedId.value) ?? null);
 
 async function handleFilter(value: FilterValue) {
   selectedId.value = null;
-  await mistakeStore.setModeFilter(value === 'all' ? undefined : (value as MistakeMode));
+  if (value === 'due') {
+    await mistakeStore.setDueFilter(true);
+  } else {
+    await mistakeStore.setDueFilter(undefined);
+    await mistakeStore.setModeFilter(value === 'all' ? undefined : (value as MistakeMode));
+  }
 }
 
 function handleOpenNote(path: string) {

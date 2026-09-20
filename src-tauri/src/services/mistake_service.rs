@@ -32,7 +32,10 @@ pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), AppError
     write_mistakes_jsonl(data_dir, &updated)
 }
 
-pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), AppError> {
+pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str, quality: u32) -> Result<(), AppError> {
+    if quality > 3 {
+        return Err(AppError::InvalidInput(format!("Invalid quality rating: {}", quality)));
+    }
     let _guard = lock_mistakes_write()?;
     let mut mistakes = read_mistakes_or_empty(data_dir)?;
     let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
@@ -41,6 +44,10 @@ pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), Ap
         if entry.id == mistake_id {
             entry.review_count += 1;
             entry.last_reviewed_at = Some(now.clone());
+            let (ef, iv, next_date) = sm2_update(entry.ease_factor, entry.interval_days, quality);
+            entry.ease_factor = ef;
+            entry.interval_days = iv;
+            entry.next_review_date = Some(next_date);
             found = true;
             break;
         }
@@ -49,6 +56,36 @@ pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str) -> Result<(), Ap
         return Err(AppError::NotFound(format!("Mistake {} not found", mistake_id)));
     }
     write_mistakes_jsonl(data_dir, &mistakes)
+}
+
+fn sm2_update(ease_factor: f64, interval_days: u32, quality: u32) -> (f64, u32, String) {
+    let mut ef = ease_factor;
+    let mut iv = interval_days;
+
+    if quality == 0 {
+        iv = 1;
+        ef = (ef - 0.2).max(1.3);
+    } else if quality == 1 {
+        iv = (1).max((iv as f64 * 1.2).round() as u32);
+        ef = (ef - 0.15).max(1.3);
+    } else if quality == 2 {
+        if iv == 0 {
+            iv = 1;
+        } else {
+            iv = (iv as f64 * ef).round() as u32;
+        }
+    } else {
+        if iv == 0 {
+            iv = 4;
+        } else {
+            iv = (iv as f64 * ef * 1.3).round() as u32;
+        }
+        ef = ef + 0.15;
+    }
+
+    let next = chrono::Local::now() + chrono::Duration::days(iv.into());
+    let next_review_date = next.format("%Y-%m-%d").to_string();
+    (ef, iv, next_review_date)
 }
 
 /// Read mistakes from jsonl file, migrating from legacy json if needed.
@@ -151,6 +188,7 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
     let limit = filter.limit.map(|value| value as usize);
     let search_lower = filter.search_text.as_ref().map(|s| s.to_lowercase());
     let blind_spot_tag_lower = filter.blind_spot_tag.as_ref().map(|s| s.to_lowercase());
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     let mut filtered = mistakes
         .iter()
         .filter(|entry| {
@@ -183,6 +221,17 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
                             spot.tag.to_lowercase().contains(needle.as_str())
                         })
                     })
+            })
+        })
+        .filter(|entry| {
+            filter.due_only.is_none_or(|due_only| {
+                if !due_only {
+                    return true;
+                }
+                entry
+                    .next_review_date
+                    .as_ref()
+                    .is_some_and(|date| date <= &today)
             })
         })
         .cloned()
@@ -246,6 +295,9 @@ mod tests {
             created_at: created_at.to_string(),
             review_count: 0,
             last_reviewed_at: None,
+            ease_factor: 2.5,
+            interval_days: 0,
+            next_review_date: None,
         }
     }
 
@@ -321,6 +373,7 @@ mod tests {
             blind_spot_tag: None,
             offset: Some(1),
             limit: Some(1),
+            due_only: None,
         };
 
         let filtered = filter_mistakes(&mistakes, &filter);
@@ -465,6 +518,7 @@ mod tests {
             blind_spot_tag: None,
             offset: None,
             limit: None,
+            due_only: None,
         };
 
         let filtered = filter_mistakes(&all, &filter);
@@ -512,6 +566,7 @@ mod tests {
             blind_spot_tag: Some("ownership".to_string()),
             offset: None,
             limit: None,
+            due_only: None,
         };
 
         let filtered = filter_mistakes(&[ownership, borrowing], &filter);
@@ -532,19 +587,22 @@ mod tests {
         );
         save_mistake(&dir, entry).expect("save should succeed");
 
-        mark_mistake_reviewed(&dir, "m1").expect("mark reviewed should succeed");
+        mark_mistake_reviewed(&dir, "m1", 2).expect("mark reviewed should succeed");
 
         let mistakes = read_mistakes_or_empty(&dir).expect("read should succeed");
         assert_eq!(mistakes.len(), 1);
         assert_eq!(mistakes[0].review_count, 1);
         assert!(mistakes[0].last_reviewed_at.is_some());
+        assert_eq!(mistakes[0].ease_factor, 2.5);
+        assert_eq!(mistakes[0].interval_days, 1);
+        assert!(mistakes[0].next_review_date.is_some());
     }
 
     #[test]
     fn mark_mistake_reviewed_returns_error_for_nonexistent_id() {
         let dir = temp_data_dir("mark_mistake_reviewed_returns_error_for_nonexistent_id");
 
-        let result = mark_mistake_reviewed(&dir, "nonexistent");
+        let result = mark_mistake_reviewed(&dir, "nonexistent", 2);
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));

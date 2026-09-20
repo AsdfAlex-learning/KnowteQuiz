@@ -70,9 +70,9 @@ pub async fn load_mistakes(
 }
 
 #[tauri::command]
-pub async fn mark_mistake_reviewed(app: AppHandle, mistake_id: String) -> Result<bool, AppError> {
+pub async fn mark_mistake_reviewed(app: AppHandle, mistake_id: String, quality: u32) -> Result<bool, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
-    mistake_service::mark_mistake_reviewed(&data_dir, &mistake_id)?;
+    mistake_service::mark_mistake_reviewed(&data_dir, &mistake_id, quality)?;
     Ok(true)
 }
 
