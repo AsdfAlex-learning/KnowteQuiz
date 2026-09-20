@@ -26,6 +26,18 @@ const emit = defineEmits<{
 }>();
 
 const videoRef = ref<HTMLVideoElement | null>(null);
+const prefersReducedMotion = ref(false);
+
+// Respect OS "reduce motion" preference — video backgrounds are a continuous
+// animation.  When enabled we skip auto-play and the play() call so the video
+// remains paused on a still frame (or does not mount at all).
+if (typeof window !== 'undefined') {
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  prefersReducedMotion.value = mq.matches;
+  mq.addEventListener('change', (e) => {
+    prefersReducedMotion.value = e.matches;
+  });
+}
 
 const videoSrc = computed(() => {
   if (!props.videoPath) return '';
@@ -45,6 +57,7 @@ function onTimeUpdate() {
 }
 
 function play() {
+  if (prefersReducedMotion.value) return;
   videoRef.value?.play().catch(() => {});
 }
 

@@ -267,3 +267,13 @@ input[type='range']::-moz-range-thumb {
 [data-glassmorphism='global'] [data-glass-fill] {
   background-color: transparent;
 }
+
+/* Respect the OS "reduce motion" preference — disable any future CSS transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
