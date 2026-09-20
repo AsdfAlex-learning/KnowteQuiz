@@ -87,7 +87,17 @@ function resume() {
   if (!video) return;
 
   if (props.savedTime > 0) {
-    video.currentTime = props.savedTime;
+    if (video.readyState >= 1 && video.duration > props.savedTime) {
+      video.currentTime = props.savedTime;
+    } else {
+      const seekOnReady = () => {
+        if (video.duration > props.savedTime) {
+          video.currentTime = props.savedTime;
+        }
+        video.removeEventListener('loadedmetadata', seekOnReady);
+      };
+      video.addEventListener('loadedmetadata', seekOnReady);
+    }
   }
   video.play().catch(() => {});
 }
@@ -118,19 +128,32 @@ watch(
 watch(
   () => props.videoPath,
   () => {
-    if (props.playing) {
-      // Small delay to let the new source load before playing
-      setTimeout(() => play(), 100);
-    }
+    const video = videoRef.value;
+    if (!video || !props.playing) return;
+    const onReady = () => {
+      video.removeEventListener('canplay', onReady);
+      video.play().catch(() => {});
+    };
+    video.addEventListener('canplay', onReady);
   }
 );
 
 onMounted(() => {
-  if (props.playing && videoRef.value) {
-    if (props.savedTime > 0) {
-      videoRef.value.currentTime = props.savedTime;
-    }
-    videoRef.value.play().catch(() => {});
+  const video = videoRef.value;
+  if (!video) return;
+
+  if (props.playing && props.savedTime > 0) {
+    // Wait for metadata before seeking to avoid silent ignore
+    const seekOnReady = () => {
+      if (video.duration > props.savedTime) {
+        video.currentTime = props.savedTime;
+      }
+      video.removeEventListener('loadedmetadata', seekOnReady);
+      video.play().catch(() => {});
+    };
+    video.addEventListener('loadedmetadata', seekOnReady);
+  } else if (props.playing) {
+    video.play().catch(() => {});
   }
 });
 
