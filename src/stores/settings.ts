@@ -18,6 +18,7 @@ import {
   testConnection as testSettingsConnection,
 } from '../services/settings';
 import { cleanupSessions } from '../services/quiz';
+import { updateStreak } from '../utils/streak';
 import { defaultSettings } from '../utils/defaults';
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -54,6 +55,11 @@ export const useSettingsStore = defineStore('settings', () => {
     } finally {
       loading.value = false;
     }
+  }
+
+  function recordActivity() {
+    updateStreak(settings.value.workspace);
+    void persistSettings();
   }
 
   async function testConnection(): Promise<ConnectionTestResult> {
@@ -192,5 +198,6 @@ export const useSettingsStore = defineStore('settings', () => {
     probeLlmNow,
     llmCapabilities,
     probeErr,
+    recordActivity,
   };
 });

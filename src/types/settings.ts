@@ -41,6 +41,8 @@ export interface WorkspaceState {
   expanded_dirs: string[];
   selected_path?: string | null;
   scroll_positions: Record<string, number>;
+  streak_days?: number;
+  last_active_date?: string | null;
 }
 
 export interface ConnectionTestResult {

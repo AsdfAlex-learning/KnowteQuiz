@@ -178,7 +178,8 @@
   "status": {
     "llm_connected": "LLM 已连接",
     "llm_ready": "LLM 就绪",
-    "llm_not_configured": "LLM 未配置"
+    "llm_not_configured": "LLM 未配置",
+    "streak_days": " 天连续"
   },
   "common": {
     "confirm": "确定",

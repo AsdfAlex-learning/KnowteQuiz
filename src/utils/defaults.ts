@@ -38,6 +38,8 @@ export function defaultSettings(): Settings {
       expanded_dirs: [],
       selected_path: null,
       scroll_positions: {},
+      streak_days: 0,
+      last_active_date: null,
     },
     theme_config: {
       background_color: '#1e1e2e',

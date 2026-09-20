@@ -150,11 +150,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useQuizStore } from '@/stores/quiz';
 import { useExplorerStore } from '@/stores/explorer';
 import { useReaderStore } from '@/stores/reader';
 import { useMistakeStore } from '@/stores/mistakes';
+import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from '@/composables/useI18n';
 import QuestionCard from './QuestionCard.vue';
 import AnswerInput from './AnswerInput.vue';
@@ -175,6 +176,7 @@ const quizStore = useQuizStore();
 const explorerStore = useExplorerStore();
 const readerStore = useReaderStore();
 const mistakeStore = useMistakeStore();
+const settingsStore = useSettingsStore();
 const { t } = useI18n();
 
 const selectedOptions = ref<number[]>([]);
@@ -184,6 +186,14 @@ const submitted = ref(false);
 const diagnosisSubmitting = ref(false);
 
 const currentQuestion = computed(() => quizStore.currentQuestion);
+
+// Record activity when quiz completes (for streak tracking)
+watch(
+  () => quizStore.showResults,
+  (showing) => {
+    if (showing) settingsStore.recordActivity();
+  }
+);
 
 const canSubmit = computed(() => {
   return canSubmitQuizAnswer(

@@ -84,6 +84,10 @@ pub struct WorkspaceState {
     pub selected_path: Option<String>,
     #[serde(default)]
     pub scroll_positions: HashMap<String, u32>,
+    #[serde(default)]
+    pub streak_days: u32,
+    #[serde(default)]
+    pub last_active_date: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

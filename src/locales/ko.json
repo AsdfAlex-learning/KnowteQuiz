@@ -178,7 +178,8 @@
   "status": {
     "llm_connected": "LLM 연결됨",
     "llm_ready": "LLM 준비됨",
-    "llm_not_configured": "LLM 미설정"
+    "llm_not_configured": "LLM 미설정",
+    "streak_days": "일 연속"
   },
   "common": {
     "confirm": "확인",

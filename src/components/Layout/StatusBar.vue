@@ -11,9 +11,12 @@
       <span v-else class="text-[var(--text-faint)]">{{ t('reader.no_file') }}</span>
     </div>
 
-    <!-- Center: Word count -->
-    <div v-if="readerStore.currentNote" class="flex items-center gap-3 text-[var(--text-faint)]">
-      <span>{{ t('reader.words', { count: wordCount }) }}</span>
+    <!-- Center: Word count + streak -->
+    <div class="flex items-center gap-3 text-[var(--text-faint)]">
+      <span v-if="readerStore.currentNote">{{ t('reader.words', { count: wordCount }) }}</span>
+      <span v-if="streakDays > 0" class="flex items-center gap-1">
+        🔥 {{ streakDays }}{{ t('status.streak_days') }}
+      </span>
     </div>
 
     <!-- Right: LLM status -->
@@ -37,6 +40,7 @@ const settingsStore = useSettingsStore();
 const { t } = useI18n();
 
 const wordCount = computed(() => readerStore.wordCount);
+const streakDays = computed(() => settingsStore.settings.workspace.streak_days || 0);
 
 const statusDotClass = computed(() => {
   if (settingsStore.llmConnected) return 'bg-[var(--color-success)]';

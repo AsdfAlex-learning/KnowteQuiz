@@ -178,7 +178,8 @@
   "status": {
     "llm_connected": "LLM connected",
     "llm_ready": "LLM ready",
-    "llm_not_configured": "LLM not configured"
+    "llm_not_configured": "LLM not configured",
+    "streak_days": " day streak"
   },
   "common": {
     "confirm": "OK",
