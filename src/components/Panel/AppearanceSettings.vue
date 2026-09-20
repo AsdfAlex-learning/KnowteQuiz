@@ -171,6 +171,33 @@
       </template>
     </div>
 
+    <!-- Readability Overlay -->
+    <div
+      v-if="modelValue.background_image || modelValue.background_video"
+      class="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4"
+    >
+      <div class="flex items-center justify-between">
+        <label for="overlay-opacity-slider" class="text-sm font-medium text-[var(--text-primary)]">
+          {{ t('appearance.overlay') }}
+        </label>
+        <span class="text-xs text-[var(--text-muted)] font-mono"> {{ modelValue.overlay_opacity }}% </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-[var(--text-muted)] font-mono">0%</span>
+        <input
+          id="overlay-opacity-slider"
+          type="range"
+          min="0"
+          max="50"
+          step="1"
+          class="flex-1"
+          :value="modelValue.overlay_opacity"
+          @input="updateOverlayOpacity"
+        />
+        <span class="text-xs text-[var(--text-muted)] font-mono">50%</span>
+      </div>
+    </div>
+
     <!-- Glassmorphism -->
     <div class="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
       <div class="flex items-center justify-between">
@@ -516,6 +543,14 @@ function updateScope(scope: 'global' | 'content') {
   });
 }
 
+function updateOverlayOpacity(e: Event) {
+  const target = e.target as HTMLInputElement;
+  emit('update:modelValue', {
+    ...props.modelValue,
+    overlay_opacity: Number(target.value),
+  });
+}
+
 function resetToDefaults() {
   imageError.value = null;
   videoError.value = null;
@@ -530,6 +565,7 @@ function resetToDefaults() {
       blur: 12,
       scope: 'global',
     },
+    overlay_opacity: 0,
     background_video: null,
     video_playing: false,
     video_time: 0,

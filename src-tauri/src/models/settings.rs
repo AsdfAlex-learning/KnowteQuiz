@@ -121,6 +121,10 @@ fn default_glass_scope() -> String {
     "global".to_string()
 }
 
+fn default_overlay_opacity() -> u32 {
+    0
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeConfig {
     #[serde(default = "default_bg_color")]
@@ -131,6 +135,8 @@ pub struct ThemeConfig {
     pub background_image: Option<String>,
     #[serde(default)]
     pub glassmorphism: GlassmorphismConfig,
+    #[serde(default = "default_overlay_opacity")]
+    pub overlay_opacity: u32,
     #[serde(default)]
     pub background_video: Option<String>,
     #[serde(default = "default_video_playing")]
@@ -146,6 +152,7 @@ impl Default for ThemeConfig {
             accent_color: default_accent_color(),
             background_image: None,
             glassmorphism: GlassmorphismConfig::default(),
+            overlay_opacity: default_overlay_opacity(),
             background_video: None,
             video_playing: default_video_playing(),
             video_time: default_video_time(),

@@ -133,6 +133,7 @@
     "status_paused": "일시 정지됨",
     "switch_static": "정적 배경으로 전환",
     "switch_wallpaper": "배경화면으로 전환",
+    "overlay": "가독성 오버레이",
     "glassmorphism": "글래스모피즘",
     "opacity": "불투명도",
     "blur": "흐림 반경",

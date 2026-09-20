@@ -16,6 +16,13 @@
 
     <!-- Base background layer -->
     <div id="background-layer" class="absolute inset-0" :style="layerStyle" />
+
+    <!-- Readability overlay: flat dark tint over the wallpaper, behind the panels -->
+    <div
+      v-if="theme.overlay_opacity > 0"
+      class="absolute inset-0 pointer-events-none z-[1]"
+      :style="{ backgroundColor: `rgba(0, 0, 0, ${theme.overlay_opacity / 100})` }"
+    />
   </div>
 </template>
 

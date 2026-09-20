@@ -49,6 +49,7 @@ export function defaultSettings(): Settings {
         blur: 12,
         scope: 'global',
       },
+      overlay_opacity: 0,
       background_video: null,
       video_playing: true,
       video_time: 0,

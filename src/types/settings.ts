@@ -85,6 +85,7 @@ export interface ThemeConfig {
   accent_color: string;
   background_image: string | null;
   glassmorphism: GlassmorphismConfig;
+  overlay_opacity: number;
   background_video: string | null;
   video_playing: boolean;
   video_time: number;
