@@ -2,11 +2,12 @@
   <div class="space-y-6">
     <!-- Background Color -->
     <div class="space-y-2">
-      <label class="text-sm font-medium text-[var(--text-primary)]">
+      <label for="bg-color-input" class="text-sm font-medium text-[var(--text-primary)]">
         {{ t('appearance.background_color') }}
       </label>
       <div class="flex items-center gap-3">
         <input
+          id="bg-color-input"
           type="color"
           :value="modelValue.background_color"
           class="w-10 h-10 rounded-lg border border-[var(--border-default)] cursor-pointer bg-transparent"
@@ -20,11 +21,12 @@
 
     <!-- Accent Color -->
     <div class="space-y-2">
-      <label class="text-sm font-medium text-[var(--text-primary)]">
+      <label for="accent-color-input" class="text-sm font-medium text-[var(--text-primary)]">
         {{ t('appearance.accent_color') }}
       </label>
       <div class="flex items-center gap-3">
         <input
+          id="accent-color-input"
           type="color"
           :value="modelValue.accent_color"
           class="w-10 h-10 rounded-lg border border-[var(--border-default)] cursor-pointer bg-transparent"
