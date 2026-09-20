@@ -184,6 +184,7 @@ pub fn default_theme_name() -> String {
 pub struct Settings {
     pub version: String,
     #[serde(default = "default_theme_name", skip_serializing)]
+    #[allow(dead_code)]
     pub theme: String,
     #[serde(default = "default_ui_language")]
     pub ui_language: String,
