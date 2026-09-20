@@ -36,6 +36,7 @@
     "save_mistake": "오답 저장",
     "retry": "다시 풀기",
     "retry_wrong": "틀린 문제 다시 풀기",
+    "source_note": "원본 노트",
     "generating": "문제 생성 중...",
     "phase_requesting": "모델 요청 중...",
     "phase_parsing": "응답 분석 중...",

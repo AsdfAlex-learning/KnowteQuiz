@@ -96,7 +96,11 @@
       v-else-if="quizStore.quizState === 'report' && quizStore.diagnosisReport"
       class="flex-1 flex flex-col overflow-y-auto p-4 space-y-4"
     >
-      <DiagnosisReportComponent :report="quizStore.diagnosisReport" />
+      <DiagnosisReportComponent
+        :report="quizStore.diagnosisReport"
+        :note-title="readerStore.currentNote?.title"
+        :note-path="explorerStore.selectedPath"
+      />
 
       <div class="space-y-2 pt-2">
         <button

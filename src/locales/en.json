@@ -36,6 +36,7 @@
     "save_mistake": "Save Mistake",
     "retry": "Retry",
     "retry_wrong": "Retry Wrong",
+    "source_note": "Source Note",
     "generating": "Generating questions...",
     "phase_requesting": "Requesting model...",
     "phase_parsing": "Parsing response...",

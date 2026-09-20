@@ -36,6 +36,7 @@
     "save_mistake": "間違いを保存",
     "retry": "再出題",
     "retry_wrong": "間違えた問題を再挑戦",
+    "source_note": "元のノート",
     "generating": "問題を生成中...",
     "phase_requesting": "モデルにリクエスト中...",
     "phase_parsing": "レスポンスを解析中...",

@@ -2,6 +2,10 @@
   <div v-if="report" class="space-y-4">
     <!-- Summary -->
     <div class="bg-[var(--bg-elevated)] rounded-lg p-4">
+      <div v-if="props.noteTitle" class="flex items-center gap-2 mb-2">
+        <span class="text-xs text-[var(--text-muted)]">{{ t('quiz.source_note') }}:</span>
+        <span class="text-xs text-[var(--text-primary)] font-medium">{{ props.noteTitle }}</span>
+      </div>
       <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
         {{ t('quiz.diagnosis_report') }}
       </h3>
@@ -55,6 +59,8 @@ const { t } = useI18n();
 
 const props = defineProps<{
   report: DiagnosisReport;
+  noteTitle?: string | null;
+  notePath?: string | null;
 }>();
 
 const levelClass = computed(() => {

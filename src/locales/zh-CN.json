@@ -36,6 +36,7 @@
     "save_mistake": "记录错题",
     "retry": "重新出题",
     "retry_wrong": "重做错题",
+    "source_note": "来源笔记",
     "generating": "正在生成题目...",
     "phase_requesting": "请求模型中...",
     "phase_parsing": "解析响应中...",
