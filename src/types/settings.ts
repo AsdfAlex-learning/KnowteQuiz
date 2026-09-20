@@ -92,7 +92,6 @@ export interface ThemeConfig {
 
 export interface Settings {
   version: string;
-  theme: string;
   ui_language: string;
   llm: LlmConfig;
   ui: { layout: UiLayout };

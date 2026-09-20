@@ -169,9 +169,14 @@ fn default_accent_color() -> String {
     "#cba6f7".to_string()
 }
 
+pub fn default_theme_name() -> String {
+    "obsidian-dark".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     pub version: String,
+    #[serde(default = "default_theme_name", skip_serializing)]
     pub theme: String,
     #[serde(default = "default_ui_language")]
     pub ui_language: String,

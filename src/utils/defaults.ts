@@ -3,7 +3,6 @@ import type { Settings } from '../types/settings';
 export function defaultSettings(): Settings {
   return {
     version: '1.0.0',
-    theme: 'obsidian-dark',
     ui_language: 'en',
     llm: {
       provider: 'openai-compatible',

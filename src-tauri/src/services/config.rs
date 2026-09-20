@@ -8,7 +8,7 @@ use tauri::AppHandle;
 fn default_settings() -> Settings {
     Settings {
         version: "1.0.0".to_string(),
-        theme: "obsidian-dark".to_string(),
+        theme: default_theme_name(),
         ui_language: "zh-CN".to_string(),
         llm: LlmConfig {
             provider: "openai-compatible".to_string(),
