@@ -84,13 +84,10 @@
 
     <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">{{ t('reader.no_file') }}</p>
 
-    <div
-      v-if="quizStore.generatingError"
-      class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
-    >
+    <div v-if="quizStore.error" class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3">
       <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
       <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
-        {{ quizStore.generatingError }}
+        {{ quizStore.error }}
       </p>
     </div>
   </div>

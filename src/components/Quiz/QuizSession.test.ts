@@ -61,7 +61,7 @@ describe('QuizSession', () => {
       },
     ];
     quizStore.quizState = 'diagnosing';
-    quizStore.generatingError = 'Session session-1 not found';
+    quizStore.error = 'Session session-1 not found';
 
     const wrapper = mount(QuizSession, {
       props: { mode: 'advanced' },
@@ -121,7 +121,7 @@ describe('QuizSession', () => {
     quizStore.quizState = 'answering';
     quizStore.startDiagnosis = vi.fn(async () => {
       quizStore.quizState = 'answering';
-      quizStore.generatingError = 'Diagnosis failed';
+      quizStore.error = 'Diagnosis failed';
     });
 
     const wrapper = mount(QuizSession, {
