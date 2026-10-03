@@ -109,11 +109,29 @@ pub async fn start(port: u16) -> Result<(), AppError> {
         diagnosis_sessions: Mutex::new(HashMap::new()),
     });
 
-    let dist_dir = get_dist_dir();
-    let index_path = dist_dir.join("index.html");
-    let serve_dir = ServeDir::new(&dist_dir).fallback(ServeFile::new(index_path));
+    let app = build_router(app_state, &get_dist_dir());
 
-    let app = Router::new()
+    let listener = tokio::net::TcpListener::bind(listener_addr(port))
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to bind TCP listener: {}", e)))?;
+
+    println!("KnowteQuiz web server running on http://localhost:{}", port);
+
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
+
+    Ok(())
+}
+
+/// Single source of truth for the route table. Tests build this directly so
+/// the production path patterns are covered. Route params use axum 0.7 `:param`
+/// syntax — `{param}` is axum 0.8 syntax and never matches here.
+fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
+    let index_path = dist_dir.join("index.html");
+    let serve_dir = ServeDir::new(dist_dir).fallback(ServeFile::new(index_path));
+
+    Router::new()
         .route("/api/notes/scan", get(scan_notes_handler))
         .route("/api/notes/read", get(read_note_handler))
         .route("/api/notes/asset", get(read_note_asset_handler))
@@ -141,32 +159,17 @@ pub async fn start(port: u16) -> Result<(), AppError> {
         .route("/api/quiz/generate", post(generate_quiz_handler))
         .route("/api/quiz/diagnose", post(submit_diagnosis_handler))
         .route(
-            "/api/quiz/diagnose/{session_id}/follow_up",
+            "/api/quiz/diagnose/:session_id/follow_up",
             post(diagnose_follow_up_handler),
         )
         .route(
-            "/api/quiz/diagnose/{session_id}/report",
+            "/api/quiz/diagnose/:session_id/report",
             get(generate_report_handler),
         )
-        .route(
-            "/api/sessions/cleanup",
-            post(cleanup_sessions_handler),
-        )
+        .route("/api/sessions/cleanup", post(cleanup_sessions_handler))
         .fallback_service(serve_dir)
         .layer(local_cors_layer())
-        .with_state(app_state);
-
-    let listener = tokio::net::TcpListener::bind(listener_addr(port))
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to bind TCP listener: {}", e)))?;
-
-    println!("KnowteQuiz web server running on http://localhost:{}", port);
-
-    axum::serve(listener, app)
-        .await
-        .map_err(|e| AppError::Internal(format!("Server error: {}", e)))?;
-
-    Ok(())
+        .with_state(state)
 }
 
 #[derive(Deserialize)]
@@ -748,6 +751,68 @@ mod tests {
 
         assert!(body_text.contains("\"event\":\"error\""));
         assert!(body_text.contains("File does not exist"));
+    }
+
+    #[tokio::test]
+    async fn follow_up_route_matches_session_id_path_segment() {
+        let data_dir = temp_data_dir("follow_up_route_matches_session_id_path_segment");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/quiz/diagnose/session-abc/follow_up")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"user_reply":"why?"}"#))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("SSE body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("SSE body should be utf8");
+
+        // A missing session streams an SSE error; the SPA fallback would answer
+        // 405 (ServeDir does not accept POST) — the old `{param}` route bug.
+        assert!(body_text.contains("\"event\":\"error\""));
+        assert!(body_text.contains("Session session-abc not found"));
+    }
+
+    #[tokio::test]
+    async fn report_route_matches_session_id_path_segment() {
+        let data_dir = temp_data_dir("report_route_matches_session_id_path_segment");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/quiz/diagnose/session-abc/report")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        // A missing session maps to 404 JSON, not the SPA fallback's 200 HTML.
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
+        assert!(body_text.contains("Session session-abc not found"));
     }
 
     fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {
