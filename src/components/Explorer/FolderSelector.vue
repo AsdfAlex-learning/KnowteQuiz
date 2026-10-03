@@ -1,6 +1,6 @@
 <template>
   <div class="px-3 py-2">
-    <div v-if="!isTauri && !explorerStore.rootPath" class="mb-2">
+    <div v-if="!isTauri() && !explorerStore.rootPath" class="mb-2">
       <input
         v-model="manualPath"
         type="text"
