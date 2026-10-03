@@ -80,7 +80,7 @@ fn sm2_update(ease_factor: f64, interval_days: u32, quality: u32) -> (f64, u32, 
         } else {
             iv = (iv as f64 * ef * 1.3).round() as u32;
         }
-        ef = ef + 0.15;
+        ef += 0.15;
     }
 
     let next = chrono::Local::now() + chrono::Duration::days(iv.into());
