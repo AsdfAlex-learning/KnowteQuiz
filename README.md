@@ -31,7 +31,7 @@
 ### First-Time Setup
 
 ```bash
-git clone https://github.com/yourname/knowtequiz.git
+git clone https://github.com/AsdfAlex-learning/KnowteQuiz.git
 cd knowtequiz
 node setup.cjs          # Interactive installer: check env → install deps → build → choose mode
 ```
@@ -168,7 +168,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **83 Rust unit tests** and **180 frontend tests** covering:
+The project includes **91 Rust unit tests** and **191 frontend tests** covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation

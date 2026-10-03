@@ -13,7 +13,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 ### Getting Started
 
 ```bash
-git clone https://github.com/yourname/knowtequiz.git
+git clone https://github.com/AsdfAlex-learning/KnowteQuiz.git
 cd knowtequiz
 node setup.cjs          # Interactive installer
 ```

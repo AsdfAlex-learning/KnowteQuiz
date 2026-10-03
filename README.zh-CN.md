@@ -29,7 +29,7 @@
 ### 首次安装
 
 ```bash
-git clone https://github.com/yourname/knowtequiz.git
+git clone https://github.com/AsdfAlex-learning/KnowteQuiz.git
 cd knowtequiz
 node setup.cjs          # 交互式安装：检查环境 → 安装依赖 → 构建 → 选择模式
 ```
@@ -166,7 +166,7 @@ KnowteQuiz 支持任意 **OpenAI 兼容** API 端点。
 
 ## 测试
 
-项目包含 **66 个 Rust 单元测试**和 **152 个前端测试**，覆盖：
+项目包含 **91 个 Rust 单元测试**和 **191 个前端测试**，覆盖：
 
 - 原子 JSON 写入与备份恢复
 - Quiz JSON 解析与校验
