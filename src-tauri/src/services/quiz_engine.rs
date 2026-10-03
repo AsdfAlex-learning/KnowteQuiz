@@ -217,13 +217,23 @@ pub async fn generate_quiz_stream(
     Ok(())
 }
 
+/// Prefix of `raw` for error messages, cut on a UTF-8 char boundary so
+/// multibyte model output (CJK notes/prompts) cannot panic while formatting.
+fn raw_preview(raw: &str) -> &str {
+    let mut end = raw.len().min(200);
+    while end > 0 && !raw.is_char_boundary(end) {
+        end -= 1;
+    }
+    &raw[..end]
+}
+
 fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, AppError> {
     let json_str = extract_json_block(raw);
     let parsed: serde_json::Value = serde_json::from_str(&json_str).map_err(|e| {
         AppError::Internal(format!(
             "JSON parse error: {}. Raw: {}",
             e,
-            &raw[..raw.len().min(200)]
+            raw_preview(raw)
         ))
     })?;
 
@@ -723,6 +733,7 @@ async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Resul
         .ok_or_else(|| AppError::Llm("No content in LLM response".to_string()))
 }
 
+#[derive(Debug)]
 struct InitialDiagnosis {
     answer_analysis: String,
     blind_spots: Vec<BlindSpot>,
@@ -735,7 +746,7 @@ fn parse_diagnosis_initial(raw: &str) -> Result<InitialDiagnosis, AppError> {
         AppError::Internal(format!(
             "Failed to parse diagnosis: {}. Raw: {}",
             e,
-            &raw[..raw.len().min(200)]
+            raw_preview(raw)
         ))
     })?;
 
@@ -938,6 +949,30 @@ mod tests {
         // Use a path that can't be created (e.g., inside a file)
         let dir = std::path::Path::new("/nonexistent/readonly/debug_test");
         save_llm_debug_log(dir, "quiz", "test"); // should not panic
+    }
+
+    #[test]
+    fn raw_preview_never_splits_multibyte_characters() {
+        // 67 CJK chars = 201 bytes; a naive 200-byte cut splits the last char.
+        let raw = "汉".repeat(67);
+        assert_eq!(raw.len(), 201);
+        assert_eq!(raw_preview(&raw), "汉".repeat(66));
+        assert_eq!(raw_preview("short"), "short");
+    }
+
+    #[test]
+    fn parse_quiz_response_with_long_chinese_garbage_errors_without_panicking() {
+        let raw = format!("模型输出不是JSON：{}", "汉".repeat(120));
+        let err = parse_quiz_response(&raw).expect_err("garbage input should fail to parse");
+        assert!(err.to_string().contains("JSON parse error"));
+        assert!(err.to_string().contains("汉"));
+    }
+
+    #[test]
+    fn parse_diagnosis_initial_with_long_chinese_garbage_errors_without_panicking() {
+        let raw = format!("诊断输出不是JSON：{}", "汉".repeat(120));
+        let err = parse_diagnosis_initial(&raw).expect_err("garbage input should fail to parse");
+        assert!(err.to_string().contains("Failed to parse diagnosis"));
     }
 
     #[test]
