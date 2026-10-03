@@ -99,10 +99,21 @@ fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Resu
 }
 
 pub async fn start(port: u16) -> Result<(), AppError> {
-    let data_dir = dirs::data_dir()
-        .ok_or_else(|| AppError::Internal("Failed to get data directory".to_string()))?
-        .join("knowtequiz");
+    let data_dir = storage::default_app_data_dir()?;
     std::fs::create_dir_all(&data_dir)?;
+
+    // Web mode used to store data in `<data_dir>/knowtequiz`, separate from the
+    // desktop app data dir. Copy missing files over so old web data survives.
+    if let Some(legacy_dir) = dirs::data_dir().map(|base| base.join("knowtequiz")) {
+        let migrated = storage::migrate_legacy_web_data(&legacy_dir, &data_dir)?;
+        if migrated > 0 {
+            println!(
+                "Migrated {} web data file(s) into {}",
+                migrated,
+                data_dir.display()
+            );
+        }
+    }
 
     let app_state = Arc::new(AppState {
         data_dir,

@@ -2,9 +2,13 @@ use crate::errors::AppError;
 use serde::{de::DeserializeOwned, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::{AppHandle, Manager};
 
 const APP_DATA_SUBDIR: &str = "knowtequiz";
+/// Tauri bundle identifier; `app_data_dir()` resolves to
+/// `<data_dir>/<identifier>`. Keep in sync with `tauri.conf.json`.
+pub const APP_IDENTIFIER: &str = "com.knowtequiz.app";
 const MANAGED_DATA_FILES: [&str; 8] = [
     "settings.json",
     "settings.json.bak",
@@ -53,6 +57,53 @@ pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, AppError> {
     Ok(dir)
 }
 
+/// Mirrors Tauri's `app_data_dir()` (`<data_dir>/<identifier>`) so the web
+/// server resolves the same data directory without a Tauri runtime.
+pub fn default_app_data_dir() -> Result<PathBuf, AppError> {
+    dirs::data_dir()
+        .map(|base| base.join(APP_IDENTIFIER).join(APP_DATA_SUBDIR))
+        .ok_or_else(|| AppError::Internal("Failed to get data directory".to_string()))
+}
+
+/// Copy managed data files and session files from the legacy web-only data dir
+/// (`<data_dir>/knowtequiz`) into `target_dir`, skipping files that already
+/// exist there. Returns the number of files copied; safe to run repeatedly.
+pub fn migrate_legacy_web_data(legacy_dir: &Path, target_dir: &Path) -> Result<usize, AppError> {
+    if !legacy_dir.exists() || legacy_dir == target_dir {
+        return Ok(0);
+    }
+
+    let mut copied = 0;
+    for filename in MANAGED_DATA_FILES {
+        let source = legacy_dir.join(filename);
+        let target = target_dir.join(filename);
+        if source.is_file() && !target.exists() {
+            fs::create_dir_all(target_dir)?;
+            fs::copy(&source, &target)?;
+            copied += 1;
+        }
+    }
+
+    let legacy_sessions = legacy_dir.join("sessions");
+    if legacy_sessions.is_dir() {
+        let target_sessions = target_dir.join("sessions");
+        for entry in fs::read_dir(&legacy_sessions)? {
+            let entry = entry?;
+            if !entry.file_type()?.is_file() {
+                continue;
+            }
+            let target_file = target_sessions.join(entry.file_name());
+            if !target_file.exists() {
+                fs::create_dir_all(&target_sessions)?;
+                fs::copy(entry.path(), &target_file)?;
+                copied += 1;
+            }
+        }
+    }
+
+    Ok(copied)
+}
+
 pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> Result<T, AppError> {
     let path = data_dir.join(filename);
     if !path.exists() {
@@ -67,11 +118,20 @@ pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> R
     }
 }
 
+/// Serializes atomic JSON writes. The `.tmp` path is fixed per filename, so
+/// two concurrent writers of the same file would otherwise interleave and
+/// corrupt the tmp→rename sequence. (`mistakes.jsonl` has its own file lock.)
+static JSON_WRITE_LOCK: Mutex<()> = Mutex::new(());
+
 pub fn write_json_path<T: Serialize>(
     data_dir: &Path,
     filename: &str,
     data: &T,
 ) -> Result<(), AppError> {
+    let _guard = JSON_WRITE_LOCK
+        .lock()
+        .map_err(|_| AppError::Internal("JSON write lock poisoned".to_string()))?;
+
     let path = data_dir.join(filename);
     let tmp_path = data_dir.join(format!("{}.tmp", filename));
     let backup_path = data_dir.join(format!("{}.bak", filename));
@@ -266,6 +326,80 @@ mod tests {
         assert_eq!(current, second);
         assert_eq!(backup, first);
         assert!(!dir.join("settings.json.tmp").exists());
+    }
+
+    #[test]
+    fn write_json_path_serializes_concurrent_writers() {
+        let dir = temp_data_dir("write_json_path_serializes_concurrent_writers");
+        let handles: Vec<_> = (0..8)
+            .map(|i| {
+                let dir = dir.clone();
+                std::thread::spawn(move || {
+                    let record = TestRecord {
+                        version: "1".to_string(),
+                        value: format!("writer-{i}"),
+                    };
+                    write_json_path(&dir, "settings.json", &record)
+                        .expect("concurrent write should succeed");
+                })
+            })
+            .collect();
+        for handle in handles {
+            handle.join().expect("writer thread should not panic");
+        }
+
+        let final_record: TestRecord =
+            read_json_path(&dir, "settings.json").expect("final file should parse");
+        assert!(final_record.value.starts_with("writer-"));
+        assert!(!dir.join("settings.json.tmp").exists());
+        assert!(
+            dir.join("settings.json.bak").exists(),
+            "last replaced file should remain as backup"
+        );
+    }
+
+    #[test]
+    fn migrate_legacy_web_data_copies_missing_files_only() {
+        let legacy = temp_data_dir("migrate_legacy_web_data_legacy");
+        let target = temp_data_dir("migrate_legacy_web_data_target");
+        fs::write(legacy.join("settings.json"), r#"{"legacy":true}"#)
+            .expect("legacy settings should be written");
+        fs::write(legacy.join("mistakes.jsonl"), "{}\n").expect("legacy mistakes should be written");
+        fs::create_dir_all(legacy.join("sessions")).expect("legacy sessions dir");
+        fs::write(legacy.join("sessions").join("s1.json"), "{}")
+            .expect("legacy session should be written");
+        fs::write(target.join("settings.json"), r#"{"current":true}"#)
+            .expect("current settings should be written");
+
+        let copied = migrate_legacy_web_data(&legacy, &target).expect("migration should succeed");
+
+        assert_eq!(copied, 2);
+        assert_eq!(
+            fs::read_to_string(target.join("settings.json")).expect("target settings intact"),
+            r#"{"current":true}"#
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("mistakes.jsonl")).expect("mistakes copied"),
+            "{}\n"
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("sessions").join("s1.json")).expect("session copied"),
+            "{}"
+        );
+
+        let copied_again =
+            migrate_legacy_web_data(&legacy, &target).expect("second migration should succeed");
+        assert_eq!(copied_again, 0);
+    }
+
+    #[test]
+    fn migrate_legacy_web_data_is_noop_without_legacy_dir() {
+        let target = temp_data_dir("migrate_noop_target");
+        let legacy = target.join("does-not-exist");
+
+        let copied = migrate_legacy_web_data(&legacy, &target).expect("migration should succeed");
+
+        assert_eq!(copied, 0);
     }
 
     #[test]
