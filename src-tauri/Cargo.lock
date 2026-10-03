@@ -1767,7 +1767,6 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
- "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
  "tower",
