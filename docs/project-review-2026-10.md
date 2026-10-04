@@ -3,6 +3,8 @@
 > 复盘日期：2026-10-04 | 方法：全量 git 历史（201 commits）+ 前端/后端/质量设施三路代码审查 + 文档与实际核对
 >
 > 结论先行：**整体健康度 B+**。地基（数据可靠性、安全默认值、测试文化、双运行时抽象）扎实；但深查发现 3 个已验证的 P0 正确性缺陷（本次已修复），以及一批文档未记录的结构性债务。测试全绿 ≠ 功能都对——Web 诊断路由失效、`isTauri` 未调用这类问题都缺"真实路由/真实环境"的端到端覆盖。
+>
+> **进展**：批次 1（P0 + 数据安全 + 卫生项）与批次 2（P1 健壮性加固 8 项中 7 项）已完成，见 §6/§7；方向确认与后续路线图见 §5。
 
 ---
 
@@ -53,16 +55,18 @@
 
 ### P1 — 数据与健壮性
 
-| # | 问题 | 位置/证据 |
-|---|---|---|
-| 4 | 最大 50MB 的视频以 **base64 存进 settings.json**（~67MB 字符串），且每次答题完成（streak）、切语言都触发整文件重写 | `AppearanceSettings.vue:438`（readAsDataURL）、`types/settings.ts:91` |
-| 5 | settings 整文件读-改-写在 4 个 store 并发执行，last-write-wins 互相覆盖（如布局快照覆盖新写入的滚动位置） | reader/explorer/layout/settings 的 persist 路径 |
-| 6 | quiz 流式生成**无取消、无竞态令牌**（其余 store 都有）：双击生成/中途切笔记会把两条流的事件混进一个 questions 数组；webStream 不接受 AbortSignal | `stores/quiz.ts:153-187`、`services/tauri.ts` |
-| 7 | SettingsModal 测连接时临时改 `settingsStore.settings.llm` 再还原，并发持久化会把**未提交的 LLM 配置写盘**；死掉的 SettingsPanel 版本语义相反（测的是已保存配置） | `SettingsModal.vue:351-354` |
-| 8 | webStream SSE 解析：多行 `data:` 只取第一行（丢载荷）、单条 JSON 解析失败抛出整条流 | `services/tauri.ts:49-66` |
-| 9 | LLM 客户端 60s **总超时**会截断长流式输出（reqwest timeout 覆盖整个响应体）；无连接/空闲分离；客户端断开后 spawn 的任务继续烧完整个生成（`tx.send` 失败被忽略） | `llm_service.rs:10-16`、`web_server.rs` 三处 spawn |
-| 10 | web 端 `/api/quiz/generate`、`/api/quiz/diagnose` 的路径未走 `resolve_note_path` 绑定（读笔记接口有防护，出题/诊断没有）——任意本地文件可被注入 prompt | `quiz_engine.rs:63`、`web_server.rs` diagnose handler |
-| 11 | `useTheme` 深度 watcher 包含 `video_time`，视频播放期间**每秒重应用整套主题 CSS 变量** | `useTheme.ts:72-78`、`BackgroundLayer.vue:89-99` |
+> 2026-10-04 批次 2 更新：除 #7（涉及 test-connection 接口设计，归入批次 3 的设置 UI 合并）外全部修复。
+
+| # | 问题 | 位置/证据 | 状态 |
+|---|---|---|---|
+| 4 | 最大 50MB 的视频以 **base64 存进 settings.json**（~67MB 字符串），且每次答题完成（streak）、切语言都触发整文件重写 | `AppearanceSettings.vue`（readAsDataURL）、`types/settings.ts` | ✅ 已修（9c33610）：媒体存 `<data_dir>/media/`，settings 存路径 + data-URL 自动迁移 + CSP 补 `media-src` |
+| 5 | settings 整文件读-改-写在 4 个 store 并发执行，last-write-wins 互相覆盖（如布局快照覆盖新写入的滚动位置） | reader/explorer/layout/settings 的 persist 路径 | ✅ 已修（90ecf69）：`queueUpdate` 串行写队列，六处调用点迁移 |
+| 6 | quiz 流式生成**无取消、无竞态令牌**：双击生成/中途切笔记会把两条流的事件混进一个 questions 数组；webStream 不接受 AbortSignal | `stores/quiz.ts`、`services/tauri.ts` | ✅ 已修（e3c7204）：request id + AbortSignal + Rust 侧断开停拉 LLM + dispatcher 去重 |
+| 7 | SettingsModal 测连接时临时改 `settingsStore.settings.llm` 再还原，并发持久化会把**未提交的 LLM 配置写盘**；死掉的 SettingsPanel 版本语义相反（测的是已保存配置） | `SettingsModal.vue` | ❌ 未修（批次 3）：需 test-connection 接受待测 LlmConfig 参数，随设置 UI 合并一起做 |
+| 8 | webStream SSE 解析：多行 `data:` 只取第一行（丢载荷）、单条 JSON 解析失败抛出整条流 | `services/tauri.ts` | ✅ 已修（bcc0f67）：按 SSE 规范聚合多行 data，坏事件跳过不中断 |
+| 9 | LLM 客户端 60s **总超时**会截断长流式输出；客户端断开后 spawn 的任务继续烧完整个生成 | `llm_service.rs`、quiz_engine 流循环 | ✅ 已修（7be89cd + e3c7204）：connect 10s / 流式无总超时 + 90s chunk 空闲判死；接收端断开即停 |
+| 10 | web 端 `/api/quiz/generate`、`/api/quiz/diagnose` 的路径未走 `resolve_note_path` 绑定——任意本地文件可被注入 prompt | `quiz_engine.rs`、web diagnose handler | ✅ 已修（24beac5）：`fs_service::resolve_note_path` 双端统一绑定 |
+| 11 | `useTheme` 深度 watcher 包含 `video_time`，视频播放期间**每秒重应用整套主题 CSS 变量** | `useTheme.ts`、`BackgroundLayer.vue` | ✅ 已修（09eb149）：watch 源改为 applyTheme 实际读取的字段 |
 
 ### P2 — 代码卫生与一致性
 
@@ -88,14 +92,19 @@
 
 ---
 
-## 5. 建议路线图
+## 5. 路线图（v2，2026-10-04 用户方向确认）
 
-- **批次 1（本次，已完成）**：P0 ×3 + 数据安全两项 + 卫生项（Cargo.toml 重复依赖/未用依赖、`--passWithNoTests`、文档测试数与 repo URL）。
-- **批次 2（健壮性，建议下一步）**：#4 视频改存文件路径 + #5 settings 写入队列（或后端 partial-update 命令）+ #6/#7/#8 竞态与 SSE + #9 LLM 超时拆分与取消 + #10 出题/诊断路径绑定 + #11 watcher 拆分 + i18n 回归清理。
-- **批次 3（架构整理）**：删除死代码群；SettingsModal/SettingsPanel 合一（抽 composable）；题目/解析走 Markdown+KaTeX 渲染；Tauri 侧 spawn_blocking 统一。
-- **批次 4（工程设施）**：#12/#13/#14/#15/#16/#17——linter、vitest 配置与覆盖率、CI 加固、发布流、依赖升级。这是防复发的关键：本次 3 个 P0 全部属于"测试全绿但功能失效"，缺少的是真实路由/真实环境的端到端覆盖。
+> 定位确认：**长期自用工具，足够好用后在 GitHub 开源分享**。节奏：小步快跑，每批端到端验证后再定下一批。功能构想（计划模式 + 知识图谱）已纳入路线图。
 
-## 6. 本次批次 1 修改清单
+- **批次 1（已完成）**：P0 ×3 + 数据安全两项 + 卫生项（依赖/`--passWithNoTests`/文档测试数与 repo URL）。
+- **批次 2（P1 健壮性，已完成）**：媒体移出 settings.json、settings 写入队列、quiz 流竞态与取消、SSE 加固、LLM 超时拆分、路径绑定、主题 watcher 拆分、i18n 回归清理。#7 归入批次 3。
+- **批次 3（P2 架构整理）**：删除死代码群（~810 行）；SettingsModal/SettingsPanel 合一（抽 composable），顺带修 #7（test-connection 接受待测 LlmConfig）；题目/解析走 Markdown+KaTeX 渲染；Tauri 侧阻塞 IO 统一 spawn_blocking；a11y 基础（对话框焦点陷阱、树键盘导航）。
+- **批次 4（P3 工程设施，直接服务开源）**：ESLint（或 oxlint）+ eslint-plugin-vue；vitest 统一配置 + 覆盖率；CI 加固（Windows job / timeout-minutes / concurrency / permissions / cargo 缓存 / cargo fmt --check）；tauri-action 发布自动化 + tag + 版本号单源；commitlint + dependabot；依赖升级（axum 0.8 时 `:param` 需换回 `{param}`——0.8 语法反转；pinia 3、vite 7）。
+- **批次 5（计划模式 + 知识图谱 MVP）**：LearningPlan 数据模型（学习范围=工作区/目录/笔记清单、预计时长、目标掌握度映射 SM-2 目标）；知识脉络管道 = 逐文档 LLM 抽取 outline（按 size+time 增量缓存，复用 index.json 思路）→ 程序按目录结构/frontmatter 链接自动拼接图谱 → LLM 仅做最终一致性校验；出题按图谱节点与计划范围选题。OCR 暂不做。届时需设计评审：图谱存储格式（graph.json 邻接表 vs 节点表）、UI 入口（新 Panel tab）、与每日复习流的关系。
+- **批次 6（学习统计面板）**：正确率趋势、复习完成率、计划进度、按笔记/标签薄弱点分布（数据源 mistakes.jsonl + streak + 批次 5 的 plan）。
+- **批次 7（知识库增强）**：全库搜索（index.json 扩展标题+正文索引）、多笔记联合出题、wikilink/嵌入块兼容。
+
+## 6. 批次 1 修改清单
 
 | 文件 | 变更 |
 |---|---|
@@ -109,3 +118,18 @@
 | `README.md` / `README.zh-CN.md` / `CONTRIBUTING.md` / `AGENTS.md` | 测试数同步（91/191/30 文件）、repo URL 修正、services 清单补全 |
 
 验证：`cargo test` 91 passed / `cargo clippy -D warnings` clean / `vue-tsc --noEmit` clean / `vitest run` 30 files 191 passed。
+
+## 7. 批次 2 修改清单（P1 健壮性加固，2026-10-04）
+
+| 提交 | 内容 |
+|---|---|
+| `7be89cd` | LLM 超时拆分：connect 10s；流式请求换用无总超时的专用 client + 90s chunk 空闲判死；非流式保持 60s |
+| `24beac5` | 路径绑定：`resolve_note_path` 下沉 `fs_service`，generate/diagnose 初轮/report/Tauri submit 全部绑定笔记根目录；+2 越界测试 |
+| `bcc0f67` | webStream SSE 加固：多行 data 聚合、坏事件跳过不中断（测试契约有意变更） |
+| `e3c7204` | quiz 流竞态与取消：store request id + AbortSignal；Tauri 转发循环断链 break；后端流循环 `tx.is_closed()` 停拉 LLM；dispatcher 去重 |
+| `90ecf69` | settings 串行写队列 `queueUpdate`，六处调用点迁移；失败向上抛错由调用方处理 |
+| `09eb149` | 主题 watcher 拆分：只 watch applyTheme 消耗的字段，video_time 不再触发重放 |
+| `b2c2a7d` | i18n 回归清理：SettingsModal 8 处 + QuizResult/TitleBar/MistakeDetail/note.ts；4 语言新增 titlebar/quiz.saved/mistakes.ref/enter_path_prompt 键；locale 键一致性测试 |
+| `9c33610` | 媒体移出 settings.json：`media_service`（uuid 命名、扩展白名单、大小上限）、Tauri `save_media_file`（raw IPC）、`POST/GET /api/data/media`、前端 `saveMediaFile(s)`、data-URL 自动迁移、CSP `media-src`；+7 测试 |
+
+验证（批次 2 完成时）：`cargo test` 100 passed / clippy `-D warnings` clean / `vue-tsc` clean / `vitest run` 32 files 201 passed。
