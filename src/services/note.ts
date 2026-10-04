@@ -1,12 +1,14 @@
 import type { NoteTreeNode, NoteContent } from '../types/note';
 import { invoke, isTauri } from './tauri';
 import { throwHttpError, parseJsonResponse } from './http';
+import { useI18n } from '../composables/useI18n';
 
 export async function selectFolder(): Promise<string | null> {
   if (isTauri()) {
     return invoke<string | null>('select_folder');
   }
-  const path = window.prompt('Enter the full path to your notes folder:');
+  const { t } = useI18n();
+  const path = window.prompt(t('sidebar.enter_path_prompt'));
   return path || null;
 }
 

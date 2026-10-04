@@ -8,7 +8,8 @@
     "open_folder": "フォルダを開く",
     "enter_path": "ノートフォルダのパスを入力...",
     "no_files": "Markdown ファイルが見つかりません",
-    "refresh": "更新"
+    "refresh": "更新",
+    "enter_path_prompt": "ノートフォルダのフルパスを入力してください:"
   },
   "reader": {
     "no_file": "ファイルが開かれていません",
@@ -57,7 +58,9 @@
     "your_reasoning": "あなたの推理",
     "not_sure": "わからない",
     "not_sure_hint": "この答えについて自信がありません。",
-    "reply_placeholder": "返信を入力..."
+    "reply_placeholder": "返信を入力...",
+    "review": "復習",
+    "saved": "保存済み"
   },
   "settings_page": {
     "title": "設定",
@@ -199,12 +202,19 @@
     "easy": "簡単",
     "due": "復習予定",
     "due_count": "{count} 問の復習予定",
-    "next_review": "次回復習"
+    "next_review": "次回復習",
+    "ref": "参照:"
   },
   "languages": {
     "en": "英語",
     "zh": "中国語",
     "ja": "日本語",
     "ko": "韓国語"
+  },
+  "titlebar": {
+    "toggle_explorer": "エクスプローラー切替 (Ctrl+B)",
+    "toggle_panel": "パネル切替 (Ctrl+Shift+B)",
+    "minimize": "最小化",
+    "maximize": "最大化"
   }
 }

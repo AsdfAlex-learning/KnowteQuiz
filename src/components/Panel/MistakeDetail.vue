@@ -78,7 +78,7 @@
             </div>
             <p class="text-xs text-[var(--text-secondary)] leading-relaxed">{{ spot.description }}</p>
             <p v-if="spot.note_reference" class="text-xs text-[var(--text-faint)] mt-1 italic">
-              Ref: {{ spot.note_reference }}
+              {{ t('mistakes.ref') }} {{ spot.note_reference }}
             </p>
           </div>
         </div>

@@ -8,7 +8,8 @@
     "open_folder": "打开文件夹",
     "enter_path": "输入笔记文件夹路径...",
     "no_files": "未找到 Markdown 文件",
-    "refresh": "刷新"
+    "refresh": "刷新",
+    "enter_path_prompt": "请输入笔记文件夹的完整路径："
   },
   "reader": {
     "no_file": "未打开文件",
@@ -57,7 +58,9 @@
     "your_reasoning": "你的推理",
     "not_sure": "不确定",
     "not_sure_hint": "我对这个答案不确定。",
-    "reply_placeholder": "输入你的回复..."
+    "reply_placeholder": "输入你的回复...",
+    "review": "复习",
+    "saved": "已保存"
   },
   "settings_page": {
     "title": "设置",
@@ -199,12 +202,19 @@
     "easy": "简单",
     "due": "待复习",
     "due_count": "{count} 道错题待复习",
-    "next_review": "下次复习"
+    "next_review": "下次复习",
+    "ref": "参考："
   },
   "languages": {
     "en": "英语",
     "zh": "中文",
     "ja": "日语",
     "ko": "韩语"
+  },
+  "titlebar": {
+    "toggle_explorer": "切换资源管理器 (Ctrl+B)",
+    "toggle_panel": "切换面板 (Ctrl+Shift+B)",
+    "minimize": "最小化",
+    "maximize": "最大化"
   }
 }

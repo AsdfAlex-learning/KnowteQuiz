@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createPinia, setActivePinia } from 'pinia';
 import { readNote, scanNotes, selectFolder } from './note';
+import { useSettingsStore } from '../stores/settings';
 
 describe('note service', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    useSettingsStore().settings.ui_language = 'en';
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });

@@ -8,7 +8,8 @@
     "open_folder": "폭다 열기",
     "enter_path": "노트 폭다 경로 입력...",
     "no_files": "Markdown 파일을 찾을 수 없습니다",
-    "refresh": "새로고침"
+    "refresh": "새로고침",
+    "enter_path_prompt": "노트 폴더의 전체 경로를 입력하세요:"
   },
   "reader": {
     "no_file": "파일이 열여 있지 않습니다",
@@ -57,7 +58,9 @@
     "your_reasoning": "당신의 추론",
     "not_sure": "잘 모르겠음",
     "not_sure_hint": "이 답에 대해 확신이 없습니다.",
-    "reply_placeholder": "답변을 입력하세요..."
+    "reply_placeholder": "답변을 입력하세요...",
+    "review": "복습",
+    "saved": "저장됨"
   },
   "settings_page": {
     "title": "설정",
@@ -199,12 +202,19 @@
     "easy": "쉬움",
     "due": "복습 예정",
     "due_count": "{count}개의 복습 예정 오답",
-    "next_review": "다음 복습"
+    "next_review": "다음 복습",
+    "ref": "참조:"
   },
   "languages": {
     "en": "영어",
     "zh": "중국어",
     "ja": "일본어",
     "ko": "한국어"
+  },
+  "titlebar": {
+    "toggle_explorer": "탐색기 전환 (Ctrl+B)",
+    "toggle_panel": "패널 전환 (Ctrl+Shift+B)",
+    "minimize": "최소화",
+    "maximize": "최대화"
   }
 }

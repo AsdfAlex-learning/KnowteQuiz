@@ -27,7 +27,7 @@
       <button
         class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
         :class="{ 'text-[var(--accent-purple)]': layoutStore.leftPanelOpen }"
-        title="Toggle Explorer (Ctrl+B)"
+        :title="t('titlebar.toggle_explorer')"
         @click="layoutStore.toggleLeftPanel()"
       >
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -38,7 +38,7 @@
       <button
         class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
         :class="{ 'text-[var(--accent-purple)]': layoutStore.rightPanelOpen }"
-        title="Toggle Panel (Ctrl+Shift+B)"
+        :title="t('titlebar.toggle_panel')"
         @click="layoutStore.toggleRightPanel()"
       >
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -53,7 +53,7 @@
 
         <button
           class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
-          title="Minimize"
+          :title="t('titlebar.minimize')"
           @click="minimize"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -62,7 +62,7 @@
         </button>
         <button
           class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
-          title="Maximize"
+          :title="t('titlebar.maximize')"
           @click="toggleMaximize"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -71,7 +71,7 @@
         </button>
         <button
           class="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:bg-[var(--color-error)] hover:text-[var(--bg-base)] transition-colors"
-          title="Close"
+          :title="t('common.close')"
           @click="closeWindow"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -87,8 +87,10 @@
 import { computed } from 'vue';
 import { useLayoutStore } from '@/stores/layout';
 import { isTauri } from '@/services/tauri';
+import { useI18n } from '@/composables/useI18n';
 
 const layoutStore = useLayoutStore();
+const { t } = useI18n();
 
 const tauriAvailable = computed(() => isTauri());
 

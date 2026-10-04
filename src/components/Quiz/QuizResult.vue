@@ -8,7 +8,7 @@
 
     <!-- Question review -->
     <div class="space-y-3">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Review</h3>
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{{ t('quiz.review') }}</h3>
       <div v-for="(q, i) in questions" :key="q.id" class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2 card-hover">
         <div class="flex items-start gap-2">
           <span
@@ -45,7 +45,7 @@
           {{ mistakeStore.isSaving(q.id) ? '...' : t('quiz.save_mistake') }}
         </button>
         <span v-else-if="!isCorrect(q) && mistakeStore.isSaved(q.id)" class="text-[11px] text-[var(--accent-green)]">
-          Saved &#10003;
+          {{ t('quiz.saved') }} &#10003;
         </span>
         <p v-if="mistakeStore.errorFor(q.id)" class="text-[11px] text-[var(--color-error)]">
           {{ mistakeStore.errorFor(q.id) }}

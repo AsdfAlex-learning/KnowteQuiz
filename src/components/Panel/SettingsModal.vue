@@ -142,13 +142,15 @@
                   class="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 space-y-1"
                 >
                   <p class="text-xs font-medium text-[var(--text-primary)]">
-                    Model: {{ settingsStore.llmCapabilities.default_model }}
+                    {{ t('settings_page.model') }}: {{ settingsStore.llmCapabilities.default_model }}
                   </p>
                   <p class="text-xs text-[var(--text-muted)]">
-                    Streaming: {{ settingsStore.llmCapabilities.supports_streaming ? '✓' : '✗' }}
+                    {{ t('settings_page.streaming') }}:
+                    {{ settingsStore.llmCapabilities.supports_streaming ? '✓' : '✗' }}
                   </p>
                   <p class="text-xs text-[var(--text-muted)]">
-                    json_object: {{ settingsStore.llmCapabilities.supports_response_format ? '✓' : '✗' }}
+                    {{ t('settings_page.json_object') }}:
+                    {{ settingsStore.llmCapabilities.supports_response_format ? '✓' : '✗' }}
                   </p>
                   <p
                     v-if="settingsStore.llmCapabilities.available_models.length > 0"
@@ -191,7 +193,7 @@
                   class="rounded-lg border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
                 >
                   <p class="text-xs font-medium text-[var(--accent-green)]">
-                    Removed {{ settingsStore.cleanupResult.deleted_count }} session(s)
+                    {{ t('settings_page.removed_sessions', { count: settingsStore.cleanupResult.deleted_count }) }}
                   </p>
                 </div>
 
@@ -227,7 +229,7 @@
                     >
                       <span class="truncate text-[var(--text-primary)]">{{ file.name }}</span>
                       <span :class="file.exists ? 'text-[var(--text-muted)]' : 'text-[var(--color-error)]'">
-                        {{ file.exists ? formatFileSize(file.size_bytes) : 'Missing' }}
+                        {{ file.exists ? formatFileSize(file.size_bytes) : t('common.missing') }}
                       </span>
                     </div>
                   </div>
@@ -237,7 +239,7 @@
                   v-if="settingsStore.error"
                   class="rounded-lg border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
                 >
-                  <p class="text-xs font-medium text-[var(--color-error)]">Error</p>
+                  <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
                   <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
                     {{ settingsStore.error }}
                   </p>
@@ -356,7 +358,7 @@ async function handleTestConnection() {
     connectionResult.value = {
       ok: false,
       kind: 'network',
-      message: 'Connection failed',
+      message: t('settings_page.connection_failed'),
       status: null,
     };
   } finally {
@@ -392,11 +394,7 @@ async function handleBackup() {
 }
 
 async function handleRestore() {
-  if (
-    !window.confirm(
-      'Restore will overwrite current settings and mistakes from the latest backup. A pre-restore snapshot is taken automatically. Continue?'
-    )
-  ) {
+  if (!window.confirm(t('settings_page.confirm_restore'))) {
     return;
   }
   restoring.value = true;
