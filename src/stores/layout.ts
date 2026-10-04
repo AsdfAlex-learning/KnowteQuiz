@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { getSettings, saveSettings } from '../services/settings';
+import { getSettings } from '../services/settings';
+import { useSettingsStore } from './settings';
 
 export const useLayoutStore = defineStore('layout', () => {
   const leftPanelOpen = ref(true);
@@ -40,12 +41,12 @@ export const useLayoutStore = defineStore('layout', () => {
 
   async function persistLayout() {
     try {
-      const settings = await getSettings();
-      settings.ui.layout.left_visible = leftPanelOpen.value;
-      settings.ui.layout.right_visible = rightPanelOpen.value;
-      settings.ui.layout.left_width = explorerWidth.value;
-      settings.ui.layout.right_width = readerWidth.value;
-      await saveSettings(settings);
+      await useSettingsStore().queueUpdate((s) => {
+        s.ui.layout.left_visible = leftPanelOpen.value;
+        s.ui.layout.right_visible = rightPanelOpen.value;
+        s.ui.layout.left_width = explorerWidth.value;
+        s.ui.layout.right_width = readerWidth.value;
+      });
     } catch {
       /* ignore */
     }

@@ -367,9 +367,11 @@ async function handleTestConnection() {
 async function handleSaveAndQuit() {
   saving.value = true;
   try {
-    // Apply local settings to store
-    Object.assign(settingsStore.settings, JSON.parse(JSON.stringify(localSettings)));
-    await settingsStore.persistSettings();
+    // Apply local settings through the store's write queue so concurrent
+    // persists (streaks, scroll positions) can't overwrite them.
+    await settingsStore.queueUpdate((s) => {
+      Object.assign(s, JSON.parse(JSON.stringify(localSettings)));
+    });
     emit('update:modelValue', false);
   } catch {
     // The store owns the user-visible error state.

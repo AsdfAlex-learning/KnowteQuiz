@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useReaderStore } from './reader';
+import { useSettingsStore } from './settings';
 import * as noteService from '../services/note';
 import * as settingsService from '../services/settings';
 import { defaultSettings } from '../utils/defaults';
@@ -123,8 +124,8 @@ describe('reader store scroll persistence', () => {
   it('persists scroll position by note path', async () => {
     const settings = defaultSettings();
     settings.workspace.selected_path = '/notes/vue/reactivity.md';
-    vi.mocked(settingsService.getSettings).mockResolvedValue(settings);
     vi.mocked(settingsService.saveSettings).mockResolvedValue(true);
+    useSettingsStore().settings = settings;
     const store = useReaderStore();
 
     await store.saveScrollPosition('/notes/vue/reactivity.md', 640);
@@ -141,12 +142,11 @@ describe('reader store scroll persistence', () => {
   });
 
   it('records scroll persistence errors without throwing', async () => {
-    vi.mocked(settingsService.getSettings).mockRejectedValue(new Error('Failed to parse settings.json'));
+    vi.mocked(settingsService.saveSettings).mockRejectedValue(new Error('Failed to parse settings.json'));
     const store = useReaderStore();
 
     await expect(store.saveScrollPosition('/notes/vue/reactivity.md', 640)).resolves.toBeUndefined();
 
     expect(store.error).toContain('Failed to parse settings.json');
-    expect(settingsService.saveSettings).not.toHaveBeenCalled();
   });
 });

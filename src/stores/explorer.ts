@@ -2,7 +2,8 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { NoteTreeNode } from '../types/note';
 import { selectFolder, scanNotes } from '../services/note';
-import { getSettings, saveSettings } from '../services/settings';
+import { getSettings } from '../services/settings';
+import { useSettingsStore } from './settings';
 import { useRequestId } from '../composables/useRequestId';
 
 export const useExplorerStore = defineStore('explorer', () => {
@@ -117,15 +118,10 @@ export const useExplorerStore = defineStore('explorer', () => {
 
   async function persistWorkspace() {
     try {
-      const settings = await getSettings();
-      await saveSettings({
-        ...settings,
-        workspace: {
-          ...settings.workspace,
-          root_path: rootPath.value,
-          expanded_dirs: Array.from(expandedDirs.value),
-          selected_path: selectedPath.value,
-        },
+      await useSettingsStore().queueUpdate((s) => {
+        s.workspace.root_path = rootPath.value;
+        s.workspace.expanded_dirs = Array.from(expandedDirs.value);
+        s.workspace.selected_path = selectedPath.value;
       });
     } catch (e) {
       error.value = String(e);

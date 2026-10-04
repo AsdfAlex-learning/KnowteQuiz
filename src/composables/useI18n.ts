@@ -69,8 +69,11 @@ export function useI18n(): {
   }
 
   function setLocale(newLocale: string) {
-    settingsStore.settings.ui_language = newLocale;
-    settingsStore.persistSettings();
+    void settingsStore
+      .queueUpdate((s) => {
+        s.ui_language = newLocale;
+      })
+      .catch(() => undefined);
   }
 
   return { t, locale, availableLocales, setLocale };

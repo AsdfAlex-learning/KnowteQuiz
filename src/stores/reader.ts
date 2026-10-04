@@ -2,7 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { NoteContent } from '../types/note';
 import { readNote } from '../services/note';
-import { getSettings, saveSettings } from '../services/settings';
+import { getSettings } from '../services/settings';
+import { useSettingsStore } from './settings';
 
 export const useReaderStore = defineStore('reader', () => {
   const currentNote = ref<NoteContent | null>(null);
@@ -49,16 +50,11 @@ export const useReaderStore = defineStore('reader', () => {
 
   async function saveScrollPosition(path: string, top: number) {
     try {
-      const settings = await getSettings();
-      await saveSettings({
-        ...settings,
-        workspace: {
-          ...settings.workspace,
-          scroll_positions: {
-            ...(settings.workspace.scroll_positions ?? {}),
-            [path]: Math.max(0, Math.round(top)),
-          },
-        },
+      await useSettingsStore().queueUpdate((s) => {
+        s.workspace.scroll_positions = {
+          ...(s.workspace.scroll_positions ?? {}),
+          [path]: Math.max(0, Math.round(top)),
+        };
       });
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e);

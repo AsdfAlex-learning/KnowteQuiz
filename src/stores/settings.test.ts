@@ -45,6 +45,27 @@ describe('settings store', () => {
     expect(store.llmConnectionResult?.message).toBe('Connection successful');
   });
 
+  it('applies concurrent queue updates serially without losing mutations', async () => {
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true);
+    const store = useSettingsStore();
+
+    await Promise.all([
+      store.queueUpdate((s) => {
+        s.workspace.scroll_positions = { '/notes/a.md': 10 };
+      }),
+      store.queueUpdate((s) => {
+        s.ui.layout.left_width = 420;
+      }),
+    ]);
+
+    expect(settingsService.saveSettings).toHaveBeenCalledTimes(2);
+    // The second save carries the first mutation too: updates accumulate on
+    // the shared settings object instead of clobbering each other.
+    const lastSaved = vi.mocked(settingsService.saveSettings).mock.calls[1][0];
+    expect(lastSaved.workspace.scroll_positions).toEqual({ '/notes/a.md': 10 });
+    expect(lastSaved.ui.layout.left_width).toBe(420);
+  });
+
   it('stores data backup results for the settings panel', async () => {
     vi.mocked(settingsService.backupData).mockResolvedValue({
       backup_dir: 'C:/Users/Alex/AppData/Roaming/knowtequiz/backups/20260621-120000',

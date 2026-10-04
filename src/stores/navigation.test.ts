@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useNavigationStore } from './navigation';
 import { useExplorerStore } from './explorer';
 import { useReaderStore } from './reader';
+import { useSettingsStore } from './settings';
 import * as noteService from '../services/note';
 import * as settingsService from '../services/settings';
 import { defaultSettings } from '../utils/defaults';
@@ -41,6 +42,8 @@ describe('navigation store', () => {
     const navigationStore = useNavigationStore();
     const explorerStore = useExplorerStore();
     const readerStore = useReaderStore();
+    // Persist mutates the shared settings store, not a fresh getSettings read.
+    useSettingsStore().settings = settings;
     explorerStore.rootPath = '/notes';
 
     await navigationStore.openNote('/notes/rust/ownership.md');
@@ -90,6 +93,7 @@ describe('navigation store', () => {
     const navigationStore = useNavigationStore();
     const explorerStore = useExplorerStore();
     const readerStore = useReaderStore();
+    useSettingsStore().settings = settings;
     explorerStore.rootPath = '/notes';
     explorerStore.selectedPath = '/notes/deleted.md';
 

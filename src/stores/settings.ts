@@ -52,14 +52,33 @@ export const useSettingsStore = defineStore('settings', () => {
       await saveSettings(settings.value);
     } catch (e) {
       error.value = String(e);
+      // Callers that care (queueUpdate) need the failure; fire-and-forget
+      // callers wrap queueUpdate in their own catch.
+      throw e;
     } finally {
       loading.value = false;
     }
   }
 
+  // Serializes read-modify-write cycles on the single reactive settings
+  // object. Concurrent persisters (scroll positions, layout, workspace,
+  // streaks, locale) used to snapshot the file independently and clobber
+  // each other with stale whole-file writes; every mutation now lands on
+  // the shared object and is saved in enqueue order. Rejects when the
+  // underlying save fails so callers can surface the error.
+  let writeQueue: Promise<void> = Promise.resolve();
+
+  function queueUpdate(mutator: (s: Settings) => void): Promise<void> {
+    const task = writeQueue.then(() => {
+      mutator(settings.value);
+      return persistSettings();
+    });
+    writeQueue = task.catch(() => undefined);
+    return task;
+  }
+
   function recordActivity() {
-    updateStreak(settings.value.workspace);
-    void persistSettings();
+    void queueUpdate((s) => updateStreak(s.workspace)).catch(() => undefined);
   }
 
   async function testConnection(): Promise<ConnectionTestResult> {
@@ -185,6 +204,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dataStatusError,
     loadSettings,
     persistSettings,
+    queueUpdate,
     testConnection,
     backupDataNow,
     loadDataStatus,
