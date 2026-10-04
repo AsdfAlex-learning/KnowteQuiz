@@ -10,11 +10,17 @@ export function isTauri(): boolean {
   return typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
 }
 
-export async function webStream<T>(path: string, body: unknown, onMessage: (msg: T) => void): Promise<void> {
+export async function webStream<T>(
+  path: string,
+  body: unknown,
+  onMessage: (msg: T) => void,
+  signal?: AbortSignal
+): Promise<void> {
   const response = await fetch(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   });
 
   if (!response.ok) {

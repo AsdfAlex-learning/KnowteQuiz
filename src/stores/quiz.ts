@@ -5,6 +5,7 @@ import { generateDiagnosisReport, generateQuiz, submitAnswerAdvanced, diagnoseFo
 import type { QuizStreamParams } from '../types/quiz';
 import type { DiagnosisContext } from '../types/mistake';
 import { isQuizAnswerCorrect } from '../utils/answer';
+import { useRequestId } from '../composables/useRequestId';
 
 export type QuizMode = 'basic' | 'advanced';
 export type QuizState = 'idle' | 'generating' | 'answering' | 'diagnosing' | 'report' | 'result';
@@ -23,6 +24,18 @@ export const useQuizStore = defineStore('quiz', () => {
   const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map());
   const error = ref<string | null>(null);
   const generatingPhase = ref<string | null>(null);
+
+  // Guards every stream callback against stale events and aborts the web
+  // transport when a newer flow (or reset) supersedes the running one.
+  const streamRequests = useRequestId();
+  let activeAbort: AbortController | null = null;
+
+  function beginStream(): { requestId: number; signal: AbortSignal } {
+    activeAbort?.abort();
+    const controller = new AbortController();
+    activeAbort = controller;
+    return { requestId: streamRequests.next(), signal: controller.signal };
+  }
 
   const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null);
   const totalQuestions = computed(() => questions.value.length);
@@ -52,6 +65,9 @@ export const useQuizStore = defineStore('quiz', () => {
   }
 
   function reset() {
+    activeAbort?.abort();
+    activeAbort = null;
+    streamRequests.next();
     quizState.value = 'idle';
     questions.value = [];
     currentIndex.value = 0;
@@ -154,7 +170,9 @@ export const useQuizStore = defineStore('quiz', () => {
     reset();
     quizState.value = 'generating';
     generatingPhase.value = null;
+    const { requestId, signal } = beginStream();
     const failGeneration = (message: string) => {
+      if (!streamRequests.isLatest(requestId)) return;
       questions.value = [];
       currentIndex.value = 0;
       answers.value = new Map();
@@ -166,10 +184,15 @@ export const useQuizStore = defineStore('quiz', () => {
       await generateQuiz(
         params,
         (phase) => {
+          if (!streamRequests.isLatest(requestId)) return;
           generatingPhase.value = phase;
         },
-        (q) => addQuestion(q),
+        (q) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          addQuestion(q);
+        },
         (total) => {
+          if (!streamRequests.isLatest(requestId)) return;
           if (total <= 0 || questions.value.length === 0) {
             failGeneration('No questions generated');
             return;
@@ -179,9 +202,12 @@ export const useQuizStore = defineStore('quiz', () => {
         },
         (err) => {
           failGeneration(err);
-        }
+        },
+        { signal }
       );
     } catch (e) {
+      // An aborted stream was superseded on purpose, not a generation failure.
+      if (!streamRequests.isLatest(requestId)) return;
       failGeneration(String(e));
     }
   }
@@ -193,6 +219,7 @@ export const useQuizStore = defineStore('quiz', () => {
     userReasoning: string,
     notePath: string
   ) {
+    const { requestId, signal } = beginStream();
     quizState.value = 'diagnosing';
     error.value = null;
     sessionId.value = null;
@@ -205,8 +232,12 @@ export const useQuizStore = defineStore('quiz', () => {
         userAnswer,
         userReasoning,
         notePath,
-        (data) => addDiagnosisMessage(data),
         (data) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          addDiagnosisMessage(data);
+        },
+        (data) => {
+          if (!streamRequests.isLatest(requestId)) return;
           addDiagnosisMessage({
             role: 'ai',
             content: data.question,
@@ -214,27 +245,35 @@ export const useQuizStore = defineStore('quiz', () => {
             follow_up: data.question,
           });
         },
-        (report) => setDiagnosisReport(report),
+        (report) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          setDiagnosisReport(report);
+        },
         (err) => {
           failDiagnosis(err);
-        }
+        },
+        { signal }
       );
+      if (!streamRequests.isLatest(requestId)) return;
       if (!error.value) {
         sessionId.value = sid;
       }
     } catch (e) {
+      if (!streamRequests.isLatest(requestId)) return;
       failDiagnosis(String(e));
     }
   }
 
   async function continueDiagnosis(userReply: string) {
     if (!sessionId.value) return;
+    const { requestId, signal } = beginStream();
     error.value = null;
     try {
       await diagnoseFollowUp(
         sessionId.value,
         userReply,
         (data) => {
+          if (!streamRequests.isLatest(requestId)) return;
           addDiagnosisMessage({ role: 'user', content: userReply, blind_spots: [] });
           addDiagnosisMessage({
             role: 'ai',
@@ -243,12 +282,18 @@ export const useQuizStore = defineStore('quiz', () => {
             follow_up: data.question,
           });
         },
-        (report) => setDiagnosisReport(report),
+        (report) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          setDiagnosisReport(report);
+        },
         (err) => {
+          if (!streamRequests.isLatest(requestId)) return;
           error.value = err;
-        }
+        },
+        { signal }
       );
     } catch (e) {
+      if (!streamRequests.isLatest(requestId)) return;
       error.value = String(e);
     }
   }

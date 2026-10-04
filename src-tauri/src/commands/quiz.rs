@@ -24,7 +24,10 @@ pub async fn generate_quiz(
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            let _ = on_event.send(event);
+            if on_event.send(event).is_err() {
+                // Tauri channel closed: drop rx so the engine can stop early.
+                break;
+            }
         }
     });
     quiz_engine::generate_quiz_stream(&data_dir, &params, tx).await
@@ -44,7 +47,10 @@ pub async fn submit_answer_advanced(
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            let _ = on_event.send(event);
+            if on_event.send(event).is_err() {
+                // Tauri channel closed: drop rx so the engine can stop early.
+                break;
+            }
         }
     });
 
@@ -96,7 +102,10 @@ pub async fn diagnose_follow_up(
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     tokio::spawn(async move {
         while let Some(event) = rx.recv().await {
-            let _ = on_event.send(event);
+            if on_event.send(event).is_err() {
+                // Tauri channel closed: drop rx so the engine can stop early.
+                break;
+            }
         }
     });
 

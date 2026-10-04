@@ -27,7 +27,7 @@ describe('quiz service', () => {
 
     await generateQuiz(params, vi.fn(), vi.fn(), vi.fn(), vi.fn());
 
-    expect(webStream).toHaveBeenCalledWith('/api/quiz/generate', params, expect.any(Function));
+    expect(webStream).toHaveBeenCalledWith('/api/quiz/generate', params, expect.any(Function), undefined);
   });
 
   it('sends the known correct answer to the web diagnosis endpoint', async () => {
@@ -52,7 +52,8 @@ describe('quiz service', () => {
         correct_answer: 'B',
         user_answer: 'A',
       }),
-      expect.any(Function)
+      expect.any(Function),
+      undefined
     );
   });
 
@@ -77,7 +78,8 @@ describe('quiz service', () => {
       expect.objectContaining({
         session_id: expect.stringMatching(/^web-\d+-[a-z0-9]+$/),
       }),
-      expect.any(Function)
+      expect.any(Function),
+      undefined
     );
   });
 
@@ -89,7 +91,8 @@ describe('quiz service', () => {
     expect(webStream).toHaveBeenCalledWith(
       '/api/quiz/diagnose/session-123/follow_up',
       { user_reply: 'I think the answer is B' },
-      expect.any(Function)
+      expect.any(Function),
+      undefined
     );
   });
 

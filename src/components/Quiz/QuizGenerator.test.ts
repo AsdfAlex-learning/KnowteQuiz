@@ -159,7 +159,8 @@ describe('QuizGenerator', () => {
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
-      expect.any(Function)
+      expect.any(Function),
+      { signal: expect.any(AbortSignal) }
     );
   });
 
@@ -200,7 +201,8 @@ describe('QuizGenerator', () => {
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
-      expect.any(Function)
+      expect.any(Function),
+      { signal: expect.any(AbortSignal) }
     );
   });
 
@@ -237,7 +239,8 @@ describe('QuizGenerator', () => {
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
-      expect.any(Function)
+      expect.any(Function),
+      { signal: expect.any(AbortSignal) }
     );
   });
 

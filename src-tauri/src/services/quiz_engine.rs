@@ -90,9 +90,15 @@ pub async fn generate_quiz_stream(
             .unwrap_or_else(crate::utils::prompt_templates::get_default_template_set);
     let prompt = crate::utils::prompt_templates::fill_template(&template_set.quiz_template, &vars);
 
-    let _ = tx.send(QuizStreamEvent::Phase {
-        phase: "requesting_model".to_string(),
-    });
+    if tx
+        .send(QuizStreamEvent::Phase {
+            phase: "requesting_model".to_string(),
+        })
+        .is_err()
+    {
+        // Receiver gone: the client disconnected before generation started.
+        return Ok(());
+    }
 
     let client = streaming_http_client();
     let request_body = serde_json::json!({
@@ -150,6 +156,10 @@ pub async fn generate_quiz_stream(
         };
         match chunk_result {
             Ok(bytes) => {
+                if tx.is_closed() {
+                    // Client disconnected mid-stream: stop pulling the LLM.
+                    return Ok(());
+                }
                 if let Ok(text) = String::from_utf8(bytes.to_vec()) {
                     for line in text.lines() {
                         if let Some(data) = line.strip_prefix("data: ") {
@@ -177,27 +187,41 @@ pub async fn generate_quiz_stream(
 
     save_llm_debug_log(data_dir, "quiz", &accumulated);
 
-    let _ = tx.send(QuizStreamEvent::Phase {
-        phase: "parsing_response".to_string(),
-    });
+    if tx
+        .send(QuizStreamEvent::Phase {
+            phase: "parsing_response".to_string(),
+        })
+        .is_err()
+    {
+        return Ok(());
+    }
 
     match parse_quiz_response(&accumulated) {
         Ok(questions) => {
             for q in &questions {
-                let _ = tx.send(QuizStreamEvent::Chunk {
-                    id: q.id.clone(),
-                    question_type: format!("{:?}", q.question_type).to_lowercase(),
-                    question: q.question.clone(),
-                    options: q.options.clone(),
-                    answer: q.answer.clone(),
-                    explanation: q.explanation.clone(),
-                });
+                if tx
+                    .send(QuizStreamEvent::Chunk {
+                        id: q.id.clone(),
+                        question_type: format!("{:?}", q.question_type).to_lowercase(),
+                        question: q.question.clone(),
+                        options: q.options.clone(),
+                        answer: q.answer.clone(),
+                        explanation: q.explanation.clone(),
+                    })
+                    .is_err()
+                {
+                    return Ok(());
+                }
             }
             let _ = tx.send(QuizStreamEvent::Done {
                 total: questions.len() as u32,
             });
         }
         Err(e) => {
+            // Don't spend a fixup roundtrip if the receiver is already gone.
+            if tx.is_closed() {
+                return Ok(());
+            }
             // Attempt one auto-repair by asking the LLM to fix the JSON
             let fixup_prompt = format!(
                 "你刚才返回了以下内容，但它不是有效的 JSON 格式。请用标准 JSON 格式重新输出完整的题目数组。\n\n原始返回内容：\n```\n{}\n```\n\n请严格按照以下格式输出：\n```json\n{{\n  \"questions\": [\n    {{\n      \"question_type\": \"single\",\n      \"question\": \"题目文本\",\n      \"options\": [\"A. 选项\", \"B. 选项\"],\n      \"answer\": \"正确答案字母或文本\",\n      \"explanation\": \"解释\"\n    }}\n  ]\n}}\n```",

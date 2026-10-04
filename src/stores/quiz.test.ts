@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useQuizStore } from './quiz';
 import { diagnoseFollowUp, generateDiagnosisReport, generateQuiz, submitAnswerAdvanced } from '../services/quiz';
 import type { DiagnosisReport } from '../types/diagnosis';
+import type { QuizQuestion } from '../types/quiz';
 
 vi.mock('../services/quiz', () => ({
   generateQuiz: vi.fn(),
@@ -129,6 +130,43 @@ describe('quiz store answer evaluation', () => {
     expect(store.error).toContain('No questions generated');
   });
 
+  it('ignores stale stream events after reset', async () => {
+    let captured: { onChunk: (q: QuizQuestion) => void; onDone: (total: number) => void } | null = null;
+    vi.mocked(generateQuiz).mockImplementation(async (_params, _onPhase, onChunk, onDone) => {
+      captured = { onChunk, onDone };
+      // Stream stays in flight; the store considers it superseded below.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const store = useQuizStore();
+
+    await store.startQuiz({
+      path: '/notes/alphabet.md',
+      types: ['single'],
+      count: 1,
+      difficulty: 'easy',
+      lang: 'en',
+    });
+    store.reset();
+
+    const stale = captured as {
+      onChunk: (q: QuizQuestion) => void;
+      onDone: (total: number) => void;
+    } | null;
+    stale?.onChunk({
+      id: 'q1',
+      question_type: 'single',
+      question: 'Stale question',
+      options: ['A. Alpha'],
+      answer: 'A',
+      explanation: 'Stale.',
+    });
+    stale?.onDone(1);
+
+    expect(store.quizState).toBe('idle');
+    expect(store.questions).toHaveLength(0);
+    expect(store.error).toBeNull();
+  });
+
   it('stores advanced diagnosis messages, session id, and generated report', async () => {
     vi.mocked(submitAnswerAdvanced).mockImplementation(
       async (_question, _correctAnswer, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
@@ -240,7 +278,8 @@ describe('quiz store answer evaluation', () => {
       'I confused two definitions.',
       expect.any(Function),
       expect.any(Function),
-      expect.any(Function)
+      expect.any(Function),
+      { signal: expect.any(AbortSignal) }
     );
     expect(store.diagnosisMessages).toEqual([
       { role: 'user', content: 'I confused two definitions.', blind_spots: [] },

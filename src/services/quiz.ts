@@ -11,30 +11,54 @@ import { invoke, isTauri, webStream } from './tauri';
 import { createLocalId } from '../utils/id';
 import { throwHttpError, parseJsonResponse } from './http';
 
+export interface StreamOptions {
+  signal?: AbortSignal;
+}
+
+interface QuizEventHandlers {
+  onPhase: (phase: string) => void;
+  onChunk: (q: QuizQuestion) => void;
+  onDone: (total: number) => void;
+  onError: (msg: string) => void;
+}
+
+function dispatchQuizEvent(msg: QuizEvent, h: QuizEventHandlers): void {
+  if (msg.event === 'phase') h.onPhase(msg.data.phase);
+  else if (msg.event === 'chunk') h.onChunk(msg.data);
+  else if (msg.event === 'done') h.onDone(msg.data.total);
+  else if (msg.event === 'error') h.onError(msg.data.message);
+}
+
+interface DiagnosisEventHandlers {
+  onInitial: (data: DiagnosisRound) => void;
+  onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void;
+  onReport: (data: DiagnosisReport) => void;
+  onError: (msg: string) => void;
+}
+
+function dispatchDiagnosisEvent(msg: DiagnosisEvent, h: DiagnosisEventHandlers): void {
+  if (msg.event === 'initial') h.onInitial(msg.data);
+  else if (msg.event === 'follow_up') h.onFollowUp(msg.data);
+  else if (msg.event === 'report') h.onReport(msg.data);
+  else if (msg.event === 'error') h.onError(msg.data.message);
+}
+
 export async function generateQuiz(
   params: QuizStreamParams,
   onPhase: (phase: string) => void,
   onChunk: (q: QuizQuestion) => void,
   onDone: (total: number) => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  options: StreamOptions = {}
 ): Promise<void> {
+  const handlers: QuizEventHandlers = { onPhase, onChunk, onDone, onError };
   if (isTauri()) {
     const { Channel } = await import('@tauri-apps/api/core');
     const channel = new Channel<QuizEvent>();
-    channel.onmessage = (msg) => {
-      if (msg.event === 'phase') onPhase(msg.data.phase);
-      else if (msg.event === 'chunk') onChunk(msg.data);
-      else if (msg.event === 'done') onDone(msg.data.total);
-      else if (msg.event === 'error') onError(msg.data.message);
-    };
+    channel.onmessage = (msg) => dispatchQuizEvent(msg, handlers);
     await invoke('generate_quiz', { params, onEvent: channel });
   } else {
-    await webStream<QuizEvent>('/api/quiz/generate', params, (msg) => {
-      if (msg.event === 'phase') onPhase(msg.data.phase);
-      else if (msg.event === 'chunk') onChunk(msg.data);
-      else if (msg.event === 'done') onDone(msg.data.total);
-      else if (msg.event === 'error') onError(msg.data.message);
-    });
+    await webStream<QuizEvent>('/api/quiz/generate', params, (msg) => dispatchQuizEvent(msg, handlers), options.signal);
   }
 }
 
@@ -47,17 +71,14 @@ export async function submitAnswerAdvanced(
   onInitial: (data: DiagnosisRound) => void,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  options: StreamOptions = {}
 ): Promise<string> {
+  const handlers: DiagnosisEventHandlers = { onInitial, onFollowUp, onReport, onError };
   if (isTauri()) {
     const { Channel } = await import('@tauri-apps/api/core');
     const channel = new Channel<DiagnosisEvent>();
-    channel.onmessage = (msg) => {
-      if (msg.event === 'initial') onInitial(msg.data);
-      else if (msg.event === 'follow_up') onFollowUp(msg.data);
-      else if (msg.event === 'report') onReport(msg.data);
-      else if (msg.event === 'error') onError(msg.data.message);
-    };
+    channel.onmessage = (msg) => dispatchDiagnosisEvent(msg, handlers);
     return invoke<string>('submit_answer_advanced', {
       question,
       correctAnswer: correct_answer,
@@ -66,27 +87,22 @@ export async function submitAnswerAdvanced(
       notePath: note_path,
       onEvent: channel,
     });
-  } else {
-    const sessionId = createLocalId('web');
-    await webStream<DiagnosisEvent>(
-      '/api/quiz/diagnose',
-      {
-        session_id: sessionId,
-        question,
-        correct_answer,
-        user_answer,
-        user_reasoning,
-        note_path,
-      },
-      (msg) => {
-        if (msg.event === 'initial') onInitial(msg.data);
-        else if (msg.event === 'follow_up') onFollowUp(msg.data);
-        else if (msg.event === 'report') onReport(msg.data);
-        else if (msg.event === 'error') onError(msg.data.message);
-      }
-    );
-    return sessionId;
   }
+  const sessionId = createLocalId('web');
+  await webStream<DiagnosisEvent>(
+    '/api/quiz/diagnose',
+    {
+      session_id: sessionId,
+      question,
+      correct_answer,
+      user_answer,
+      user_reasoning,
+      note_path,
+    },
+    (msg) => dispatchDiagnosisEvent(msg, handlers),
+    options.signal
+  );
+  return sessionId;
 }
 
 export async function diagnoseFollowUp(
@@ -94,16 +110,14 @@ export async function diagnoseFollowUp(
   userReply: string,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  options: StreamOptions = {}
 ): Promise<void> {
+  const handlers: DiagnosisEventHandlers = { onInitial: () => {}, onFollowUp, onReport, onError };
   if (isTauri()) {
     const { Channel } = await import('@tauri-apps/api/core');
     const channel = new Channel<DiagnosisEvent>();
-    channel.onmessage = (msg) => {
-      if (msg.event === 'follow_up') onFollowUp(msg.data);
-      else if (msg.event === 'report') onReport(msg.data);
-      else if (msg.event === 'error') onError(msg.data.message);
-    };
+    channel.onmessage = (msg) => dispatchDiagnosisEvent(msg, handlers);
     await invoke('diagnose_follow_up', { sessionId, userReply, onEvent: channel });
   } else {
     await webStream<DiagnosisEvent>(
@@ -111,11 +125,8 @@ export async function diagnoseFollowUp(
       {
         user_reply: userReply,
       },
-      (msg) => {
-        if (msg.event === 'follow_up') onFollowUp(msg.data);
-        else if (msg.event === 'report') onReport(msg.data);
-        else if (msg.event === 'error') onError(msg.data.message);
-      }
+      (msg) => dispatchDiagnosisEvent(msg, handlers),
+      options.signal
     );
   }
 }

@@ -107,6 +107,27 @@ describe('webStream', () => {
     expect(messages).toEqual([{ event: 'done', payload: { total: 1 } }]);
   });
 
+  it('passes an abort signal through to fetch and rejects when aborted', async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () =>
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        );
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = webStream('/api/quiz/generate', {}, vi.fn(), controller.signal);
+    controller.abort();
+
+    await expect(pending).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/quiz/generate',
+      expect.objectContaining({ signal: controller.signal })
+    );
+  });
+
   it('includes response text when an HTTP request fails', async () => {
     vi.stubGlobal(
       'fetch',
