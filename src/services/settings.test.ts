@@ -6,6 +6,7 @@ import {
   openDataDir,
   probeLlm,
   restoreLatestBackup,
+  saveMediaBytes,
   saveSettings,
   testConnection,
 } from './settings';
@@ -64,6 +65,41 @@ describe('settings service', () => {
     );
 
     await expect(saveSettings({} as never)).rejects.toThrow('HTTP 400: Invalid settings payload');
+  });
+
+  it('uploads theme media as binary with kind and extension in web mode', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({ name: 'abc.png', path: 'C:/data/media/abc.png', size_bytes: 4 }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const saved = await saveMediaBytes(new Uint8Array([1, 2, 3, 4]), 'png', 'image');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/data/media?kind=image&file_name=media.png',
+      expect.objectContaining({ method: 'POST' })
+    );
+    expect(saved).toEqual({
+      name: 'abc.png',
+      path: 'C:/data/media/abc.png',
+      size_bytes: 4,
+    });
+  });
+
+  it('propagates media upload failures with the response body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        text: async () => 'Unsupported image type: .svg',
+      }))
+    );
+
+    await expect(saveMediaBytes(new Uint8Array([1]), 'svg', 'image')).rejects.toThrow(
+      'HTTP 400: Unsupported image type: .svg'
+    );
   });
 
   it('includes the response body when web connection testing fails', async () => {

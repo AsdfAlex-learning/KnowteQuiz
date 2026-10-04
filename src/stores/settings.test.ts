@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSettingsStore } from './settings';
 import * as settingsService from '../services/settings';
 import * as quizService from '../services/quiz';
+import { defaultSettings } from '../utils/defaults';
 
 vi.mock('../services/settings', () => ({
   getSettings: vi.fn(),
@@ -12,6 +13,7 @@ vi.mock('../services/settings', () => ({
   getDataStatus: vi.fn(),
   restoreLatestBackup: vi.fn(),
   openDataDir: vi.fn(),
+  saveMediaBytes: vi.fn(),
 }));
 
 vi.mock('../services/quiz', () => ({
@@ -64,6 +66,28 @@ describe('settings store', () => {
     const lastSaved = vi.mocked(settingsService.saveSettings).mock.calls[1][0];
     expect(lastSaved.workspace.scroll_positions).toEqual({ '/notes/a.md': 10 });
     expect(lastSaved.ui.layout.left_width).toBe(420);
+  });
+
+  it('migrates legacy data-url theme media to stored files on load', async () => {
+    const fixture = defaultSettings();
+    fixture.theme_config.background_image = 'data:image/png;base64,AQID';
+    vi.mocked(settingsService.getSettings).mockResolvedValue(fixture);
+    vi.mocked(settingsService.saveMediaBytes).mockResolvedValue({
+      name: 'abc.png',
+      path: 'C:/data/media/abc.png',
+      size_bytes: 3,
+    });
+    vi.mocked(settingsService.saveSettings).mockResolvedValue(true);
+    const store = useSettingsStore();
+
+    await store.loadSettings();
+    await vi.waitFor(() => expect(settingsService.saveMediaBytes).toHaveBeenCalled());
+    await vi.waitFor(() => expect(settingsService.saveSettings).toHaveBeenCalled());
+
+    expect(settingsService.saveMediaBytes).toHaveBeenCalledWith(expect.any(Uint8Array), 'png', 'image');
+    expect(store.settings.theme_config.background_image).toBe('C:/data/media/abc.png');
+    const saved = vi.mocked(settingsService.saveSettings).mock.calls[0][0];
+    expect(saved.theme_config.background_image).toBe('C:/data/media/abc.png');
   });
 
   it('stores data backup results for the settings panel', async () => {

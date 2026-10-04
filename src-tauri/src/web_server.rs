@@ -1,5 +1,7 @@
 use axum::{
-    extract::{Json, Path as AxumPath, Query, State},
+    body::Bytes,
+    extract::{DefaultBodyLimit, Json, Path as AxumPath, Query, State},
+    handler::Handler,
     http::{header, HeaderValue, Method},
     response::{
         sse::{Event, Sse},
@@ -27,8 +29,8 @@ use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::Settings;
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
-    config, diagnosis_session_service, fs_service, llm_service, mistake_service, note_service,
-    quiz_engine, storage,
+    config, diagnosis_session_service, fs_service, llm_service, media_service, mistake_service,
+    note_service, quiz_engine, storage,
 };
 
 pub struct AppState {
@@ -157,6 +159,12 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route(
             "/api/data/restore-latest",
             post(restore_latest_backup_handler),
+        )
+        .route(
+            "/api/data/media",
+            get(get_media_handler).post(
+                save_media_handler.layer(DefaultBodyLimit::max(52 * 1024 * 1024)),
+            ),
         )
         .route("/api/prompt-templates", get(list_prompt_templates_handler))
         .route(
@@ -615,6 +623,56 @@ async fn cleanup_sessions_handler(
     Ok(Json(result))
 }
 
+#[derive(Deserialize)]
+struct SaveMediaQuery {
+    kind: String,
+    file_name: String,
+}
+
+async fn save_media_handler(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<SaveMediaQuery>,
+    body: Bytes,
+) -> Result<Json<media_service::MediaSaved>, AppError> {
+    let data_dir = state.data_dir.clone();
+    let saved = tokio::task::spawn_blocking(move || {
+        media_service::save_media_file(&data_dir, &query.kind, &query.file_name, &body)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Media save task failed: {e}")))??;
+    Ok(Json(saved))
+}
+
+#[derive(Deserialize)]
+struct GetMediaQuery {
+    name: String,
+}
+
+async fn get_media_handler(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<GetMediaQuery>,
+) -> Result<Response, AppError> {
+    let data_dir = state.data_dir.clone();
+    let name = query.name.clone();
+    let path = tokio::task::spawn_blocking(move || {
+        media_service::media_path_by_name(&data_dir, &name)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Media lookup task failed: {e}")))??;
+    let content_type = media_service::media_content_type(&query.name);
+    let bytes = tokio::fs::read(&path)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to read media file: {e}")))?;
+    Ok((
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::CACHE_CONTROL, "private, max-age=31536000, immutable"),
+        ],
+        bytes,
+    )
+        .into_response())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -813,6 +871,77 @@ mod tests {
             .expect("body should be readable");
         let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
         assert!(body_text.contains("Session session-abc not found"));
+    }
+
+    #[tokio::test]
+    async fn save_and_fetch_media_roundtrip() {
+        let data_dir = temp_data_dir("save_and_fetch_media_roundtrip");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/data/media?kind=video&file_name=lecture.mp4")
+                    .body(Body::from(b"video-bytes".to_vec()))
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let saved: serde_json::Value = serde_json::from_slice(&bytes).expect("json body");
+        let name = saved["name"].as_str().expect("name field").to_string();
+        assert!(saved["path"].as_str().unwrap().contains("media"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/api/data/media?name={name}"))
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+            Some("video/mp4")
+        );
+    }
+
+    #[tokio::test]
+    async fn get_media_rejects_non_generated_names() {
+        let data_dir = temp_data_dir("get_media_rejects_non_generated_names");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/api/data/media?name=../settings.json")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     }
 
     fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {

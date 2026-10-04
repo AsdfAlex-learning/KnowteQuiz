@@ -37,6 +37,7 @@ pub fn run_desktop() {
             settings::load_mistakes,
             settings::mark_mistake_reviewed,
             settings::open_data_dir,
+            settings::save_media_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running KnowteQuiz");

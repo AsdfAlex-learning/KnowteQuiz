@@ -326,6 +326,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import { requestStop, requestResume, resetVideoState } from '@/composables/useVideoBackground';
 import { clampBlur } from '@/utils/glass';
+import { saveMediaFile } from '@/services/settings';
 import type { ThemeConfig } from '@/types/settings';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -380,7 +381,7 @@ function updateAccentColor(e: Event) {
   });
 }
 
-function handleImageSelect(e: Event) {
+async function handleImageSelect(e: Event) {
   const target = e.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
@@ -392,14 +393,15 @@ function handleImageSelect(e: Event) {
   }
   imageError.value = null;
 
-  const reader = new FileReader();
-  reader.onload = () => {
+  try {
+    const saved = await saveMediaFile(file, 'image');
     emit('update:modelValue', {
       ...props.modelValue,
-      background_image: reader.result as string,
+      background_image: saved.path,
     });
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    imageError.value = err instanceof Error ? err.message : String(err);
+  }
 }
 
 function clearImage() {
@@ -413,7 +415,7 @@ function clearImage() {
   }
 }
 
-function handleVideoSelect(e: Event) {
+async function handleVideoSelect(e: Event) {
   const target = e.target as HTMLInputElement;
   const file = target.files?.[0];
   if (!file) return;
@@ -426,16 +428,17 @@ function handleVideoSelect(e: Event) {
   videoError.value = null;
   resetVideoState();
 
-  const reader = new FileReader();
-  reader.onload = () => {
+  try {
+    const saved = await saveMediaFile(file, 'video');
     emit('update:modelValue', {
       ...props.modelValue,
-      background_video: reader.result as string,
+      background_video: saved.path,
       video_playing: true,
       video_time: 0,
     });
-  };
-  reader.readAsDataURL(file);
+  } catch (err) {
+    videoError.value = err instanceof Error ? err.message : String(err);
+  }
 }
 
 function clearVideo() {

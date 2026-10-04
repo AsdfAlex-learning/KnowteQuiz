@@ -73,6 +73,39 @@ export async function openDataDir(): Promise<string> {
   throw new Error('Opening the data directory is only supported in the desktop app');
 }
 
+export interface MediaSaved {
+  name: string;
+  path: string;
+  size_bytes: number;
+}
+
+export type MediaKind = 'image' | 'video';
+
+export async function saveMediaFile(file: File, kind: MediaKind): Promise<MediaSaved> {
+  const dot = file.name.lastIndexOf('.');
+  const extension = dot >= 0 ? file.name.slice(dot + 1) : '';
+  return saveMediaBytes(new Uint8Array(await file.arrayBuffer()), extension, kind);
+}
+
+export async function saveMediaBytes(bytes: Uint8Array, extension: string, kind: MediaKind): Promise<MediaSaved> {
+  const file_name = `media.${extension}`;
+  if (isTauri()) {
+    // Raw IPC body: avoids base64-encoding a 50 MB video into the JSON bridge.
+    return invoke<MediaSaved>('save_media_file', bytes, {
+      headers: { 'x-kq-kind': kind, 'x-kq-file-name': file_name },
+    });
+  }
+  const params = new URLSearchParams({ kind, file_name });
+  // The byte view always spans its whole buffer here, so posting the buffer
+  // is equivalent to posting the view (and satisfies BodyInit typings).
+  const res = await fetch(`/api/data/media?${params}`, {
+    method: 'POST',
+    body: bytes.buffer as ArrayBuffer,
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<MediaSaved>(res);
+}
+
 export interface LlmCapabilities {
   available_models: string[];
   supports_streaming: boolean;

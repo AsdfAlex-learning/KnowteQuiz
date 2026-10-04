@@ -4,7 +4,7 @@ use crate::models::settings::Settings;
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::llm_service::LlmCapabilities;
 use crate::services::storage::{DataBackupResult, DataRestoreResult, DataStatus};
-use crate::services::{config, llm_service, mistake_service, storage};
+use crate::services::{config, llm_service, media_service, mistake_service, storage};
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -106,4 +106,37 @@ pub async fn open_data_dir(app: AppHandle) -> Result<String, AppError> {
     }
 
     Ok(path)
+}
+
+#[tauri::command]
+pub async fn save_media_file(
+    app: AppHandle,
+    request: tauri::ipc::Request<'_>,
+) -> Result<media_service::MediaSaved, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+
+    // The frontend sends the raw bytes as the invoke payload; kind and the
+    // original file name (for extension validation) travel in headers.
+    let kind = header_value(request.headers(), "x-kq-kind");
+    let file_name = header_value(request.headers(), "x-kq-file-name");
+    let bytes = match request.body() {
+        tauri::ipc::InvokeBody::Raw(bytes) => bytes.to_vec(),
+        tauri::ipc::InvokeBody::Json(_) => {
+            return Err(AppError::InvalidInput(
+                "Media upload must be sent as raw bytes".to_string(),
+            ))
+        }
+    };
+
+    tokio::task::spawn_blocking(move || media_service::save_media_file(&data_dir, &kind, &file_name, &bytes))
+        .await
+        .map_err(|e| AppError::Internal(format!("Media save task failed: {e}")))?
+}
+
+fn header_value(headers: &tauri::http::HeaderMap, name: &str) -> String {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .to_string()
 }

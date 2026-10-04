@@ -14,6 +14,7 @@ import {
   openDataDir,
   probeLlm,
   restoreLatestBackup,
+  saveMediaBytes,
   saveSettings,
   testConnection as testSettingsConnection,
 } from '../services/settings';
@@ -37,11 +38,46 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = null;
     try {
       settings.value = await getSettings();
+      void migrateLegacyThemeMedia();
     } catch (e) {
       error.value = String(e);
       settings.value = defaultSettings();
     } finally {
       loading.value = false;
+    }
+  }
+
+  // Legacy settings embedded theme media as base64 data URLs (up to ~67 MB
+  // inside settings.json). Move them into the media dir once and store the
+  // file path instead; failures keep the data URL and retry on next load.
+  async function migrateLegacyThemeMedia(): Promise<void> {
+    const theme = settings.value.theme_config;
+    if (!theme) return;
+    try {
+      const next = { ...theme };
+      let changed = false;
+      for (const key of ['background_image', 'background_video'] as const) {
+        const value = next[key];
+        if (!value || !value.startsWith('data:')) continue;
+        const [head, base64] = value.split(',');
+        const mime = head.slice(5).split(';')[0] ?? '';
+        const extension = (mime.split('/')[1] ?? 'bin').toLowerCase();
+        const kind = key === 'background_video' ? 'video' : 'image';
+        const saved = await saveMediaBytes(
+          Uint8Array.from(atob(base64 ?? ''), (c) => c.charCodeAt(0)),
+          extension,
+          kind
+        );
+        next[key] = saved.path;
+        changed = true;
+      }
+      if (changed) {
+        await queueUpdate((s) => {
+          s.theme_config = next;
+        });
+      }
+    } catch {
+      // keep the data URLs; migration is retried on the next settings load
     }
   }
 
