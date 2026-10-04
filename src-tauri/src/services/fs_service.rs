@@ -1,12 +1,35 @@
 use crate::errors::AppError;
 use crate::models::note::{NoteIndex, NoteIndexEntry, NoteTreeNode};
-use crate::services::{note_service, storage};
+use crate::services::{config, note_service, storage};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 
 const NOTE_INDEX_FILENAME: &str = "index.json";
 const NOTE_INDEX_VERSION: &str = "1.0.0";
+
+/// Resolve `candidate` against the configured note root: canonicalizes both
+/// and rejects anything outside the root. Shared by the web server (network
+/// exposure) and the quiz engine so prompts can only contain workspace notes.
+pub async fn resolve_note_path(data_dir: &Path, candidate: &str) -> Result<PathBuf, AppError> {
+    let settings = config::get_settings_path(data_dir)?;
+    let root = settings
+        .workspace
+        .root_path
+        .ok_or_else(|| AppError::InvalidInput("No note root configured".to_string()))?;
+    let root_canon = fs::canonicalize(&root)
+        .await
+        .map_err(|e| AppError::InvalidInput(format!("Invalid note root: {e}")))?;
+    let target_canon = fs::canonicalize(candidate)
+        .await
+        .map_err(|_| AppError::NotFound(format!("File does not exist: {candidate}")))?;
+    if !target_canon.starts_with(&root_canon) {
+        return Err(AppError::InvalidInput(
+            "Path is outside the configured note root".to_string(),
+        ));
+    }
+    Ok(target_canon)
+}
 
 pub async fn scan_directory(root_path: &str) -> Result<Vec<NoteTreeNode>, AppError> {
     let root = Path::new(root_path);

@@ -66,7 +66,9 @@ pub async fn generate_quiz_stream(
     params: &QuizStreamParams,
     tx: UnboundedSender<QuizStreamEvent>,
 ) -> Result<(), AppError> {
-    let note_content = crate::services::fs_service::read_file_content(&params.path).await?;
+    let resolved_note = crate::services::fs_service::resolve_note_path(data_dir, &params.path).await?;
+    let note_content =
+        crate::services::fs_service::read_file_content(&resolved_note.to_string_lossy()).await?;
     let truncated_content = note_content_for_prompt(&note_content);
     let settings = crate::services::config::get_settings_path(data_dir)?;
     let llm = &settings.llm;
@@ -563,7 +565,9 @@ pub async fn submit_diagnosis_initial(
     note_path: &str,
     tx: UnboundedSender<DiagnosisStreamEvent>,
 ) -> Result<DiagnosisRound, AppError> {
-    let note_content = crate::services::fs_service::read_file_content(note_path).await?;
+    let resolved_note = crate::services::fs_service::resolve_note_path(data_dir, note_path).await?;
+    let note_content =
+        crate::services::fs_service::read_file_content(&resolved_note.to_string_lossy()).await?;
     let truncated_content = note_content_for_prompt(&note_content);
 
     let settings = crate::services::config::get_settings_path(data_dir)?;
@@ -681,7 +685,10 @@ pub async fn generate_diagnosis_report(
     data_dir: &Path,
     session: &DiagnosisSession,
 ) -> Result<DiagnosisReport, AppError> {
-    let note_content = crate::services::fs_service::read_file_content(&session.note_path).await?;
+    let resolved_note =
+        crate::services::fs_service::resolve_note_path(data_dir, &session.note_path).await?;
+    let note_content =
+        crate::services::fs_service::read_file_content(&resolved_note.to_string_lossy()).await?;
     let truncated_content = note_content_for_prompt(&note_content);
 
     let conversation_json = serde_json::to_string(&session.conversation)
@@ -945,6 +952,91 @@ mod tests {
             .join(uuid::Uuid::new_v4().to_string());
         std::fs::create_dir_all(&dir).expect("test temp dir should be created");
         dir
+    }
+
+    fn write_settings_with_root(data_dir: &Path, root: &Path) {
+        let settings = serde_json::json!({
+            "version": "1.0.0",
+            "theme": "obsidian-dark",
+            "ui_language": "zh-CN",
+            "llm": {
+                "provider": "openai-compatible",
+                "base_url": "http://localhost:11434/v1",
+                "api_key": "",
+                "model": "qwen2.5:7b",
+                "max_tokens": 4096,
+                "temperature": 0.7
+            },
+            "ui": {
+                "layout": {
+                    "left_visible": true,
+                    "right_visible": true,
+                    "left_width": 280,
+                    "right_width": 360
+                }
+            },
+            "quiz": {
+                "default_types": ["single", "short"],
+                "default_language": "zh",
+                "default_count": 5,
+                "default_mode": "basic",
+                "default_difficulty": "medium",
+                "prompt_template": "default",
+                "advanced": {
+                    "max_diagnosis_rounds": 3,
+                    "require_reasoning": true,
+                    "show_diagnosis_report": true
+                }
+            },
+            "workspace": {
+                "root_path": root.to_string_lossy()
+            }
+        });
+        std::fs::write(data_dir.join("settings.json"), settings.to_string()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn generate_quiz_stream_rejects_paths_outside_note_root() {
+        let data_dir = temp_data_dir("generate_quiz_stream_rejects_paths_outside_data");
+        let root = temp_data_dir("generate_quiz_stream_rejects_paths_outside_notes");
+        let outside = temp_data_dir("generate_quiz_stream_rejects_paths_outside_outside");
+        std::fs::write(outside.join("secret.md"), "# secret").unwrap();
+        write_settings_with_root(&data_dir, &root);
+
+        let params = QuizStreamParams {
+            path: outside.join("secret.md").to_string_lossy().to_string(),
+            types: vec![QuestionType::Single],
+            count: 5,
+            difficulty: "medium".to_string(),
+            lang: "zh".to_string(),
+        };
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let result = generate_quiz_stream(&data_dir, &params, tx).await;
+
+        let err = result.expect_err("path outside the note root should be rejected");
+        assert!(err.to_string().contains("outside the configured note root"));
+    }
+
+    #[tokio::test]
+    async fn generate_quiz_stream_rejects_missing_files_inside_root() {
+        let data_dir = temp_data_dir("generate_quiz_stream_rejects_missing_data");
+        let root = temp_data_dir("generate_quiz_stream_rejects_missing_notes");
+        write_settings_with_root(&data_dir, &root);
+
+        let params = QuizStreamParams {
+            path: root.join("no-such-note.md").to_string_lossy().to_string(),
+            types: vec![QuestionType::Single],
+            count: 5,
+            difficulty: "medium".to_string(),
+            lang: "zh".to_string(),
+        };
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let result = generate_quiz_stream(&data_dir, &params, tx).await;
+
+        let err = result.expect_err("missing note should be reported");
+        assert!(err.to_string().contains("File does not exist"));
     }
 
     #[test]

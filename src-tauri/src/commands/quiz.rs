@@ -60,7 +60,11 @@ pub async fn submit_answer_advanced(
     )
     .await?;
 
-    let note_content = crate::services::fs_service::read_file_content(&note_path).await?;
+    let note_content = {
+        let resolved =
+            crate::services::fs_service::resolve_note_path(&data_dir, &note_path).await?;
+        crate::services::fs_service::read_file_content(&resolved.to_string_lossy()).await?
+    };
     let note_body = crate::services::note_service::extract_body_content(&note_content);
     let settings = crate::services::config::get_settings_path(&data_dir)?;
     let session = DiagnosisSession {

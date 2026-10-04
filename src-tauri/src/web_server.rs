@@ -206,31 +206,11 @@ struct ReadNoteAssetQuery {
     path: String,
 }
 
-async fn resolve_note_path(data_dir: &Path, candidate: &str) -> Result<PathBuf, AppError> {
-    let settings = config::get_settings_path(data_dir)?;
-    let root = settings
-        .workspace
-        .root_path
-        .ok_or_else(|| AppError::InvalidInput("No note root configured".to_string()))?;
-    let root_canon = tokio::fs::canonicalize(&root)
-        .await
-        .map_err(|e| AppError::InvalidInput(format!("Invalid note root: {e}")))?;
-    let target_canon = tokio::fs::canonicalize(candidate)
-        .await
-        .map_err(|_| AppError::NotFound(format!("File does not exist: {candidate}")))?;
-    if !target_canon.starts_with(&root_canon) {
-        return Err(AppError::InvalidInput(
-            "Path is outside the configured note root".to_string(),
-        ));
-    }
-    Ok(target_canon)
-}
-
 async fn read_note_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteQuery>,
 ) -> Result<Json<NoteContent>, AppError> {
-    let canonical = resolve_note_path(&state.data_dir, &query.path).await?;
+    let canonical = fs_service::resolve_note_path(&state.data_dir, &query.path).await?;
     if !fs_service::is_markdown_path(&canonical) {
         return Err(AppError::InvalidInput(format!(
             "Not a Markdown file: {}",
@@ -246,7 +226,7 @@ async fn read_note_asset_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<ReadNoteAssetQuery>,
 ) -> Result<Response, AppError> {
-    let canonical = resolve_note_path(&state.data_dir, &query.path).await?;
+    let canonical = fs_service::resolve_note_path(&state.data_dir, &query.path).await?;
     let content_type = asset_content_type(&canonical)
         .ok_or_else(|| AppError::InvalidInput(format!("Unsupported asset type: {}", query.path)))?;
     let bytes = tokio::fs::read(&canonical)
@@ -480,23 +460,30 @@ async fn submit_diagnosis_handler(
         let app_state = state.clone();
 
         // Create session upfront so follow_up can find it
-        if let Ok(note_content) = fs_service::read_file_content(&note_path).await {
-            let note_body = note_service::extract_body_content(&note_content);
-            if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
-                let session = DiagnosisSession {
-                    session_id: session_id.clone(),
-                    question: question.clone(),
-                    user_answer: user_answer.clone(),
-                    user_reasoning: user_reasoning.clone(),
-                    note_path: note_path.clone(),
-                    note_content: note_body.chars().take(8000).collect(),
-                    conversation: vec![],
-                    current_round: 0,
-                    max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
-                    final_report: None,
-                };
-                if let Err(err) = cache_diagnosis_session(&app_state, session) {
-                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
+        if let Ok(resolved) = fs_service::resolve_note_path(&app_state.data_dir, &note_path).await
+        {
+            if let Ok(note_content) =
+                fs_service::read_file_content(&resolved.to_string_lossy()).await
+            {
+                let note_body = note_service::extract_body_content(&note_content);
+                if let Ok(settings) = config::get_settings_path(&app_state.data_dir) {
+                    let session = DiagnosisSession {
+                        session_id: session_id.clone(),
+                        question: question.clone(),
+                        user_answer: user_answer.clone(),
+                        user_reasoning: user_reasoning.clone(),
+                        note_path: note_path.clone(),
+                        note_content: note_body.chars().take(8000).collect(),
+                        conversation: vec![],
+                        current_round: 0,
+                        max_rounds: settings.quiz.advanced.max_diagnosis_rounds,
+                        final_report: None,
+                    };
+                    if let Err(err) = cache_diagnosis_session(&app_state, session) {
+                        let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+                            message: err.to_string(),
+                        });
+                    }
                 }
             }
         }
@@ -726,6 +713,8 @@ mod tests {
     #[tokio::test]
     async fn submit_diagnosis_stream_reports_initial_failures() {
         let data_dir = temp_data_dir("submit_diagnosis_stream_reports_initial_failures");
+        let root = temp_data_dir("submit_diagnosis_stream_reports_initial_failures_notes");
+        write_settings_with_root(&data_dir, &root);
         let state = Arc::new(AppState {
             data_dir,
             diagnosis_sessions: Mutex::new(HashMap::new()),
@@ -739,7 +728,7 @@ mod tests {
             "correct_answer": "B",
             "user_answer": "A",
             "user_reasoning": "I guessed.",
-            "note_path": "D:/missing-note.md"
+            "note_path": root.join("missing-note.md").to_string_lossy()
         });
 
         let response = app
@@ -867,7 +856,7 @@ mod tests {
         std::fs::write(root.join("note.md"), "# Hello").unwrap();
         write_settings_with_root(&data_dir, &root);
 
-        let result = resolve_note_path(&data_dir, &root.join("note.md").to_string_lossy()).await;
+        let result = fs_service::resolve_note_path(&data_dir, &root.join("note.md").to_string_lossy()).await;
         assert!(result.is_ok());
     }
 
@@ -881,7 +870,7 @@ mod tests {
         std::fs::write(outside.join("secret.txt"), "secret").unwrap();
         write_settings_with_root(&data_dir, &root);
 
-        let result = resolve_note_path(&data_dir, &outside.join("secret.txt").to_string_lossy()).await;
+        let result = fs_service::resolve_note_path(&data_dir, &outside.join("secret.txt").to_string_lossy()).await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("outside the configured note root"));
@@ -900,7 +889,7 @@ mod tests {
         write_settings_with_root(&data_dir, &root);
 
         let traversal = root.join("..").join("outside_secret.txt");
-        let result = resolve_note_path(&data_dir, &traversal.to_string_lossy()).await;
+        let result = fs_service::resolve_note_path(&data_dir, &traversal.to_string_lossy()).await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("outside the configured note root"));
