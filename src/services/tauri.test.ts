@@ -77,16 +77,34 @@ describe('webStream', () => {
     ]);
   });
 
-  it('rejects malformed SSE data instead of silently ignoring it', async () => {
+  it('skips malformed SSE events and keeps the stream alive', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        body: streamFromText('data: {"event":"done"'),
+        body: streamFromChunks(['data: {"event":"chunk"\n\n', 'data: {"event":"done","data":{"total":1}}\n\n']),
       }))
     );
+    const messages: unknown[] = [];
 
-    await expect(webStream('/api/quiz/generate', {}, vi.fn())).rejects.toThrow('SSE parse error');
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg));
+
+    expect(messages).toEqual([{ event: 'done', data: { total: 1 } }]);
+  });
+
+  it('joins multi-line data fields into a single event', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        body: streamFromText('data: {"event":"done",\ndata: "payload":{"total":1}}\n\n'),
+      }))
+    );
+    const messages: unknown[] = [];
+
+    await webStream('/api/quiz/generate', {}, (msg) => messages.push(msg));
+
+    expect(messages).toEqual([{ event: 'done', payload: { total: 1 } }]);
   });
 
   it('includes response text when an HTTP request fails', async () => {

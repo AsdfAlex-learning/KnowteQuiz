@@ -47,20 +47,22 @@ export async function webStream<T>(path: string, body: unknown, onMessage: (msg:
 }
 
 function emitSseChunk<T>(chunk: string, onMessage: (msg: T) => void): void {
-  const lines = chunk.split(/\r?\n/);
-  let data = '';
-  for (const line of lines) {
+  // SSE spec: multiple `data:` lines in one event join with \n; `:` lines are
+  // comments; `event:`/`id:`/`retry:` fields are not used by this backend.
+  const dataLines: string[] = [];
+  for (const line of chunk.split(/\r?\n/)) {
+    if (line.startsWith(':')) continue;
     if (line.startsWith('data:')) {
-      data = line.slice(5).replace(/^ /, '');
-      break;
+      dataLines.push(line.slice(5).replace(/^ /, ''));
     }
   }
-  if (data) {
-    try {
-      const msg = JSON.parse(data) as T;
-      onMessage(msg);
-    } catch (e) {
-      throw new Error(`SSE parse error: ${String(e)}`);
-    }
+  if (dataLines.length === 0) return;
+
+  try {
+    const msg = JSON.parse(dataLines.join('\n')) as T;
+    onMessage(msg);
+  } catch {
+    // A malformed event must not kill the whole stream: skip it and keep
+    // reading. Malformed events are logged on the backend debug log instead.
   }
 }
