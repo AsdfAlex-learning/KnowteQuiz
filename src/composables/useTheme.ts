@@ -69,8 +69,14 @@ export function useTheme() {
     applyTheme();
   });
 
+  // Watch only the fields applyThemeToRoot consumes. video_time updates every
+  // second during video playback and must not re-run theme application.
   const unwatch = watch(
-    () => settingsStore.settings.theme_config,
+    [
+      () => settingsStore.settings.theme_config?.background_color,
+      () => settingsStore.settings.theme_config?.accent_color,
+      () => settingsStore.settings.theme_config?.glassmorphism,
+    ],
     () => {
       applyTheme();
     },
