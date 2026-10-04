@@ -5,18 +5,34 @@ use serde::{Deserialize, Serialize};
 use std::sync::LazyLock;
 use std::time::Duration;
 
-/// Global HTTP client with connection pooling and 60-second timeout.
-/// Reused across all LLM requests to avoid per-request client creation.
+/// Global HTTP client with connection pooling.
+/// `timeout` caps whole requests; suitable for non-streaming LLM calls.
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
         .timeout(Duration::from_secs(60))
         .pool_max_idle_per_host(10)
         .build()
         .expect("Failed to create HTTP client")
 });
 
+/// Client for streaming LLM calls: no total deadline, because local models
+/// can legitimately think for minutes. Callers enforce a per-chunk idle
+/// timeout instead (`LLM_STREAM_IDLE_TIMEOUT` in quiz_engine).
+static STREAM_HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .pool_max_idle_per_host(10)
+        .build()
+        .expect("Failed to create streaming HTTP client")
+});
+
 pub fn http_client() -> &'static reqwest::Client {
     &HTTP_CLIENT
+}
+
+pub fn streaming_http_client() -> &'static reqwest::Client {
+    &STREAM_HTTP_CLIENT
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

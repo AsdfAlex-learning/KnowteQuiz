@@ -2,12 +2,18 @@ use crate::errors::AppError;
 use crate::models::diagnosis::*;
 use crate::models::quiz::*;
 use crate::models::settings::LlmConfig;
-use crate::services::llm_service::http_client;
+use crate::services::llm_service::{http_client, streaming_http_client};
 use futures_util::StreamExt;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
+use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
+
+/// Maximum gap between LLM stream chunks before a generation is considered
+/// hung. Streaming requests carry no total deadline (local models can think
+/// for minutes), so this idle bound is the only stream-level timeout.
+const LLM_STREAM_IDLE_TIMEOUT: Duration = Duration::from_secs(90);
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase", tag = "event", content = "data")]
@@ -86,7 +92,7 @@ pub async fn generate_quiz_stream(
         phase: "requesting_model".to_string(),
     });
 
-    let client = http_client();
+    let client = streaming_http_client();
     let request_body = serde_json::json!({
         "model": llm.model,
         "messages": [
@@ -122,7 +128,24 @@ pub async fn generate_quiz_stream(
     let mut stream = response.bytes_stream();
     let mut accumulated = String::new();
 
-    while let Some(chunk_result) = stream.next().await {
+    loop {
+        let next_chunk =
+            match tokio::time::timeout(LLM_STREAM_IDLE_TIMEOUT, stream.next()).await {
+                Ok(chunk_result) => chunk_result,
+                Err(_) => {
+                    let message = format!(
+                        "LLM stream idle for over {}s; generation aborted",
+                        LLM_STREAM_IDLE_TIMEOUT.as_secs()
+                    );
+                    let _ = tx.send(QuizStreamEvent::Error {
+                        message: message.clone(),
+                    });
+                    return Err(AppError::Llm(message));
+                }
+            };
+        let Some(chunk_result) = next_chunk else {
+            break;
+        };
         match chunk_result {
             Ok(bytes) => {
                 if let Ok(text) = String::from_utf8(bytes.to_vec()) {
