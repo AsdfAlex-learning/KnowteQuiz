@@ -7,13 +7,21 @@
         @mousedown.self="$emit('update:modelValue', false)"
       >
         <div
-          class="relative flex flex-col w-full max-w-2xl max-h-[85vh] bg-[var(--bg-base)] rounded-xl border border-[var(--border-default)] shadow-2xl"
+          ref="dialogRef"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-modal-title"
+          tabindex="-1"
+          class="relative flex flex-col w-full max-w-2xl max-h-[85vh] bg-[var(--bg-base)] rounded-xl border border-[var(--border-default)] shadow-2xl focus:outline-none"
         >
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--border-default)]">
-            <h2 class="text-lg font-semibold text-[var(--text-primary)]">{{ t('settings_page.title') }}</h2>
+            <h2 id="settings-modal-title" class="text-lg font-semibold text-[var(--text-primary)]">
+              {{ t('settings_page.title') }}
+            </h2>
             <button
               class="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-active)] hover:text-[var(--text-primary)] transition-colors"
+              :aria-label="t('common.close')"
               @click="$emit('update:modelValue', false)"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
@@ -109,7 +117,7 @@
                     :disabled="testing"
                     @click="handleTestConnection"
                   >
-                    {{ testing ? '...' : t('settings_page.test_connection') }}
+                    {{ testing ? t('settings_page.testing') : t('settings_page.test_connection') }}
                   </button>
 
                   <button
@@ -117,7 +125,7 @@
                     :disabled="probing"
                     @click="handleProbeLlm"
                   >
-                    {{ probing ? '...' : t('settings_page.probe_llm') }}
+                    {{ probing ? t('settings_page.probing') : t('settings_page.probe_llm') }}
                   </button>
                 </div>
 
@@ -146,16 +154,25 @@
                   </p>
                   <p class="text-xs text-[var(--text-muted)]">
                     {{ t('settings_page.streaming') }}:
-                    {{ settingsStore.llmCapabilities.supports_streaming ? '✓' : '✗' }}
+                    {{
+                      settingsStore.llmCapabilities.supports_streaming
+                        ? '✓ ' + t('common.confirm')
+                        : '✗ ' + t('common.cancel')
+                    }}
                   </p>
                   <p class="text-xs text-[var(--text-muted)]">
                     {{ t('settings_page.json_object') }}:
-                    {{ settingsStore.llmCapabilities.supports_response_format ? '✓' : '✗' }}
+                    {{
+                      settingsStore.llmCapabilities.supports_response_format
+                        ? '✓ ' + t('common.confirm')
+                        : '✗ ' + t('common.cancel')
+                    }}
                   </p>
                   <p
                     v-if="settingsStore.llmCapabilities.available_models.length > 0"
                     class="text-xs text-[var(--text-muted)] mt-1"
                   >
+                    {{ t('settings_page.available_models') }}:
                     {{ settingsStore.llmCapabilities.available_models.join(', ') }}
                   </p>
                 </div>
@@ -169,14 +186,14 @@
                     :disabled="backingUp"
                     @click="handleBackup"
                   >
-                    {{ backingUp ? '...' : t('settings_page.backup') }}
+                    {{ backingUp ? t('settings_page.backing_up') : t('settings_page.backup') }}
                   </button>
                   <button
                     class="flex-1 py-2 rounded-lg text-sm font-medium bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:bg-[var(--bg-active)] transition-colors btn-press"
                     :disabled="restoring"
                     @click="handleRestore"
                   >
-                    {{ restoring ? '...' : t('settings_page.restore') }}
+                    {{ restoring ? t('settings_page.restoring') : t('settings_page.restore') }}
                   </button>
                 </div>
 
@@ -185,7 +202,9 @@
                   :disabled="settingsStore.isCleaningUp"
                   @click="handleCleanupSessions"
                 >
-                  {{ settingsStore.isCleaningUp ? '...' : t('settings_page.cleanup_sessions') }}
+                  {{
+                    settingsStore.isCleaningUp ? t('settings_page.cleaning_up') : t('settings_page.cleanup_sessions')
+                  }}
                 </button>
 
                 <div
@@ -194,6 +213,37 @@
                 >
                   <p class="text-xs font-medium text-[var(--accent-green)]">
                     {{ t('settings_page.removed_sessions', { count: settingsStore.cleanupResult.deleted_count }) }}
+                  </p>
+                  <p class="mt-1 text-xs text-[var(--text-muted)]">
+                    {{ t('settings_page.kept_sessions', { count: settingsStore.cleanupResult.remaining_count }) }}
+                  </p>
+                </div>
+
+                <div v-if="settingsStore.cleanupErr" class="text-xs text-[var(--color-error)]">
+                  {{ settingsStore.cleanupErr }}
+                </div>
+
+                <div
+                  v-if="settingsStore.lastBackupResult"
+                  class="rounded-lg border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
+                >
+                  <p class="text-xs font-medium text-[var(--accent-green)]">
+                    {{ t('settings_page.backed_up_files', { count: settingsStore.lastBackupResult.files.length }) }}
+                  </p>
+                  <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
+                    {{ backupFolderName(settingsStore.lastBackupResult.backup_dir) }}
+                  </p>
+                </div>
+
+                <div
+                  v-if="settingsStore.lastRestoreResult"
+                  class="rounded-lg border border-[var(--accent-green)]/30 bg-[var(--accent-green)]/10 p-3"
+                >
+                  <p class="text-xs font-medium text-[var(--accent-green)]">
+                    {{ t('settings_page.restored_files', { count: settingsStore.lastRestoreResult.files.length }) }}
+                  </p>
+                  <p class="mt-1 truncate text-xs text-[var(--text-muted)]">
+                    {{ backupFolderName(settingsStore.lastRestoreResult.backup_dir) }}
                   </p>
                 </div>
 
@@ -231,15 +281,30 @@
                       <span :class="file.exists ? 'text-[var(--text-muted)]' : 'text-[var(--color-error)]'">
                         {{ file.exists ? formatFileSize(file.size_bytes) : t('common.missing') }}
                       </span>
+                      <span
+                        v-if="file.exists && file.modified_at"
+                        class="col-span-2 truncate text-[11px] text-[var(--text-muted)]"
+                      >
+                        {{ formatModifiedAt(file.modified_at) }}
+                      </span>
                     </div>
                   </div>
+
+                  <p v-else-if="settingsStore.dataStatusError" class="text-xs text-[var(--color-error)]">
+                    {{ settingsStore.dataStatusError }}
+                  </p>
+                  <p v-if="settingsStore.openDirErr" class="text-[11px] text-[var(--color-error)]">
+                    {{ settingsStore.openDirErr }}
+                  </p>
                 </div>
 
                 <div
                   v-if="settingsStore.error"
                   class="rounded-lg border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3"
                 >
-                  <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
+                  <p class="text-xs font-medium text-[var(--color-error)]">
+                    {{ t('settings_page.settings_error') }}
+                  </p>
                   <p class="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
                     {{ settingsStore.error }}
                   </p>
@@ -266,7 +331,7 @@
               :disabled="saving"
               @click="handleSaveAndQuit"
             >
-              {{ saving ? '...' : t('settings_page.save') }}
+              {{ saving ? t('settings_page.saving') : t('settings_page.save') }}
             </button>
           </div>
         </div>
@@ -276,7 +341,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onMounted, computed } from 'vue';
+import { ref, reactive, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from '@/composables/useI18n';
 import LLMConfigForm from './LLMConfigForm.vue';
@@ -305,15 +370,65 @@ const tabs = computed(() => [
 // Local copy for buffering changes
 const localSettings = reactive<Settings>(JSON.parse(JSON.stringify(settingsStore.settings)));
 
-// Sync when modal opens
+// ── Dialog semantics: Esc to close, initial focus, and a Tab focus trap ────
+const dialogRef = ref<HTMLElement | null>(null);
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
+function focusFirstInDialog() {
+  const dialog = dialogRef.value;
+  if (!dialog) return;
+  const first = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+  (first ?? dialog).focus();
+}
+
+function trapTabFocus(e: KeyboardEvent) {
+  const dialog = dialogRef.value;
+  if (!dialog) return;
+  const focusables = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+  if (focusables.length === 0) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  const inside = active instanceof Node && dialog.contains(active);
+  if (e.shiftKey && (active === first || !inside)) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && (active === last || !inside)) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function handleDialogKeydown(e: KeyboardEvent) {
+  if (!props.modelValue) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    emit('update:modelValue', false);
+  } else if (e.key === 'Tab') {
+    trapTabFocus(e);
+  }
+}
+
+// Sync when modal opens (immediate covers mount-while-open in tests)
 watch(
   () => props.modelValue,
   (open) => {
     if (open) {
       Object.assign(localSettings, JSON.parse(JSON.stringify(settingsStore.settings)));
+      void nextTick(focusFirstInDialog);
     }
-  }
+  },
+  { immediate: true }
 );
+
+onMounted(() => {
+  window.addEventListener('keydown', handleDialogKeydown);
+  settingsStore.loadDataStatus();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleDialogKeydown);
+});
 
 const testing = ref(false);
 const backingUp = ref(false);
@@ -349,11 +464,8 @@ async function handleTestConnection() {
   testing.value = true;
   connectionResult.value = null;
   try {
-    // Test with current LLM config from local settings
-    const original = settingsStore.settings.llm;
-    settingsStore.settings.llm = localSettings.llm;
-    connectionResult.value = await settingsStore.testConnection();
-    settingsStore.settings.llm = original;
+    // Probe the edited-but-unsaved config directly; saved settings stay untouched.
+    connectionResult.value = await settingsStore.testConnection(localSettings.llm);
   } catch {
     connectionResult.value = {
       ok: false,
@@ -425,15 +537,18 @@ async function handleProbeLlm() {
     probing.value = false;
   }
 }
-
 function formatFileSize(sizeBytes: number): string {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
   return `${Math.round(sizeBytes / 1024)} KB`;
 }
 
-onMounted(() => {
-  settingsStore.loadDataStatus();
-});
+function backupFolderName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() || path;
+}
+
+function formatModifiedAt(value: string): string {
+  return value.slice(0, 16).replace('T', ' ');
+}
 </script>
 
 <style scoped>
