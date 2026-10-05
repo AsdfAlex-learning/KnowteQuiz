@@ -4,7 +4,7 @@
 >
 > 结论先行：**整体健康度 B+**。地基（数据可靠性、安全默认值、测试文化、双运行时抽象）扎实；但深查发现 3 个已验证的 P0 正确性缺陷（本次已修复），以及一批文档未记录的结构性债务。测试全绿 ≠ 功能都对——Web 诊断路由失效、`isTauri` 未调用这类问题都缺"真实路由/真实环境"的端到端覆盖。
 >
-> **进展**：批次 1（P0 + 数据安全 + 卫生项）与批次 2（P1 健壮性加固 8 项中 7 项）已完成，见 §6/§7；方向确认与后续路线图见 §5。
+> **进展**：批次 1（P0 + 数据安全 + 卫生项）、批次 2（P1 健壮性 7/8）、批次 3（P2 架构整理）与批次 4 核心（工程设施）均已完成，见 §6–§8；#7 已随批次 3 修复。方向确认与后续路线图见 §5。
 
 ---
 
@@ -70,25 +70,33 @@
 
 ### P2 — 代码卫生与一致性
 
-- **死代码群约 810 行**：`SettingsPanel.vue`（370 行，仅被自身测试引用，且是功能更全、i18n 更完整的版本——线上 SettingsModal 反而有 10+ 处硬编码英文）+ `common/{Button,Card,Chip,Input,Modal,MarkdownContent}.vue`（零引用）。无 ESLint + `noUnusedLocals: false`，无人报警。`utils/markdown.ts` 渲染管线也只被测试使用。
-- Tauri 侧命令在 async 上下文跑同步 IO（backup/status/restore/cleanup），与 web 侧 `spawn_blocking` 策略不一致；`blocking_pick_folder` 阻塞 async worker（`commands/note.rs:11`）。
-- `response_format` 靠 base_url 字符串启发式（`"openai"`/`"localhost:11434"`），已实现的 `probe_llm` 能力探测结果没被 `call_llm` 用上；`127.0.0.1:11434`、LM Studio 等端点静默错过 JSON 模式。
-- SM-2 无直接单元测试（仅一条间接路径），Rust/TS 双实现无一致性测试；问答界面纯文本渲染（无 Markdown/KaTeX——学习笔记常见公式）。
-- debug 日志（`data/debug/`）无上限且同秒覆盖；session 清理只能手动触发，启动时不清理。
-- web 端 `mark_mistake_reviewed` 手解析参数，缺字段返回 500 而非 400；AppError 序列化为纯字符串，前端无法区分错误类别。
-- 无障碍债：SettingsModal 无 `role="dialog"`/Esc/焦点陷阱（死掉的 Modal.vue 反而都有）；树节点无键盘导航；resize 手柄仅鼠标。
+> 2026-10-05 批次 3 更新：除「SM-2 跨语言一致性」（已用共享黄金向量测试缓解）、「AppError 类型化序列化」（顺延）外，本节全部处理完毕。
+
+- ~~**死代码群约 810 行**~~ ✅ 已删除（SettingsPanel 370 行 + common 六组件 357 行 + utils/markdown.ts 未用导出）。
+- ~~SettingsPanel 与 SettingsModal 双 UI~~ ✅ 已合并：Panel 优势特性（备份/恢复结果、修改时间、busy 标签、能力标签）全部进入 Modal，并补 dialog a11y（role/Esc/焦点陷阱）与 7 个组件测试。
+- ~~Tauri 侧阻塞 IO~~ ✅ 已统一 spawn_blocking（backup/status/restore/cleanup/pick_folder）。
+- ~~`response_format` URL 启发式~~ ✅ 已持久化 probe 结果到 settings.json，`call_llm` 优先采用（`wants_json_mode`）。
+- ~~SM-2 无直接单测~~ ✅ 已补共享黄金向量测试（Rust 侧；与 TS 同向量）。
+- ~~debug 日志无上限/同秒覆盖~~ ✅ uuid 后缀 + 100 条保留上限；session 清理启动时自动执行。
+- ~~web 端 mark_mistake_reviewed 500~~ ✅ 类型化请求体（400），冒烟 payload 同步修复（顺带发现并修复 CI/冒烟用错 `quiz.language` 键的问题）。
+- ~~笔记内搜索 window.find~~ ✅ 重写为 DOM mark 高亮 + 真实计数。
+- ~~题目/解析纯文本渲染~~ ✅ 题干/选项/解析/诊断报告全部走 Markdown+KaTeX（html:false 防 XSS）。
+- 无障碍剩余项（树节点键盘导航、resize 手柄）未处理，顺延。
+- AppError 序列化为纯字符串（前端无法按类别处理错误）——顺延，需单独一轮设计前后端错误契约。
 
 ### P3 — 工程设施
 
-| # | 问题 | 说明 |
+> 2026-10-05 批次 4 更新：#12–#14、#17、#18 已完成；#15（发布自动化）与 #16（依赖大版本升级）按用户决定顺延下一轮。
+
+| # | 问题 | 状态 |
 |---|---|---|
-| 12 | **无 JS linter**（仅 Prettier） | 建议 ESLint 9 flat config（或 oxlint）+ eslint-plugin-vue，接入 lint-staged 与 CI |
-| 13 | vitest 无配置文件 | 11 个文件散落 `// @vitest-environment jsdom` 注释；建议 `vitest.config.ts` 统一 jsdom + 加 `@vitest/coverage-v8` |
-| 14 | CI 缺失项 | 无 `timeout-minutes` / `concurrency` / `permissions: contents: read`；**无 Windows job**（Windows-first 应用只在 ubuntu 上测 Rust）；smoke job 无 cargo 缓存；无 `cargo fmt --check` |
-| 15 | 发布自动化为零 | 零 tag、无 tauri-action/发布工作流、版本号 3 处手工；建议 tag 触发的构建工作流 |
-| 16 | 依赖老化 | axum 0.7→0.8、tower-http 0.5→0.6、dirs 5→6、pinia 2→3、vite 6→7（+plugin-vue 6、vue-tsc 3）；无 dependabot/renovate |
-| 17 | 提交规范未强制 | CONTRIBUTING 承诺 Conventional Commits，但无 commit-msg hook / commitlint |
-| 18 | 杂项 | `.gitignore` 未含 `.codegraph/`、`.agents/`；`npm test` 别名缺失；冒烟脚本会向真实数据目录写入测试错题（建议 `--data-dir=` 参数使其封闭） |
+| 12 | **无 JS linter**（仅 Prettier） | ✅ ESLint 9 flat config（vue3 + ts recommended）+ lint-staged + CI 步骤；存量死变量已修 |
+| 13 | vitest 无配置文件 | ✅ `vitest.config.ts`（jsdom 默认）+ `@vitest/coverage-v8` + `test:coverage`；13 处散落注释清除 |
+| 14 | CI 缺失项 | ✅ timeout-minutes ×4、concurrency、permissions、Windows job（advisory 起步）、smoke cargo 缓存、`cargo fmt --check` |
+| 15 | 发布自动化为零 | ❌ 顺延（tauri-action + tag + 版本单源，需独立验证环境） |
+| 16 | 依赖老化 | ❌ 顺延（axum 0.8 时 `:param` 需换回 `{param}`；pinia 3、vite 7） |
+| 17 | 提交规范未强制 | ✅ commitlint + husky commit-msg hook（Conventional Commits） |
+| 18 | 杂项 | ✅ `.gitignore` 补 `.codegraph/`、`.agents/`、`.zcode/`、`coverage/`；`npm test` 别名；冒烟脚本 `--data-dir` 封闭化（不再污染真实数据） |
 
 ---
 
@@ -133,3 +141,34 @@
 | `9c33610` | 媒体移出 settings.json：`media_service`（uuid 命名、扩展白名单、大小上限）、Tauri `save_media_file`（raw IPC）、`POST/GET /api/data/media`、前端 `saveMediaFile(s)`、data-URL 自动迁移、CSP `media-src`；+7 测试 |
 
 验证（批次 2 完成时）：`cargo test` 100 passed / clippy `-D warnings` clean / `vue-tsc` clean / `vitest run` 32 files 201 passed。
+
+## 8. 批次 3 + 批次 4 修改清单（2026-10-05）
+
+**批次 3（P2 架构整理）**
+
+| 提交 | 内容 |
+|---|---|
+| `751b4d4` | #7 修复：test-connection 接受待测 LlmConfig（Tauri 命令/Axum 可选 body/前端 service），不再触碰已保存配置 |
+| `6d94a2b` | SettingsModal 合并 Panel 全部优势特性 + dialog a11y（role/aria-modal/Esc/初始焦点/焦点陷阱） |
+| `df597a9` | 删除生产死代码 SettingsPanel（370 行）及其测试 |
+| `a602312` | 题目/选项/解析/诊断报告接入 `renderQuizMarkdown`（html:false + KaTeX）；删除 markdown.ts 五个未用导出（含 extractText no-op bug） |
+| `8db6590` | 删除 6 个零引用 common 组件（357 行） |
+| `25460fe` | 笔记内搜索重写：DOM mark 高亮 + 真实计数 N/M + 恢复原 HTML；移除 `window.find` 与唯一一处 `as any` |
+
+**批次 4 核心（工程设施）**
+
+| 提交 | 内容 |
+|---|---|
+| `ae0fabe` | Tauri 命令阻塞 IO 统一 spawn_blocking（backup/status/restore/cleanup/pick_folder）；删除 storage 三个无调用方包装 |
+| `0e1da20` | mark_mistake_reviewed 类型化请求体（400）；修复 CI/冒烟脚本错误 payload（`id` → `mistake_id`+`quality`）与错误设置键（`quiz.language` → `default_language`） |
+| `f3461d5` | probe 结果持久化到 settings.json；`wants_json_mode` 替代 URL 启发式 + 单测 |
+| `3123ce9` | SM-2 四分支 + EF 下限黄金向量测试（与 TS 同向量） |
+| `e767c84` | debug 日志 uuid 后缀 + 100 条保留上限；启动时自动清理过期 session（桌面 setup + web start） |
+| `7730599` | `--data-dir` CLI 贯通；CI 冒烟与 smoke-test.ps1 改用临时目录（hermetic） |
+| `d71ec75` | `cargo fmt` 一次性格式化（CI fmt 门禁前置） |
+| `591cc47` | `vitest.config.ts`（jsdom 默认）+ coverage 工具与 include 配置；13 处环境注释清除；`npm test` / `test:coverage` 别名 |
+| `11098cb` | ESLint flat config（vue3+ts recommended）+ lint-staged 集成；存量死变量/死代码修复（OptionCard base、QuizResult emit、DiagnosisChat props、useTheme 常量、start.cjs/setup.cjs） |
+| `6ae86de` | CI：timeout ×4、concurrency、permissions、`cargo fmt --check`、smoke cargo 缓存、Windows cargo-test job（advisory） |
+| `832b6e0` | commitlint（husky commit-msg）+ dependabot（npm/cargo/actions 每周）+ `.gitignore` 补工具目录 |
+
+验证（批次 3+4 完成时）：`cargo test` 104 passed / `cargo clippy -D warnings` clean / `cargo fmt --check` clean / `eslint .` clean / `vue-tsc` clean / `vitest run` 32 files 207 passed / `npm run build` OK。
