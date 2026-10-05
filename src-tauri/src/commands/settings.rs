@@ -49,17 +49,26 @@ pub async fn probe_llm(app: AppHandle) -> Result<LlmCapabilities, AppError> {
 
 #[tauri::command]
 pub async fn backup_data(app: AppHandle) -> Result<DataBackupResult, AppError> {
-    storage::backup_data_files(&app)
+    let data_dir = storage::get_data_dir(&app)?;
+    tokio::task::spawn_blocking(move || storage::backup_data_files_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Backup task failed: {e}")))?
 }
 
 #[tauri::command]
 pub async fn get_data_status(app: AppHandle) -> Result<DataStatus, AppError> {
-    storage::data_status(&app)
+    let data_dir = storage::get_data_dir(&app)?;
+    tokio::task::spawn_blocking(move || storage::data_status_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Data status task failed: {e}")))?
 }
 
 #[tauri::command]
 pub async fn restore_latest_backup(app: AppHandle) -> Result<DataRestoreResult, AppError> {
-    storage::restore_latest_backup(&app)
+    let data_dir = storage::get_data_dir(&app)?;
+    tokio::task::spawn_blocking(move || storage::restore_latest_backup_path(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Restore task failed: {e}")))?
 }
 
 #[tauri::command]

@@ -8,7 +8,11 @@ use tauri::AppHandle;
 #[tauri::command]
 pub async fn select_folder(app: AppHandle) -> Result<Option<String>, AppError> {
     use tauri_plugin_dialog::DialogExt;
-    let folder = app.dialog().file().blocking_pick_folder();
+    // The native dialog parks its thread until the user picks; keep it off
+    // the async runtime workers.
+    let folder = tokio::task::spawn_blocking(move || app.dialog().file().blocking_pick_folder())
+        .await
+        .map_err(|e| AppError::Internal(format!("Folder picker task failed: {e}")))?;
     Ok(folder.map(|p| p.to_string()))
 }
 

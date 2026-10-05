@@ -148,5 +148,7 @@ pub async fn generate_diagnosis_report(
 #[tauri::command]
 pub async fn cleanup_sessions(app: AppHandle) -> Result<SessionCleanupResult, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
-    diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7)
+    tokio::task::spawn_blocking(move || diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7))
+        .await
+        .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))?
 }

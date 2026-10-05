@@ -185,11 +185,6 @@ pub fn backup_data_files_path(data_dir: &Path) -> Result<DataBackupResult, AppEr
     })
 }
 
-pub fn backup_data_files(app: &AppHandle) -> Result<DataBackupResult, AppError> {
-    let dir = get_data_dir(app)?;
-    backup_data_files_path(&dir)
-}
-
 pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, AppError> {
     let backup_dir = latest_backup_dir(data_dir)?;
     let pre_restore = backup_data_files_path(data_dir)?;
@@ -216,11 +211,6 @@ pub fn restore_latest_backup_path(data_dir: &Path) -> Result<DataRestoreResult, 
         pre_restore_backup_dir: pre_restore.backup_dir,
         files,
     })
-}
-
-pub fn restore_latest_backup(app: &AppHandle) -> Result<DataRestoreResult, AppError> {
-    let dir = get_data_dir(app)?;
-    restore_latest_backup_path(&dir)
 }
 
 fn latest_backup_dir(data_dir: &Path) -> Result<PathBuf, AppError> {
@@ -276,11 +266,6 @@ pub fn data_status_path(data_dir: &Path) -> Result<DataStatus, AppError> {
         data_dir: data_dir.to_string_lossy().to_string(),
         files,
     })
-}
-
-pub fn data_status(app: &AppHandle) -> Result<DataStatus, AppError> {
-    let dir = get_data_dir(app)?;
-    data_status_path(&dir)
 }
 
 #[cfg(test)]
