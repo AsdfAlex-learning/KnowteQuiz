@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
