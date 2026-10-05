@@ -961,6 +961,9 @@ fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String
     }
 }
 
+/// Keep at most this many raw LLM debug files per data dir.
+const DEBUG_LOG_RETENTION: usize = 100;
+
 fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
     let debug_dir = data_dir.join("debug");
     if std::fs::create_dir_all(&debug_dir).is_err() {
@@ -968,10 +971,36 @@ fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
     }
 
     let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
-    let filename = format!("{}_{}_raw.txt", timestamp, kind);
-    let path = debug_dir.join(filename);
+    // uuid suffix: concurrent calls within the same second must not overwrite.
+    let filename = format!("{}_{}_{}_raw.txt", timestamp, uuid::Uuid::new_v4().simple(), kind);
 
-    let _ = std::fs::write(&path, raw);
+    if std::fs::write(debug_dir.join(filename), raw).is_err() {
+        return;
+    }
+    prune_debug_logs(&debug_dir);
+}
+
+/// Remove the oldest debug files beyond the retention cap. Best effort.
+fn prune_debug_logs(debug_dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(debug_dir) else {
+        return;
+    };
+    let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = entries
+        .flatten()
+        .filter(|entry| entry.path().is_file())
+        .filter_map(|entry| {
+            let modified = entry.metadata().ok()?.modified().ok()?;
+            Some((modified, entry.path()))
+        })
+        .collect();
+    if files.len() <= DEBUG_LOG_RETENTION {
+        return;
+    }
+    files.sort_by_key(|(modified, _)| *modified);
+    let excess = files.len() - DEBUG_LOG_RETENTION;
+    for (_, path) in files.into_iter().take(excess) {
+        let _ = std::fs::remove_file(path);
+    }
 }
 
 #[cfg(test)]

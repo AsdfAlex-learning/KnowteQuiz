@@ -117,6 +117,12 @@ pub async fn start(port: u16) -> Result<(), AppError> {
         }
     }
 
+    // Remove diagnosis sessions left over from previous runs.
+    let cleanup_dir = data_dir.clone();
+    tokio::task::spawn_blocking(move || {
+        let _ = diagnosis_session_service::cleanup_expired_sessions(&cleanup_dir, 7);
+    });
+
     let app_state = Arc::new(AppState {
         data_dir,
         diagnosis_sessions: Mutex::new(HashMap::new()),

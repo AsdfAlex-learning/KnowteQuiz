@@ -39,6 +39,17 @@ pub fn run_desktop() {
             settings::open_data_dir,
             settings::save_media_file,
         ])
+        .setup(|app| {
+            // Best-effort cleanup of stale diagnosis sessions on startup.
+            if let Ok(data_dir) = crate::services::storage::get_data_dir(app.handle()) {
+                std::thread::spawn(move || {
+                    let _ = crate::services::diagnosis_session_service::cleanup_expired_sessions(
+                        &data_dir, 7,
+                    );
+                });
+            }
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running KnowteQuiz");
 }
