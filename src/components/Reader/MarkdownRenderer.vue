@@ -94,7 +94,12 @@
         </div>
 
         <!-- Rendered markdown -->
-        <article v-else-if="readerStore.currentNote" class="markdown-body max-w-none" v-html="renderedHtml" />
+        <article
+          v-else-if="readerStore.currentNote"
+          ref="articleRef"
+          class="markdown-body max-w-none"
+          v-html="renderedHtml"
+        />
 
         <!-- Empty state -->
         <EmptyState v-else />
@@ -114,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import MarkdownIt from 'markdown-it';
 import mk from '@traptitech/markdown-it-katex';
 import hljs from 'highlight.js';
@@ -186,11 +191,16 @@ function scrollToHeading(id: string) {
   }
 }
 
-// In-note search
+// In-note search: DOM-based highlighting over the rendered article. The raw
+// HTML stays the source of truth; matches are <mark> nodes injected into the
+// live DOM and removed by restoring the original innerHTML.
 const showSearch = ref(false);
 const searchQuery = ref('');
 const searchInput = ref<HTMLInputElement | null>(null);
+const articleRef = ref<HTMLElement | null>(null);
 const matchInfo = ref('');
+const searchMatches = ref<HTMLElement[]>([]);
+const activeMatchIndex = ref(-1);
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleSearchInput() {
@@ -201,29 +211,100 @@ function handleSearchInput() {
 }
 
 function doSearch() {
-  if (!searchQuery.value.trim()) {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) {
     clearFind();
     return;
   }
-  // window.find() highlights and scrolls to the first match
-  const found = (window as any).find(searchQuery.value, false, false, true, false, true, false);
-  matchInfo.value = found ? '?' : '0/0';
+  const container = articleRef.value;
+  if (!container) return;
+
+  // Start from the pristine render so repeated searches never nest marks.
+  container.innerHTML = renderedHtml.value;
+  searchMatches.value = [];
+  activeMatchIndex.value = -1;
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode(node: Node): number {
+      const parent = (node as Text).parentElement;
+      if (parent && (parent.tagName === 'SCRIPT' || parent.tagName === 'STYLE')) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return node.nodeValue && node.nodeValue.toLowerCase().includes(query)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    },
+  });
+
+  const textNodes: Text[] = [];
+  let current = walker.nextNode();
+  while (current) {
+    textNodes.push(current as Text);
+    current = walker.nextNode();
+  }
+
+  for (const node of textNodes) {
+    const text = node.nodeValue ?? '';
+    const lower = text.toLowerCase();
+    const fragment = document.createDocumentFragment();
+    let cursor = 0;
+    let start = lower.indexOf(query);
+    while (start >= 0) {
+      if (start > cursor) {
+        fragment.appendChild(document.createTextNode(text.slice(cursor, start)));
+      }
+      const mark = document.createElement('mark');
+      mark.setAttribute('data-search-hit', '');
+      mark.textContent = text.slice(start, start + query.length);
+      fragment.appendChild(mark);
+      searchMatches.value.push(mark);
+      cursor = start + query.length;
+      start = lower.indexOf(query, cursor);
+    }
+    if (cursor < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(cursor)));
+    }
+    node.parentNode?.replaceChild(fragment, node);
+  }
+
+  if (searchMatches.value.length > 0) {
+    setActiveMatch(0);
+  } else {
+    matchInfo.value = '0/0';
+  }
+}
+
+function setActiveMatch(index: number) {
+  searchMatches.value.forEach((mark, i) => {
+    if (i === index) {
+      mark.setAttribute('data-search-active', '');
+    } else {
+      mark.removeAttribute('data-search-active');
+    }
+  });
+  activeMatchIndex.value = index;
+  matchInfo.value = `${index + 1}/${searchMatches.value.length}`;
+  // Optional call: jsdom test environments don't implement scrollIntoView.
+  searchMatches.value[index]?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
 }
 
 function findNext() {
-  if (!searchQuery.value.trim()) return;
-  const found = (window as any).find(searchQuery.value, false, false, true, false, false, true);
-  matchInfo.value = found ? '?' : '0/0';
+  if (searchMatches.value.length === 0) return;
+  setActiveMatch((activeMatchIndex.value + 1) % searchMatches.value.length);
 }
 
 function findPrev() {
-  if (!searchQuery.value.trim()) return;
-  const found = (window as any).find(searchQuery.value, false, true, true, false, false, true);
-  matchInfo.value = found ? '?' : '0/0';
+  if (searchMatches.value.length === 0) return;
+  setActiveMatch((activeMatchIndex.value - 1 + searchMatches.value.length) % searchMatches.value.length);
 }
 
 function clearFind() {
-  window.getSelection()?.removeAllRanges();
+  const container = articleRef.value;
+  if (container) {
+    container.innerHTML = renderedHtml.value;
+  }
+  searchMatches.value = [];
+  activeMatchIndex.value = -1;
   matchInfo.value = '';
 }
 
@@ -256,4 +337,23 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
 });
+
+// Re-run the active search when the note content changes under it.
+watch(renderedHtml, () => {
+  if (!showSearch.value || !searchQuery.value.trim()) return;
+  void nextTick(doSearch);
+});
 </script>
+
+<style scoped>
+:deep(mark[data-search-hit]) {
+  background: color-mix(in srgb, var(--accent-purple) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+}
+
+:deep(mark[data-search-active]) {
+  background: var(--accent-purple);
+  color: var(--bg-base);
+}
+</style>
