@@ -576,6 +576,62 @@ mod tests {
     }
 
     #[test]
+    fn sm2_update_matches_shared_golden_vectors() {
+        // Vectors are identical to src/utils/sm2.test.ts so the Rust and TS
+        // implementations stay in lockstep. Dates are not compared here
+        // (Rust formats local time, TS formats UTC); only ef/interval.
+        // quality 0 (again): interval reset to 1, ef drops 0.2.
+        let (ef, iv, _) = sm2_update(2.5, 3, 0);
+        assert_eq!(ef, 2.3);
+        assert_eq!(iv, 1);
+
+        // quality 1 (hard): interval ×1.2 (min 1), ef drops 0.15.
+        let (ef, iv, _) = sm2_update(2.5, 3, 1);
+        assert_eq!(ef, 2.35);
+        assert_eq!(iv, 4);
+
+        // quality 2 (good): first success keeps ef, interval starts at 1.
+        let (ef, iv, _) = sm2_update(2.5, 0, 2);
+        assert_eq!(ef, 2.5);
+        assert_eq!(iv, 1);
+
+        // quality 2 (good): interval × ef.
+        let (ef, iv, _) = sm2_update(2.5, 3, 2);
+        assert_eq!(ef, 2.5);
+        assert_eq!(iv, 8);
+
+        // quality 3 (easy): first success jumps to 4, ef gains 0.15.
+        let (ef, iv, _) = sm2_update(2.5, 0, 3);
+        assert_eq!(ef, 2.65);
+        assert_eq!(iv, 4);
+
+        // quality 3 (easy): interval × ef × 1.3.
+        let (ef, iv, _) = sm2_update(2.5, 3, 3);
+        assert_eq!(ef, 2.65);
+        assert_eq!(iv, 10);
+    }
+
+    #[test]
+    fn sm2_update_clamps_ease_factor_floor_at_1_3() {
+        let (ef, _, _) = sm2_update(1.35, 3, 0);
+        assert_eq!(ef, 1.3);
+
+        let (ef, iv, _) = sm2_update(1.4, 10, 1);
+        assert_eq!(ef, 1.3);
+        assert_eq!(iv, 12);
+    }
+
+    #[test]
+    fn sm2_update_returns_iso_formatted_next_review_date() {
+        let (_, iv, next) = sm2_update(2.5, 3, 2);
+        let expected_date = (chrono::Local::now() + chrono::Duration::days(iv as i64))
+            .format("%Y-%m-%d")
+            .to_string();
+        assert_eq!(next, expected_date);
+        assert_eq!(next.len(), 10);
+    }
+
+    #[test]
     fn mark_mistake_reviewed_increments_review_count_and_sets_timestamp() {
         let dir = temp_data_dir("mark_mistake_reviewed_increments_review_count");
         let entry = mistake(
