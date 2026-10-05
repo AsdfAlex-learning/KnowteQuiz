@@ -359,18 +359,17 @@ async fn save_mistake_handler(
     Ok(Json(true))
 }
 
+#[derive(Deserialize)]
+struct MarkMistakeReviewRequest {
+    mistake_id: String,
+    quality: u32,
+}
+
 async fn mark_mistake_reviewed_handler(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<serde_json::Value>,
+    Json(request): Json<MarkMistakeReviewRequest>,
 ) -> Result<Json<bool>, AppError> {
-    let mistake_id = payload["mistake_id"]
-        .as_str()
-        .ok_or("Missing mistake_id")?
-        .to_string();
-    let quality = payload["quality"]
-        .as_u64()
-        .ok_or("Missing quality")? as u32;
-    mistake_service::mark_mistake_reviewed(&state.data_dir, &mistake_id, quality)?;
+    mistake_service::mark_mistake_reviewed(&state.data_dir, &request.mistake_id, request.quality)?;
     Ok(Json(true))
 }
 

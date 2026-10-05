@@ -87,12 +87,12 @@ try {
     # 8. Settings persistence (write + read-back)
     Write-Host "[8/9] Testing settings write/read-back..." -ForegroundColor Yellow
     $origSettings = Invoke-RestMethod -Uri "$baseUrl/api/settings"
-    $origLang = $origSettings.quiz.language
-    $origSettings.quiz.language = 'ja'
+    $origLang = $origSettings.quiz.default_language
+    $origSettings.quiz.default_language = 'ja'
     $body = $origSettings | ConvertTo-Json -Depth 10
     Invoke-RestMethod -Uri "$baseUrl/api/settings" -Method Post -Body $body -ContentType "application/json" | Out-Null
     $readBack = Invoke-RestMethod -Uri "$baseUrl/api/settings"
-    if ($readBack.quiz.language -ne 'ja') { throw "Settings write/read-back failed: expected ja, got $($readBack.quiz.language)" }
+    if ($readBack.quiz.default_language -ne 'ja') { throw "Settings write/read-back failed: expected ja, got $($readBack.quiz.default_language)" }
     # Restore original
     $origSettings.quiz.language = $origLang
     $body = $origSettings | ConvertTo-Json -Depth 10
@@ -101,7 +101,7 @@ try {
 
     # 9. Mark a mistake as reviewed
     Write-Host "[9/9] Testing mistake review flow..." -ForegroundColor Yellow
-    Invoke-RestMethod -Uri "$baseUrl/api/mistakes/review" -Method Post -Body "{`"id`":`"$mistakeId`"}" -ContentType "application/json" | Out-Null
+    Invoke-RestMethod -Uri "$baseUrl/api/mistakes/review" -Method Post -Body "{`"mistake_id`":`"$mistakeId`",`"quality`":3}" -ContentType "application/json" | Out-Null
     $reviewed = Invoke-RestMethod -Uri "$baseUrl/api/mistakes"
     $reviewedEntry = $reviewed | Where-Object { $_.id -eq $mistakeId }
     if ($reviewedEntry.review_count -lt 1) { throw "Mistake review failed: review_count is $($reviewedEntry.review_count)" }

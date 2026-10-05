@@ -131,13 +131,13 @@ jobs:
           echo "Smoke: mistake persisted"
 
           # 6. Settings persistence across restart
-          #    Read settings, modify quiz.language, write back, restart, verify
+          #    Read settings, modify quiz.default_language, write back, restart, verify
           curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_orig.json
-          ORIGINAL_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['language'])" < /tmp/settings_orig.json)
+          ORIGINAL_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['default_language'])" < /tmp/settings_orig.json)
           python3 -c "
           import json,sys
           s=json.load(open('/tmp/settings_orig.json'))
-          s['quiz']['language']='ja'
+          s['quiz']['default_language']='ja'
           json.dump(s,open('/tmp/settings_new.json','w'))
           "
           curl -sSf -X POST http://127.0.0.1:14201/api/settings \
@@ -165,7 +165,7 @@ jobs:
           # 7. Mark mistake as reviewed
           curl -sSf -X POST http://127.0.0.1:14201/api/mistakes/review \
             -H "Content-Type: application/json" \
-            -d "{\"id\":\"$MISTAKE_ID\"}" > /dev/null
+            -d "{\"mistake_id\":\"$MISTAKE_ID\",\"quality\":3}" > /dev/null
           echo "Smoke: mistake marked as reviewed"
 
           echo "Smoke test passed (7 steps)"
