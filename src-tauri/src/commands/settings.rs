@@ -44,7 +44,12 @@ pub async fn test_connection(
 pub async fn probe_llm(app: AppHandle) -> Result<LlmCapabilities, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;
-    llm_service::probe_capabilities(&settings.llm).await
+    let capabilities = llm_service::probe_capabilities(&settings.llm).await?;
+    // Persist the probed capability so call_llm can trust it on later runs.
+    let mut updated = settings;
+    updated.llm.supports_response_format = Some(capabilities.supports_response_format);
+    config::save_settings_path(&data_dir, &updated)?;
+    Ok(capabilities)
 }
 
 #[tauri::command]

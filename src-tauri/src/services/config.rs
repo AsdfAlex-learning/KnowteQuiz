@@ -17,6 +17,7 @@ fn default_settings() -> Settings {
             model: "qwen2.5:7b".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
+            supports_response_format: None,
         },
         ui: UiLayoutContainer {
             layout: UiLayout {

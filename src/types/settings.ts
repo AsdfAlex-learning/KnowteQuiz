@@ -7,6 +7,8 @@ export interface LlmConfig {
   model: string;
   max_tokens: number;
   temperature: number;
+  /** Persisted probe result; absent means "never probed". */
+  supports_response_format?: boolean | null;
 }
 
 export type SettingsLLM = LlmConfig;

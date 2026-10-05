@@ -10,6 +10,11 @@ pub struct LlmConfig {
     pub model: String,
     pub max_tokens: u32,
     pub temperature: f64,
+    /// Persisted result of the last `probe_llm` run: whether the endpoint
+    /// accepts `response_format: json_object`. `None` = never probed (the
+    /// legacy base_url heuristic applies in `call_llm`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub supports_response_format: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

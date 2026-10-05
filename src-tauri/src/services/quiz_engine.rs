@@ -735,6 +735,16 @@ pub async fn generate_diagnosis_report(
     parse_diagnosis_report(&response_text)
 }
 
+/// Whether the non-streaming LLM call should request `response_format:
+/// json_object`. A probed capability wins; unprobed endpoints fall back to
+/// the legacy base_url heuristic.
+fn wants_json_mode(llm: &LlmConfig) -> bool {
+    match llm.supports_response_format {
+        Some(supported) => supported,
+        None => llm.base_url.contains("openai") || llm.base_url.contains("localhost:11434"),
+    }
+}
+
 async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Result<String, AppError> {
     let client = http_client();
 
@@ -749,7 +759,7 @@ async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Resul
         "max_tokens": settings.max_tokens,
     });
 
-    if settings.base_url.contains("openai") || settings.base_url.contains("localhost:11434") {
+    if wants_json_mode(settings) {
         if let Some(obj) = request_body.as_object_mut() {
             obj.insert(
                 "response_format".to_string(),
@@ -1180,6 +1190,32 @@ Good luck."#;
 
         assert_eq!(questions.len(), 1);
         assert!(questions[0].question.contains("fn main()"));
+    }
+
+    #[test]
+    fn wants_json_mode_prefers_probed_capability_over_url_heuristic() {
+        let mut llm = LlmConfig {
+            provider: "openai-compatible".to_string(),
+            base_url: "http://127.0.0.1:1234/v1".to_string(),
+            api_key: String::new(),
+            model: "test".to_string(),
+            max_tokens: 1024,
+            temperature: 0.7,
+            supports_response_format: None,
+        };
+        // Unprobed: legacy URL heuristic (non-ollama, non-openai host).
+        assert!(!wants_json_mode(&llm));
+
+        llm.supports_response_format = Some(true);
+        assert!(wants_json_mode(&llm));
+
+        llm.supports_response_format = Some(false);
+        assert!(!wants_json_mode(&llm));
+
+        // Unprobed but heuristic-matching host.
+        llm.supports_response_format = None;
+        llm.base_url = "http://localhost:11434/v1".to_string();
+        assert!(wants_json_mode(&llm));
     }
 
     #[test]

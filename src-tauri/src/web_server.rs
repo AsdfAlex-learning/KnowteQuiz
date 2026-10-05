@@ -306,7 +306,12 @@ async fn probe_llm_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<llm_service::LlmCapabilities>, AppError> {
     let settings = config::get_settings_path(&state.data_dir)?;
-    Ok(Json(llm_service::probe_capabilities(&settings.llm).await?))
+    let capabilities = llm_service::probe_capabilities(&settings.llm).await?;
+    // Persist the probed capability so call_llm can trust it on later runs.
+    let mut updated = settings;
+    updated.llm.supports_response_format = Some(capabilities.supports_response_format);
+    config::save_settings_path(&state.data_dir, &updated)?;
+    Ok(Json(capabilities))
 }
 
 async fn backup_data_handler(
