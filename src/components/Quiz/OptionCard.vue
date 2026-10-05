@@ -37,7 +37,6 @@ defineEmits<{
 const renderedText = computed(() => renderQuizMarkdown(props.text));
 
 const optionClasses = computed(() => {
-  const base = 'border-';
   switch (props.state) {
     case 'correct':
       return 'border-[var(--accent-green)] bg-[var(--accent-green)]/10';

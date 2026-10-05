@@ -9,7 +9,7 @@
     <!-- Question review -->
     <div class="space-y-3">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{{ t('quiz.review') }}</h3>
-      <div v-for="(q, i) in questions" :key="q.id" class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2 card-hover">
+      <div v-for="q in questions" :key="q.id" class="bg-[var(--bg-elevated)] rounded-lg p-3 space-y-2 card-hover">
         <div class="flex items-start gap-2">
           <span
             class="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5"
@@ -94,7 +94,7 @@ const props = defineProps<{
   diagnosisReport: DiagnosisReport | null;
 }>();
 
-const emit = defineEmits<{
+defineEmits<{
   newQuiz: [];
   retryWrong: [];
 }>();

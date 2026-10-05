@@ -73,7 +73,7 @@ import type { DiagnosisRound } from '@/types/diagnosis';
 
 const { t } = useI18n();
 
-const props = defineProps<{
+defineProps<{
   messages: DiagnosisRound[];
   active: boolean;
   completed: boolean;

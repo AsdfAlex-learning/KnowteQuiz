@@ -10,7 +10,6 @@ const CSS_VAR_BORDER_FOCUS = '--border-focus';
 
 const DEFAULT_BG_BASE = '#1e1e2e';
 const DEFAULT_ACCENT_PURPLE = '#cba6f7';
-const DEFAULT_BORDER_FOCUS = '#cba6f7';
 
 function applyThemeToRoot(theme: ThemeConfig) {
   const root = document.documentElement;

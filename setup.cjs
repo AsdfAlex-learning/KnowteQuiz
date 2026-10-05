@@ -51,15 +51,6 @@ function runCommand(cmd, args, opts = {}) {
   });
 }
 
-function checkCommand(cmd) {
-  try {
-    execSync(`${cmd} --version`, { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function getNodeVersion() {
   try {
     return execSync('node --version', { encoding: 'utf-8' }).trim();

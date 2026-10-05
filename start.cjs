@@ -16,7 +16,6 @@ const path = require('path');
 
 const isWindows = process.platform === 'win32';
 const isMac = process.platform === 'darwin';
-const isLinux = process.platform === 'linux';
 
 const projectRoot = __dirname;
 const tauriDir = path.join(projectRoot, 'src-tauri');
