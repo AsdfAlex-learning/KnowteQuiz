@@ -26,7 +26,7 @@ use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
-use crate::models::settings::Settings;
+use crate::models::settings::{LlmConfig, Settings};
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
     config, diagnosis_session_service, fs_service, llm_service, media_service, mistake_service,
@@ -284,11 +284,22 @@ async fn save_settings_handler(
     Ok(Json(true))
 }
 
+#[derive(Deserialize)]
+struct TestConnectionBody {
+    llm: Option<LlmConfig>,
+}
+
 async fn test_connection_handler(
     State(state): State<Arc<AppState>>,
+    body: Option<Json<TestConnectionBody>>,
 ) -> Result<Json<ConnectionTestResult>, AppError> {
-    let settings = config::get_settings_path(&state.data_dir)?;
-    Ok(Json(llm_service::test_connection(&settings.llm).await?))
+    // A request body carrying `llm` probes an edited-but-unsaved config;
+    // an empty body keeps probing the saved settings.
+    let llm = match body {
+        Some(Json(TestConnectionBody { llm: Some(pending) })) => pending,
+        _ => config::get_settings_path(&state.data_dir)?.llm,
+    };
+    Ok(Json(llm_service::test_connection(&llm).await?))
 }
 
 async fn probe_llm_handler(

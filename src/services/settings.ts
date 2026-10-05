@@ -3,6 +3,7 @@ import type {
   DataBackupResult,
   DataRestoreResult,
   DataStatus,
+  LlmConfig,
   Settings,
 } from '../types/settings';
 import { invoke, isTauri } from './tauri';
@@ -30,11 +31,17 @@ export async function saveSettings(settings: Settings): Promise<boolean> {
   return parseJsonResponse<boolean>(res);
 }
 
-export async function testConnection(): Promise<ConnectionTestResult> {
+export async function testConnection(llm?: LlmConfig): Promise<ConnectionTestResult> {
+  // A provided llm probes an edited-but-unsaved config; omitting it probes
+  // the saved settings (both runtimes treat a null field the same way).
   if (isTauri()) {
-    return invoke<ConnectionTestResult>('test_connection');
+    return invoke<ConnectionTestResult>('test_connection', { llm: llm ?? null });
   }
-  const res = await fetch('/api/test-connection', { method: 'POST' });
+  const res = await fetch('/api/test-connection', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ llm: llm ?? null }),
+  });
   if (!res.ok) await throwHttpError(res);
   return parseJsonResponse<ConnectionTestResult>(res);
 }

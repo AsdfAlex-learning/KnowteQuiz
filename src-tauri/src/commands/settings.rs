@@ -1,6 +1,6 @@
 use crate::errors::AppError;
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
-use crate::models::settings::Settings;
+use crate::models::settings::{LlmConfig, Settings};
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::llm_service::LlmCapabilities;
 use crate::services::storage::{DataBackupResult, DataRestoreResult, DataStatus};
@@ -24,10 +24,20 @@ pub async fn list_prompt_templates() -> Result<Vec<(String, String, String)>, Ap
 }
 
 #[tauri::command]
-pub async fn test_connection(app: AppHandle) -> Result<ConnectionTestResult, AppError> {
-    let data_dir = storage::get_data_dir(&app)?;
-    let settings = config::get_settings_path(&data_dir)?;
-    llm_service::test_connection(&settings.llm).await
+pub async fn test_connection(
+    app: AppHandle,
+    llm: Option<LlmConfig>,
+) -> Result<ConnectionTestResult, AppError> {
+    // `Some` probes an edited-but-unsaved LLM config; `None` falls back to the
+    // saved settings so existing callers keep working.
+    let effective = match llm {
+        Some(pending) => pending,
+        None => {
+            let data_dir = storage::get_data_dir(&app)?;
+            config::get_settings_path(&data_dir)?.llm
+        }
+    };
+    llm_service::test_connection(&effective).await
 }
 
 #[tauri::command]

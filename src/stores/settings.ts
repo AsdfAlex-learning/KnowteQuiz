@@ -5,6 +5,7 @@ import type {
   DataBackupResult,
   DataRestoreResult,
   DataStatus,
+  LlmConfig,
   Settings,
 } from '../types/settings';
 import {
@@ -117,9 +118,9 @@ export const useSettingsStore = defineStore('settings', () => {
     void queueUpdate((s) => updateStreak(s.workspace)).catch(() => undefined);
   }
 
-  async function testConnection(): Promise<ConnectionTestResult> {
+  async function testConnection(llm?: LlmConfig): Promise<ConnectionTestResult> {
     try {
-      const result = await testSettingsConnection();
+      const result = await testSettingsConnection(llm);
       llmConnectionResult.value = result;
       llmConnected.value = result.ok;
       return result;
