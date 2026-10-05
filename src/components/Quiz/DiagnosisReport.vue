@@ -9,9 +9,7 @@
       <h3 class="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
         {{ t('quiz.diagnosis_report') }}
       </h3>
-      <p class="text-sm text-[var(--text-primary)] leading-relaxed">
-        {{ report.summary }}
-      </p>
+      <div class="text-sm text-[var(--text-primary)] leading-relaxed quiz-md" v-html="renderedSummary"></div>
     </div>
 
     <!-- Overall level -->
@@ -42,7 +40,7 @@
           class="flex items-start gap-2 text-sm text-[var(--text-secondary)]"
         >
           <span class="text-[var(--accent-purple)] mt-0.5 text-xs">{{ i + 1 }}.</span>
-          <span>{{ step }}</span>
+          <span class="quiz-md" v-html="renderQuizMarkdown(step)"></span>
         </li>
       </ul>
     </div>
@@ -54,6 +52,7 @@ import { computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import type { DiagnosisReport } from '@/types/diagnosis';
 import DiagnosisReportCard from './DiagnosisReportCard.vue';
+import { renderQuizMarkdown } from '@/utils/markdown';
 
 const { t } = useI18n();
 
@@ -62,6 +61,8 @@ const props = defineProps<{
   noteTitle?: string | null;
   notePath?: string | null;
 }>();
+
+const renderedSummary = computed(() => renderQuizMarkdown(props.report.summary));
 
 const levelClass = computed(() => {
   switch (props.report.overall_level) {

@@ -7,9 +7,7 @@
       <span class="text-xs font-medium text-[var(--accent-purple)]">{{ spot.tag }}</span>
     </div>
 
-    <p class="text-xs text-[var(--text-secondary)] leading-relaxed">
-      {{ spot.description }}
-    </p>
+    <div class="text-xs text-[var(--text-secondary)] leading-relaxed quiz-md" v-html="renderedDescription"></div>
 
     <div v-if="spot.note_reference" class="bg-[var(--bg-base)] rounded-md px-2.5 py-1.5">
       <p class="text-[11px] text-[var(--text-faint)] italic">
@@ -19,9 +17,7 @@
 
     <div v-if="spot.suggestion" class="flex items-start gap-1.5">
       <span class="text-[var(--accent-green)] text-xs mt-0.5">&rarr;</span>
-      <p class="text-xs text-[var(--accent-green)] leading-relaxed">
-        {{ spot.suggestion }}
-      </p>
+      <div class="text-xs text-[var(--accent-green)] leading-relaxed quiz-md" v-html="renderedSuggestion"></div>
     </div>
   </div>
 </template>
@@ -29,10 +25,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { BlindSpot } from '@/types/diagnosis';
+import { renderQuizMarkdown } from '@/utils/markdown';
 
 const props = defineProps<{
   spot: BlindSpot;
 }>();
+
+const renderedDescription = computed(() => renderQuizMarkdown(props.spot.description));
+const renderedSuggestion = computed(() => (props.spot.suggestion ? renderQuizMarkdown(props.spot.suggestion) : ''));
 
 const severityClass = computed(() => {
   switch (props.spot.severity) {

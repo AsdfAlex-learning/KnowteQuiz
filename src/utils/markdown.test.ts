@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { extractHeadings, renderMarkdown, renderMarkdownWithFallback } from './markdown';
+import { extractHeadings, renderMarkdownWithFallback, renderQuizMarkdown } from './markdown';
 
 describe('markdown rendering safety', () => {
   it('returns rendered html when the renderer succeeds', () => {
@@ -15,12 +15,22 @@ describe('markdown rendering safety', () => {
       '<pre class="markdown-render-fallback"><code>&lt;script&gt;alert(1)&lt;/script&gt;</code></pre>'
     );
   });
+});
 
-  it('keeps MarkdownIt instances separate for different option sets', () => {
-    expect(renderMarkdown('<b>raw</b>', { html: false, katex: false, highlight: false })).toContain(
-      '&lt;b&gt;raw&lt;/b&gt;'
-    );
-    expect(renderMarkdown('<b>raw</b>', { html: true, katex: false, highlight: false })).toContain('<b>raw</b>');
+describe('quiz markdown rendering', () => {
+  it('renders emphasis and line breaks but never raw html', () => {
+    const html = renderQuizMarkdown('**重要** 概念\n第二条');
+
+    expect(html).toContain('<strong>重要</strong>');
+    expect(html).toContain('第二条');
+    expect(html).not.toContain('<b>raw</b>');
+    expect(renderQuizMarkdown('<b>raw</b>')).toContain('&lt;b&gt;raw&lt;/b&gt;');
+  });
+
+  it('renders inline math through katex', () => {
+    const html = renderQuizMarkdown('质能方程 $E=mc^2$ 是核心结论');
+
+    expect(html).toContain('katex');
   });
 });
 

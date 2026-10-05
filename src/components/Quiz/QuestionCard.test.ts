@@ -54,3 +54,29 @@ describe('QuestionCard', () => {
     expect(options[1].props('text')).toBe('Beta');
   });
 });
+
+describe('QuestionCard markdown rendering', () => {
+  it('renders question markdown and keeps raw html inert', () => {
+    const wrapper = mount(QuestionCard, {
+      props: {
+        question: {
+          id: 'q2',
+          question_type: 'short',
+          question: '**Important** concept <img src=x>',
+          options: [],
+          answer: 'Answer',
+          explanation: '',
+        },
+        currentIndex: 0,
+        total: 1,
+        selectedOptions: [],
+        submitted: false,
+      },
+    });
+
+    const heading = wrapper.find('h2');
+    expect(heading.html()).toContain('<strong>Important</strong>');
+    expect(heading.html()).toContain('&lt;img');
+    expect(heading.find('img').exists()).toBe(false);
+  });
+});

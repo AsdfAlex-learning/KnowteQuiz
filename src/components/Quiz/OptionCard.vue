@@ -12,15 +12,14 @@
       >
         {{ letter }}
       </span>
-      <span class="text-sm leading-relaxed" :class="textClasses">
-        {{ text }}
-      </span>
+      <div class="text-sm leading-relaxed min-w-0 quiz-md" :class="textClasses" v-html="renderedText"></div>
     </div>
   </button>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { renderQuizMarkdown } from '@/utils/markdown';
 
 export type OptionState = 'default' | 'selected' | 'correct' | 'incorrect';
 
@@ -34,6 +33,8 @@ const props = defineProps<{
 defineEmits<{
   select: [];
 }>();
+
+const renderedText = computed(() => renderQuizMarkdown(props.text));
 
 const optionClasses = computed(() => {
   const base = 'border-';

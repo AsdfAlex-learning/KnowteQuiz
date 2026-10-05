@@ -19,9 +19,7 @@
     </span>
 
     <!-- Question text -->
-    <h2 class="text-sm font-medium text-[var(--text-primary)] leading-relaxed">
-      {{ question.question }}
-    </h2>
+    <h2 class="text-sm font-medium text-[var(--text-primary)] leading-relaxed quiz-md" v-html="renderedQuestion"></h2>
 
     <!-- Options (for choice questions) -->
     <div v-if="question.options.length > 0" class="space-y-2">
@@ -44,6 +42,7 @@ import type { QuizQuestion } from '@/types/quiz';
 import OptionCard from './OptionCard.vue';
 import type { OptionState } from './OptionCard.vue';
 import { correctChoiceLetters } from '@/utils/answer';
+import { renderQuizMarkdown } from '@/utils/markdown';
 
 const props = defineProps<{
   question: QuizQuestion;
@@ -58,6 +57,8 @@ defineEmits<{
 }>();
 
 const progressPercent = computed(() => (props.total > 0 ? ((props.currentIndex + 1) / props.total) * 100 : 0));
+
+const renderedQuestion = computed(() => renderQuizMarkdown(props.question.question));
 
 const typeBadgeClass = computed(() => {
   switch (props.question.question_type) {

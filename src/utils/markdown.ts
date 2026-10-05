@@ -66,16 +66,6 @@ export function getMarkdown_it(options: MarkdownOptions = {}): MarkdownIt {
   return md;
 }
 
-export function renderMarkdown(content: string, options?: MarkdownOptions): string {
-  const md = getMarkdown_it(options);
-  return renderMarkdownWithFallback(content, (source) => md.render(source));
-}
-
-export function renderInline(content: string, options?: MarkdownOptions): string {
-  const md = getMarkdown_it(options);
-  return md.renderInline(content);
-}
-
 export function renderMarkdownWithFallback(content: string, render: (source: string) => string): string {
   try {
     return render(content);
@@ -84,31 +74,17 @@ export function renderMarkdownWithFallback(content: string, render: (source: str
   }
 }
 
-export function highlightCode(code: string, language: string): string {
-  const langLower = language.toLowerCase();
-  if (langLower && hljs.getLanguage(langLower)) {
-    try {
-      return hljs.highlight(code, { language: langLower }).value;
-    } catch {
-      // fallback
-    }
-  }
-  return code;
-}
+// Quiz questions/options/explanations come from LLM output: raw HTML must
+// render as text, inline math is common, and code highlighting is unnecessary.
+const quizMarkdownOptions: MarkdownOptions = {
+  html: false,
+  katex: true,
+  highlight: false,
+  breaks: true,
+};
 
-export function extractText(content: string): string {
-  const md = getMarkdown_it({ katex: false, highlight: false });
-  const html = md.render(content);
-  return html
-    .replace(/<[^>]+>/g, '')
-    .replace(/</g, '<')
-    .replace(/>/g, '>')
-    .replace(/&/g, '&')
-    .replace(/"/g, '"');
-}
-
-export function splitByParagraph(content: string): string[] {
-  return content.split(/\n\n+/).filter(Boolean);
+export function renderQuizMarkdown(content: string): string {
+  return renderMarkdownWithFallback(content, (source) => getMarkdown_it(quizMarkdownOptions).render(source));
 }
 
 export interface TocHeading {

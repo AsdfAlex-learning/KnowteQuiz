@@ -61,9 +61,10 @@
           <!-- Explanation after submit -->
           <div v-if="currentQuestion.explanation" class="bg-[var(--bg-base)] rounded-lg p-3">
             <p class="text-xs text-[var(--text-muted)] mb-1">{{ t('quiz.explanation') }}</p>
-            <p class="text-sm text-[var(--text-secondary)] leading-relaxed">
-              {{ currentQuestion.explanation }}
-            </p>
+            <div
+              class="text-sm text-[var(--text-secondary)] leading-relaxed quiz-md"
+              v-html="renderedExplanation"
+            ></div>
           </div>
 
           <button
@@ -161,6 +162,7 @@ import { useReaderStore } from '@/stores/reader';
 import { useMistakeStore } from '@/stores/mistakes';
 import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from '@/composables/useI18n';
+import { renderQuizMarkdown } from '@/utils/markdown';
 import QuestionCard from './QuestionCard.vue';
 import AnswerInput from './AnswerInput.vue';
 import ReasoningInput from './ReasoningInput.vue';
@@ -190,6 +192,9 @@ const submitted = ref(false);
 const diagnosisSubmitting = ref(false);
 
 const currentQuestion = computed(() => quizStore.currentQuestion);
+const renderedExplanation = computed(() =>
+  currentQuestion.value ? renderQuizMarkdown(currentQuestion.value.explanation) : ''
+);
 
 // Record activity when quiz completes (for streak tracking)
 watch(

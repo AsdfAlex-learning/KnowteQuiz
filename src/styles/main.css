@@ -277,3 +277,17 @@ input[type='range']::-moz-range-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Rendered quiz/diagnosis markdown blocks: collapse the block margins of the
+ * first/last child so short snippets align with surrounding text. */
+.quiz-md > :first-child {
+  margin-top: 0;
+}
+
+.quiz-md > :last-child {
+  margin-bottom: 0;
+}
+
+.quiz-md code {
+  font-size: 0.9em;
+}
