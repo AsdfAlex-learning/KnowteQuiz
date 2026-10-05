@@ -16,9 +16,12 @@ $baseUrl = 'http://127.0.0.1:14200'
 
 Write-Host "=== KnowteQuiz Smoke Test ===" -ForegroundColor Cyan
 
-# 1. Start server
+# 1. Start server (hermetic data dir so real user data is untouched)
 Write-Host "[1/9] Starting web server..." -ForegroundColor Yellow
-$server = Start-Process -FilePath "cargo" -ArgumentList "run -- --mode=web" -WorkingDirectory (Join-Path $PSScriptRoot ".." "src-tauri") -PassThru -NoNewWindow
+$dataDir = Join-Path $env:TEMP "knowtequiz-smoke-data"
+if (Test-Path $dataDir) { Remove-Item -Recurse -Force $dataDir }
+New-Item -ItemType Directory -Path $dataDir | Out-Null
+$server = Start-Process -FilePath "cargo" -ArgumentList "run -- --mode=web --data-dir=`"$dataDir`"" -WorkingDirectory (Join-Path $PSScriptRoot ".." "src-tauri") -PassThru -NoNewWindow
 
 try {
     # Wait for server
@@ -113,4 +116,5 @@ try {
 } finally {
     Write-Host "Stopping server..." -ForegroundColor Yellow
     Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+    if (Test-Path $dataDir) { Remove-Item -Recurse -Force $dataDir -ErrorAction SilentlyContinue }
 }

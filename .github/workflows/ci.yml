@@ -96,7 +96,9 @@ jobs:
       - name: Start web server & smoke test
         run: |
           cd src-tauri
-          ./target/debug/knowtequiz --mode=web --port=14201 &
+          # Hermetic data dir: the smoke test must not touch real user data.
+          rm -rf /tmp/kq-smoke-data && mkdir -p /tmp/kq-smoke-data
+          ./target/debug/knowtequiz --mode=web --port=14201 --data-dir=/tmp/kq-smoke-data &
           SERVER_PID=$!
           sleep 2
 
@@ -148,7 +150,7 @@ jobs:
           wait $SERVER_PID 2>/dev/null || true
           sleep 1
 
-          cargo run -- --mode=web --port=14201 &
+          cargo run -- --mode=web --port=14201 --data-dir=/tmp/kq-smoke-data &
           SERVER_PID=$!
           sleep 5
 

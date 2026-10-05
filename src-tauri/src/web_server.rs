@@ -100,22 +100,32 @@ fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Resu
     diagnosis_session_service::finish_session(&state.diagnosis_sessions, &state.data_dir, session)
 }
 
-pub async fn start(port: u16) -> Result<(), AppError> {
-    let data_dir = storage::default_app_data_dir()?;
-    std::fs::create_dir_all(&data_dir)?;
+pub async fn start(port: u16, data_dir_override: Option<PathBuf>) -> Result<(), AppError> {
+    // An explicit --data-dir (used by hermetic smoke tests) skips the legacy
+    // migration: it is a scratch dir, not a user profile.
+    let data_dir = match data_dir_override {
+        Some(dir) => dir,
+        None => {
+            let data_dir = storage::default_app_data_dir()?;
+            std::fs::create_dir_all(&data_dir)?;
 
-    // Web mode used to store data in `<data_dir>/knowtequiz`, separate from the
-    // desktop app data dir. Copy missing files over so old web data survives.
-    if let Some(legacy_dir) = dirs::data_dir().map(|base| base.join("knowtequiz")) {
-        let migrated = storage::migrate_legacy_web_data(&legacy_dir, &data_dir)?;
-        if migrated > 0 {
-            println!(
-                "Migrated {} web data file(s) into {}",
-                migrated,
-                data_dir.display()
-            );
+            // Web mode used to store data in `<data_dir>/knowtequiz`, separate
+            // from the desktop app data dir. Copy missing files over so old
+            // web data survives.
+            if let Some(legacy_dir) = dirs::data_dir().map(|base| base.join("knowtequiz")) {
+                let migrated = storage::migrate_legacy_web_data(&legacy_dir, &data_dir)?;
+                if migrated > 0 {
+                    println!(
+                        "Migrated {} web data file(s) into {}",
+                        migrated,
+                        data_dir.display()
+                    );
+                }
+            }
+            data_dir
         }
-    }
+    };
+    std::fs::create_dir_all(&data_dir)?;
 
     // Remove diagnosis sessions left over from previous runs.
     let cleanup_dir = data_dir.clone();
