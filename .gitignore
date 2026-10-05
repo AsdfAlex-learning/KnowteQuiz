@@ -8,6 +8,7 @@ dist/
 .vite/
 .vite-temp/
 .vue-global-types/
+coverage/
 
 # Rust / Tauri
 src-tauri/target/
@@ -28,6 +29,9 @@ Thumbs.db
 .sisyphus/
 AGENTS.md
 TECH_SPEC.md
+.codegraph/
+.agents/
+.zcode/
 
 # Environment (if any)
 .env
