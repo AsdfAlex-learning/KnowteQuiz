@@ -10,7 +10,10 @@ use tauri::{AppHandle, Manager};
 
 pub struct DiagnosisSessions(pub Mutex<HashMap<String, DiagnosisSession>>);
 
-fn with_sessions<R>(app: &AppHandle, f: impl FnOnce(&Mutex<HashMap<String, DiagnosisSession>>) -> R) -> R {
+fn with_sessions<R>(
+    app: &AppHandle,
+    f: impl FnOnce(&Mutex<HashMap<String, DiagnosisSession>>) -> R,
+) -> R {
     f(&app.state::<DiagnosisSessions>().0)
 }
 
@@ -86,7 +89,9 @@ pub async fn submit_answer_advanced(
         final_report: None,
     };
 
-    with_sessions(&app, |s| diagnosis_session_service::cache_session(s, &data_dir, session))?;
+    with_sessions(&app, |s| {
+        diagnosis_session_service::cache_session(s, &data_dir, session)
+    })?;
 
     Ok(session_id)
 }
@@ -109,18 +114,23 @@ pub async fn diagnose_follow_up(
         }
     });
 
-    let mut session =
-        with_sessions(&app, |s| diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id))
-            .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
+    let mut session = with_sessions(&app, |s| {
+        diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id)
+    })
+    .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
 
     if let Err(err) =
         quiz_engine::diagnose_follow_up(&data_dir, &mut session, &user_reply, tx).await
     {
-        with_sessions(&app, |s| diagnosis_session_service::cache_session(s, &data_dir, session))?;
+        with_sessions(&app, |s| {
+            diagnosis_session_service::cache_session(s, &data_dir, session)
+        })?;
         return Err(err);
     }
 
-    with_sessions(&app, |s| diagnosis_session_service::finish_session(s, &data_dir, session))?;
+    with_sessions(&app, |s| {
+        diagnosis_session_service::finish_session(s, &data_dir, session)
+    })?;
     Ok(())
 }
 
@@ -130,17 +140,22 @@ pub async fn generate_diagnosis_report(
     session_id: String,
 ) -> Result<DiagnosisReport, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
-    let mut session =
-        with_sessions(&app, |s| diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id))
-            .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
+    let mut session = with_sessions(&app, |s| {
+        diagnosis_session_service::load_from_cache_or_disk(s, &data_dir, &session_id)
+    })
+    .map_err(|_| AppError::NotFound(format!("Session {} not found", session_id)))?;
 
     if let Some(ref report) = session.final_report {
-        with_sessions(&app, |s| diagnosis_session_service::finish_session(s, &data_dir, session.clone()))?;
+        with_sessions(&app, |s| {
+            diagnosis_session_service::finish_session(s, &data_dir, session.clone())
+        })?;
         Ok(report.clone())
     } else {
         let report = quiz_engine::generate_diagnosis_report(&data_dir, &session).await?;
         session.final_report = Some(report.clone());
-        with_sessions(&app, |s| diagnosis_session_service::finish_session(s, &data_dir, session))?;
+        with_sessions(&app, |s| {
+            diagnosis_session_service::finish_session(s, &data_dir, session)
+        })?;
         Ok(report)
     }
 }
@@ -148,7 +163,9 @@ pub async fn generate_diagnosis_report(
 #[tauri::command]
 pub async fn cleanup_sessions(app: AppHandle) -> Result<SessionCleanupResult, AppError> {
     let data_dir = crate::services::storage::get_data_dir(&app)?;
-    tokio::task::spawn_blocking(move || diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7))
-        .await
-        .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))?
+    tokio::task::spawn_blocking(move || {
+        diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))?
 }

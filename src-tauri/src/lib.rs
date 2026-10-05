@@ -56,7 +56,10 @@ pub fn run_desktop() {
 
 pub fn run_web_server(port: u16, data_dir_override: Option<String>) {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-    if let Err(e) = rt.block_on(web_server::start(port, data_dir_override.map(std::path::PathBuf::from))) {
+    if let Err(e) = rt.block_on(web_server::start(
+        port,
+        data_dir_override.map(std::path::PathBuf::from),
+    )) {
         eprintln!("Web server failed: {}", e);
         std::process::exit(1);
     }
@@ -65,9 +68,10 @@ pub fn run_web_server(port: u16, data_dir_override: Option<String>) {
 pub fn run_both(port: u16, data_dir_override: Option<String>) {
     std::thread::spawn(move || {
         let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
-        if let Err(e) =
-            rt.block_on(web_server::start(port, data_dir_override.map(std::path::PathBuf::from)))
-        {
+        if let Err(e) = rt.block_on(web_server::start(
+            port,
+            data_dir_override.map(std::path::PathBuf::from),
+        )) {
             eprintln!("Web server failed: {}", e);
             std::process::exit(1);
         }

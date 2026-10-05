@@ -84,8 +84,15 @@ fn send_missing_session_error(
 
 // ── Session management (delegated to shared service) ────────────────────────
 
-fn load_diagnosis_session(state: &AppState, session_id: &str) -> Result<DiagnosisSession, AppError> {
-    diagnosis_session_service::load_from_cache_or_disk(&state.diagnosis_sessions, &state.data_dir, session_id)
+fn load_diagnosis_session(
+    state: &AppState,
+    session_id: &str,
+) -> Result<DiagnosisSession, AppError> {
+    diagnosis_session_service::load_from_cache_or_disk(
+        &state.diagnosis_sessions,
+        &state.data_dir,
+        session_id,
+    )
 }
 
 fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), AppError> {
@@ -93,7 +100,11 @@ fn cache_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Resul
 }
 
 fn discard_diagnosis_session(state: &AppState, session_id: &str) -> Result<(), AppError> {
-    diagnosis_session_service::discard_session(&state.diagnosis_sessions, &state.data_dir, session_id)
+    diagnosis_session_service::discard_session(
+        &state.diagnosis_sessions,
+        &state.data_dir,
+        session_id,
+    )
 }
 
 fn finish_diagnosis_session(state: &AppState, session: DiagnosisSession) -> Result<(), AppError> {
@@ -178,19 +189,15 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         )
         .route(
             "/api/data/media",
-            get(get_media_handler).post(
-                save_media_handler.layer(DefaultBodyLimit::max(52 * 1024 * 1024)),
-            ),
+            get(get_media_handler)
+                .post(save_media_handler.layer(DefaultBodyLimit::max(52 * 1024 * 1024))),
         )
         .route("/api/prompt-templates", get(list_prompt_templates_handler))
         .route(
             "/api/mistakes",
             get(load_mistakes_handler).post(save_mistake_handler),
         )
-        .route(
-            "/api/mistakes/review",
-            post(mark_mistake_reviewed_handler),
-        )
+        .route("/api/mistakes/review", post(mark_mistake_reviewed_handler))
         .route("/api/quiz/generate", post(generate_quiz_handler))
         .route("/api/quiz/diagnose", post(submit_diagnosis_handler))
         .route(
@@ -253,17 +260,20 @@ async fn read_note_asset_handler(
     let canonical = fs_service::resolve_note_path(&state.data_dir, &query.path).await?;
     let content_type = asset_content_type(&canonical)
         .ok_or_else(|| AppError::InvalidInput(format!("Unsupported asset type: {}", query.path)))?;
-    let bytes = tokio::fs::read(&canonical)
-        .await
-        .map_err(|err| AppError::Internal(format!("Failed to read asset {}: {}", query.path, err)))?;
+    let bytes = tokio::fs::read(&canonical).await.map_err(|err| {
+        AppError::Internal(format!("Failed to read asset {}: {}", query.path, err))
+    })?;
 
-    Ok(([
-        (header::CONTENT_TYPE, HeaderValue::from_static(content_type)),
-        (
-            header::X_CONTENT_TYPE_OPTIONS,
-            HeaderValue::from_static("nosniff"),
-        ),
-    ], bytes)
+    Ok((
+        [
+            (header::CONTENT_TYPE, HeaderValue::from_static(content_type)),
+            (
+                header::X_CONTENT_TYPE_OPTIONS,
+                HeaderValue::from_static("nosniff"),
+            ),
+        ],
+        bytes,
+    )
         .into_response())
 }
 
@@ -354,9 +364,10 @@ async fn restore_latest_backup_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<storage::DataRestoreResult>, AppError> {
     let data_dir = state.data_dir.clone();
-    let result = tokio::task::spawn_blocking(move || storage::restore_latest_backup_path(&data_dir))
-        .await
-        .map_err(|e| AppError::Internal(format!("Restore task failed: {e}")))??;
+    let result =
+        tokio::task::spawn_blocking(move || storage::restore_latest_backup_path(&data_dir))
+            .await
+            .map_err(|e| AppError::Internal(format!("Restore task failed: {e}")))??;
     Ok(Json(result))
 }
 
@@ -409,9 +420,7 @@ async fn generate_quiz_handler(
     }
 
     if let Some(err_msg) = validation_error {
-        let _ = tx.send(quiz_engine::QuizStreamEvent::Error {
-            message: err_msg,
-        });
+        let _ = tx.send(quiz_engine::QuizStreamEvent::Error { message: err_msg });
     } else {
         let data_dir = state.data_dir.clone();
         tokio::spawn(async move {
@@ -499,8 +508,7 @@ async fn submit_diagnosis_handler(
         let app_state = state.clone();
 
         // Create session upfront so follow_up can find it
-        if let Ok(resolved) = fs_service::resolve_note_path(&app_state.data_dir, &note_path).await
-        {
+        if let Ok(resolved) = fs_service::resolve_note_path(&app_state.data_dir, &note_path).await {
             if let Ok(note_content) =
                 fs_service::read_file_content(&resolved.to_string_lossy()).await
             {
@@ -557,7 +565,9 @@ async fn submit_diagnosis_handler(
                 }
                 Err(err) => {
                     let _ = discard_diagnosis_session(&app_state, &session_id);
-                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
+                    let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+                        message: err.to_string(),
+                    });
                 }
             }
         });
@@ -603,13 +613,17 @@ async fn diagnose_follow_up_handler(
             )
             .await
             {
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+                    message: err.to_string(),
+                });
                 let _ = cache_diagnosis_session(&app_state, session);
                 return;
             }
 
             if let Err(err) = finish_diagnosis_session(&app_state, session) {
-                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error { message: err.to_string() });
+                let _ = tx.send(quiz_engine::DiagnosisStreamEvent::Error {
+                    message: err.to_string(),
+                });
             }
         });
     } else {
@@ -648,9 +662,11 @@ async fn cleanup_sessions_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<diagnosis_session_service::SessionCleanupResult>, AppError> {
     let data_dir = state.data_dir.clone();
-    let result = tokio::task::spawn_blocking(move || diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7))
-        .await
-        .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))??;
+    let result = tokio::task::spawn_blocking(move || {
+        diagnosis_session_service::cleanup_expired_sessions(&data_dir, 7)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Session cleanup task failed: {e}")))??;
     Ok(Json(result))
 }
 
@@ -685,11 +701,10 @@ async fn get_media_handler(
 ) -> Result<Response, AppError> {
     let data_dir = state.data_dir.clone();
     let name = query.name.clone();
-    let path = tokio::task::spawn_blocking(move || {
-        media_service::media_path_by_name(&data_dir, &name)
-    })
-    .await
-    .map_err(|e| AppError::Internal(format!("Media lookup task failed: {e}")))??;
+    let path =
+        tokio::task::spawn_blocking(move || media_service::media_path_by_name(&data_dir, &name))
+            .await
+            .map_err(|e| AppError::Internal(format!("Media lookup task failed: {e}")))??;
     let content_type = media_service::media_content_type(&query.name);
     let bytes = tokio::fs::read(&path)
         .await
@@ -697,7 +712,10 @@ async fn get_media_handler(
     Ok((
         [
             (header::CONTENT_TYPE, content_type),
-            (header::CACHE_CONTROL, "private, max-age=31536000, immutable"),
+            (
+                header::CACHE_CONTROL,
+                "private, max-age=31536000, immutable",
+            ),
         ],
         bytes,
     )
@@ -1016,7 +1034,8 @@ mod tests {
         std::fs::write(root.join("note.md"), "# Hello").unwrap();
         write_settings_with_root(&data_dir, &root);
 
-        let result = fs_service::resolve_note_path(&data_dir, &root.join("note.md").to_string_lossy()).await;
+        let result =
+            fs_service::resolve_note_path(&data_dir, &root.join("note.md").to_string_lossy()).await;
         assert!(result.is_ok());
     }
 
@@ -1030,7 +1049,9 @@ mod tests {
         std::fs::write(outside.join("secret.txt"), "secret").unwrap();
         write_settings_with_root(&data_dir, &root);
 
-        let result = fs_service::resolve_note_path(&data_dir, &outside.join("secret.txt").to_string_lossy()).await;
+        let result =
+            fs_service::resolve_note_path(&data_dir, &outside.join("secret.txt").to_string_lossy())
+                .await;
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("outside the configured note root"));
@@ -1092,7 +1113,10 @@ mod tests {
         };
         let result = read_note_handler(State(state), Query(query)).await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Not a Markdown file"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Not a Markdown file"));
     }
 
     fn write_settings_with_root(data_dir: &Path, root: &Path) {

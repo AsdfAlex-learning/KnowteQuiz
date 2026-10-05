@@ -20,7 +20,10 @@ fn lock_mistakes_write() -> Result<std::sync::MutexGuard<'static, ()>, AppError>
         .map_err(|_| AppError::Internal("Mistake write lock poisoned".to_string()))
 }
 
-pub fn load_mistakes(data_dir: &Path, filter: &MistakeFilter) -> Result<Vec<MistakeEntry>, AppError> {
+pub fn load_mistakes(
+    data_dir: &Path,
+    filter: &MistakeFilter,
+) -> Result<Vec<MistakeEntry>, AppError> {
     let mistakes = read_mistakes_or_empty(data_dir)?;
     Ok(filter_mistakes(&mistakes, filter))
 }
@@ -32,13 +35,22 @@ pub fn save_mistake(data_dir: &Path, entry: MistakeEntry) -> Result<(), AppError
     write_mistakes_jsonl(data_dir, &updated)
 }
 
-pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str, quality: u32) -> Result<(), AppError> {
+pub fn mark_mistake_reviewed(
+    data_dir: &Path,
+    mistake_id: &str,
+    quality: u32,
+) -> Result<(), AppError> {
     if quality > 3 {
-        return Err(AppError::InvalidInput(format!("Invalid quality rating: {}", quality)));
+        return Err(AppError::InvalidInput(format!(
+            "Invalid quality rating: {}",
+            quality
+        )));
     }
     let _guard = lock_mistakes_write()?;
     let mut mistakes = read_mistakes_or_empty(data_dir)?;
-    let now = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+    let now = chrono::Local::now()
+        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
+        .to_string();
     let mut found = false;
     for entry in &mut mistakes {
         if entry.id == mistake_id {
@@ -53,7 +65,10 @@ pub fn mark_mistake_reviewed(data_dir: &Path, mistake_id: &str, quality: u32) ->
         }
     }
     if !found {
-        return Err(AppError::NotFound(format!("Mistake {} not found", mistake_id)));
+        return Err(AppError::NotFound(format!(
+            "Mistake {} not found",
+            mistake_id
+        )));
     }
     write_mistakes_jsonl(data_dir, &mistakes)
 }
@@ -100,7 +115,8 @@ fn read_mistakes_or_empty(data_dir: &Path) -> Result<Vec<MistakeEntry>, AppError
 
     // If only legacy json exists, migrate it
     if json_path.exists() {
-        let mistakes: Vec<MistakeEntry> = crate::services::storage::read_json_path(data_dir, MISTAKES_LEGACY_FILE)?;
+        let mistakes: Vec<MistakeEntry> =
+            crate::services::storage::read_json_path(data_dir, MISTAKES_LEGACY_FILE)?;
         write_mistakes_jsonl(data_dir, &mistakes)?;
         // Remove legacy file after successful migration
         let _ = fs::remove_file(&json_path);
@@ -120,14 +136,16 @@ fn read_jsonl(path: &Path) -> Result<Vec<MistakeEntry>, AppError> {
     let mut mistakes = Vec::new();
 
     for (line_num, line) in reader.lines().enumerate() {
-        let line = line
-            .map_err(|e| AppError::Internal(format!("Failed to read line {}: {}", line_num + 1, e)))?;
+        let line = line.map_err(|e| {
+            AppError::Internal(format!("Failed to read line {}: {}", line_num + 1, e))
+        })?;
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
         }
-        let entry: MistakeEntry = serde_json::from_str(trimmed)
-            .map_err(|e| AppError::Internal(format!("Failed to parse line {}: {}", line_num + 1, e)))?;
+        let entry: MistakeEntry = serde_json::from_str(trimmed).map_err(|e| {
+            AppError::Internal(format!("Failed to parse line {}: {}", line_num + 1, e))
+        })?;
         mistakes.push(entry);
     }
 
@@ -142,16 +160,18 @@ fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<()
     // Build jsonl content
     let mut content = String::new();
     for entry in mistakes {
-        let line = serde_json::to_string(entry)
-            .map_err(|e| AppError::Internal(format!("Failed to serialize mistake {}: {}", entry.id, e)))?;
+        let line = serde_json::to_string(entry).map_err(|e| {
+            AppError::Internal(format!("Failed to serialize mistake {}: {}", entry.id, e))
+        })?;
         content.push_str(&line);
         content.push('\n');
     }
 
     // Atomic write: tmp → sync → backup old → rename
     {
-        let mut file = fs::File::create(&tmp)
-            .map_err(|e| AppError::Internal(format!("Failed to create {}: {}", tmp.display(), e)))?;
+        let mut file = fs::File::create(&tmp).map_err(|e| {
+            AppError::Internal(format!("Failed to create {}: {}", tmp.display(), e))
+        })?;
         file.write_all(content.as_bytes())
             .map_err(|e| AppError::Internal(format!("Failed to write {}: {}", tmp.display(), e)))?;
         file.sync_all()
@@ -165,8 +185,14 @@ fn write_mistakes_jsonl(data_dir: &Path, mistakes: &[MistakeEntry]) -> Result<()
     }
 
     // Rename tmp → target
-    fs::rename(&tmp, &target)
-        .map_err(|e| AppError::Internal(format!("Failed to rename {} to {}: {}", tmp.display(), target.display(), e)))?;
+    fs::rename(&tmp, &target).map_err(|e| {
+        AppError::Internal(format!(
+            "Failed to rename {} to {}: {}",
+            tmp.display(),
+            target.display(),
+            e
+        ))
+    })?;
 
     Ok(())
 }
@@ -206,21 +232,23 @@ pub fn filter_mistakes(mistakes: &[MistakeEntry], filter: &MistakeFilter) -> Vec
             search_lower.as_ref().is_none_or(|needle| {
                 entry.question.to_lowercase().contains(needle.as_str())
                     || entry.user_answer.to_lowercase().contains(needle.as_str())
-                    || entry.correct_answer.to_lowercase().contains(needle.as_str())
+                    || entry
+                        .correct_answer
+                        .to_lowercase()
+                        .contains(needle.as_str())
                     || entry.explanation.to_lowercase().contains(needle.as_str())
                     || entry.note_title.to_lowercase().contains(needle.as_str())
             })
         })
         .filter(|entry| {
             blind_spot_tag_lower.as_ref().is_none_or(|needle| {
-                entry
-                    .diagnosis
-                    .as_ref()
-                    .is_some_and(|diagnosis| {
-                        diagnosis.final_report.blind_spots.iter().any(|spot| {
-                            spot.tag.to_lowercase().contains(needle.as_str())
-                        })
-                    })
+                entry.diagnosis.as_ref().is_some_and(|diagnosis| {
+                    diagnosis
+                        .final_report
+                        .blind_spots
+                        .iter()
+                        .any(|spot| spot.tag.to_lowercase().contains(needle.as_str()))
+                })
             })
         })
         .filter(|entry| {
@@ -417,8 +445,8 @@ mod tests {
 
         save_mistake(&dir, entry).expect("save should succeed");
 
-        let content = std::fs::read_to_string(dir.join(MISTAKES_FILE))
-            .expect("jsonl file should exist");
+        let content =
+            std::fs::read_to_string(dir.join(MISTAKES_FILE)).expect("jsonl file should exist");
         // Each line should be valid JSON, no array wrapper
         let lines: Vec<&str> = content.lines().filter(|l| !l.trim().is_empty()).collect();
         assert_eq!(lines.len(), 1);
@@ -474,10 +502,11 @@ mod tests {
         ];
         // Write as legacy JSON array
         let json = serde_json::to_string(&entries).unwrap();
-        std::fs::write(dir.join(MISTAKES_LEGACY_FILE), json).expect("legacy json should be written");
+        std::fs::write(dir.join(MISTAKES_LEGACY_FILE), json)
+            .expect("legacy json should be written");
 
-        let loaded = load_mistakes(&dir, &MistakeFilter::default())
-            .expect("migration should succeed");
+        let loaded =
+            load_mistakes(&dir, &MistakeFilter::default()).expect("migration should succeed");
 
         assert_eq!(loaded.len(), 2);
         // filter_mistakes sorts by created_at descending — m2 (Jan 2) before m1 (Jan 1)
@@ -714,6 +743,10 @@ mod tests {
         });
 
         let mistakes = read_mistakes_or_empty(&dir).expect("read should succeed");
-        assert_eq!(mistakes.len(), 16, "every concurrent save must be persisted");
+        assert_eq!(
+            mistakes.len(),
+            16,
+            "every concurrent save must be persisted"
+        );
     }
 }

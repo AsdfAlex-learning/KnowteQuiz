@@ -22,7 +22,10 @@ fn extract_title(
             return stripped.trim().to_string();
         }
     }
-    if let Some(title) = metadata.get("title").filter(|title| !title.trim().is_empty()) {
+    if let Some(title) = metadata
+        .get("title")
+        .filter(|title| !title.trim().is_empty())
+    {
         return title.trim().to_string();
     }
     std::path::Path::new(path)
@@ -64,7 +67,10 @@ fn normalize_frontmatter_value(value: &str) -> String {
         let mut chars = value.chars();
         let first = chars.next();
         let last = chars.next_back();
-        if matches!((first, last), (Some('"'), Some('"')) | (Some('\''), Some('\''))) {
+        if matches!(
+            (first, last),
+            (Some('"'), Some('"')) | (Some('\''), Some('\''))
+        ) {
             return chars.as_str().to_string();
         }
     }

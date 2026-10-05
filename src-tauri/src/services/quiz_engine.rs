@@ -66,7 +66,8 @@ pub async fn generate_quiz_stream(
     params: &QuizStreamParams,
     tx: UnboundedSender<QuizStreamEvent>,
 ) -> Result<(), AppError> {
-    let resolved_note = crate::services::fs_service::resolve_note_path(data_dir, &params.path).await?;
+    let resolved_note =
+        crate::services::fs_service::resolve_note_path(data_dir, &params.path).await?;
     let note_content =
         crate::services::fs_service::read_file_content(&resolved_note.to_string_lossy()).await?;
     let truncated_content = note_content_for_prompt(&note_content);
@@ -137,20 +138,19 @@ pub async fn generate_quiz_stream(
     let mut accumulated = String::new();
 
     loop {
-        let next_chunk =
-            match tokio::time::timeout(LLM_STREAM_IDLE_TIMEOUT, stream.next()).await {
-                Ok(chunk_result) => chunk_result,
-                Err(_) => {
-                    let message = format!(
-                        "LLM stream idle for over {}s; generation aborted",
-                        LLM_STREAM_IDLE_TIMEOUT.as_secs()
-                    );
-                    let _ = tx.send(QuizStreamEvent::Error {
-                        message: message.clone(),
-                    });
-                    return Err(AppError::Llm(message));
-                }
-            };
+        let next_chunk = match tokio::time::timeout(LLM_STREAM_IDLE_TIMEOUT, stream.next()).await {
+            Ok(chunk_result) => chunk_result,
+            Err(_) => {
+                let message = format!(
+                    "LLM stream idle for over {}s; generation aborted",
+                    LLM_STREAM_IDLE_TIMEOUT.as_secs()
+                );
+                let _ = tx.send(QuizStreamEvent::Error {
+                    message: message.clone(),
+                });
+                return Err(AppError::Llm(message));
+            }
+        };
         let Some(chunk_result) = next_chunk else {
             break;
         };
@@ -249,14 +249,20 @@ pub async fn generate_quiz_stream(
                         }
                         Err(fixup_error) => {
                             let _ = tx.send(QuizStreamEvent::Error {
-                                message: format!("Failed to parse quiz response after retry: {} (original: {})", fixup_error, e),
+                                message: format!(
+                                    "Failed to parse quiz response after retry: {} (original: {})",
+                                    fixup_error, e
+                                ),
                             });
                         }
                     }
                 }
                 Err(fixup_err) => {
                     let _ = tx.send(QuizStreamEvent::Error {
-                        message: format!("Failed to parse quiz response: {} (fixup also failed: {})", e, fixup_err),
+                        message: format!(
+                            "Failed to parse quiz response: {} (fixup also failed: {})",
+                            e, fixup_err
+                        ),
                     });
                 }
             }
@@ -288,7 +294,9 @@ fn parse_quiz_response(raw: &str) -> Result<Vec<QuizQuestion>, AppError> {
 
     let questions = parsed["questions"]
         .as_array()
-        .ok_or(AppError::InvalidInput("Missing 'questions' array in response".to_string()))?;
+        .ok_or(AppError::InvalidInput(
+            "Missing 'questions' array in response".to_string(),
+        ))?;
     if questions.is_empty() {
         return Err(AppError::InvalidInput(
             "Missing non-empty 'questions' array in response".to_string(),
@@ -745,7 +753,11 @@ fn wants_json_mode(llm: &LlmConfig) -> bool {
     }
 }
 
-async fn call_llm(settings: &LlmConfig, prompt: &str, temperature: f64) -> Result<String, AppError> {
+async fn call_llm(
+    settings: &LlmConfig,
+    prompt: &str,
+    temperature: f64,
+) -> Result<String, AppError> {
     let client = http_client();
 
     let mut request_body = serde_json::json!({
@@ -841,9 +853,9 @@ fn parse_follow_up(raw: &str) -> Result<FollowUpResponse, AppError> {
     let json_str = extract_json_block(raw);
     let parsed: Value = serde_json::from_str(&json_str)
         .map_err(|e| AppError::Internal(format!("Failed to parse follow-up: {}", e)))?;
-    let should_continue = parsed["should_continue"]
-        .as_bool()
-        .ok_or_else(|| AppError::InvalidInput("Diagnosis response missing should_continue".to_string()))?;
+    let should_continue = parsed["should_continue"].as_bool().ok_or_else(|| {
+        AppError::InvalidInput("Diagnosis response missing should_continue".to_string())
+    })?;
     let follow_up_question = string_field(&parsed, "follow_up_question").unwrap_or_default();
 
     if should_continue && follow_up_question.is_empty() {
@@ -878,9 +890,12 @@ fn parse_blind_spot(value: &Value, label: &str) -> Result<BlindSpot, AppError> {
     let tag = string_field(value, "tag")
         .or_else(|| string_field(value, "type"))
         .or_else(|| string_field(value, "concept"))
-        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {} tag", label)))?;
-    let description = string_field(value, "description")
-        .ok_or_else(|| AppError::InvalidInput(format!("Diagnosis response missing {} description", label)))?;
+        .ok_or_else(|| {
+            AppError::InvalidInput(format!("Diagnosis response missing {} tag", label))
+        })?;
+    let description = string_field(value, "description").ok_or_else(|| {
+        AppError::InvalidInput(format!("Diagnosis response missing {} description", label))
+    })?;
 
     Ok(BlindSpot {
         tag,
@@ -972,7 +987,12 @@ fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
 
     let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
     // uuid suffix: concurrent calls within the same second must not overwrite.
-    let filename = format!("{}_{}_{}_raw.txt", timestamp, uuid::Uuid::new_v4().simple(), kind);
+    let filename = format!(
+        "{}_{}_{}_raw.txt",
+        timestamp,
+        uuid::Uuid::new_v4().simple(),
+        kind
+    );
 
     if std::fs::write(debug_dir.join(filename), raw).is_err() {
         return;
@@ -1420,8 +1440,8 @@ Good luck."#;
             ]
         }"#;
 
-        let questions =
-            parse_quiz_response(raw).expect("multiple choice answer text joined by and should parse");
+        let questions = parse_quiz_response(raw)
+            .expect("multiple choice answer text joined by and should parse");
 
         assert_eq!(questions.len(), 1);
         assert_eq!(questions[0].answer, "Alpha and Gamma");

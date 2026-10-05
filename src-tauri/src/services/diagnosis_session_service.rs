@@ -92,8 +92,12 @@ pub fn delete_session(data_dir: &Path, session_id: &str) -> Result<(), AppError>
 
 fn remove_file_if_exists(path: &Path, session_id: &str) -> Result<(), AppError> {
     if path.exists() {
-        std::fs::remove_file(path)
-            .map_err(|err| AppError::Internal(format!("Failed to delete diagnosis session {}: {}", session_id, err)))?;
+        std::fs::remove_file(path).map_err(|err| {
+            AppError::Internal(format!(
+                "Failed to delete diagnosis session {}: {}",
+                session_id, err
+            ))
+        })?;
     }
     Ok(())
 }
@@ -104,7 +108,10 @@ pub struct SessionCleanupResult {
     pub remaining_count: u32,
 }
 
-pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<SessionCleanupResult, AppError> {
+pub fn cleanup_expired_sessions(
+    data_dir: &Path,
+    max_age_days: u32,
+) -> Result<SessionCleanupResult, AppError> {
     let sessions_dir = sessions_dir(data_dir)?;
     let now = std::time::SystemTime::now();
     let cutoff = std::time::Duration::from_secs(max_age_days as u64 * 86400);
@@ -123,10 +130,16 @@ pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<Se
             continue;
         }
 
-        let Ok(metadata) = entry.metadata() else { continue };
-        let Ok(modified) = metadata.modified() else { continue };
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        let Ok(modified) = metadata.modified() else {
+            continue;
+        };
 
-        let Ok(elapsed) = now.duration_since(modified) else { continue };
+        let Ok(elapsed) = now.duration_since(modified) else {
+            continue;
+        };
 
         if elapsed > cutoff {
             let id = path
@@ -151,14 +164,17 @@ pub fn cleanup_expired_sessions(data_dir: &Path, max_age_days: u32) -> Result<Se
 
 fn sessions_dir(data_dir: &Path) -> Result<PathBuf, AppError> {
     let dir = data_dir.join(SESSIONS_DIR);
-    std::fs::create_dir_all(&dir)
-        .map_err(|err| AppError::Internal(format!("Failed to create diagnosis sessions dir: {}", err)))?;
+    std::fs::create_dir_all(&dir).map_err(|err| {
+        AppError::Internal(format!("Failed to create diagnosis sessions dir: {}", err))
+    })?;
     Ok(dir)
 }
 
 fn session_filename(session_id: &str) -> Result<String, AppError> {
     if session_id.trim().is_empty() || session_id.contains('/') || session_id.contains('\\') {
-        return Err(AppError::InvalidInput("Invalid diagnosis session id".to_string()));
+        return Err(AppError::InvalidInput(
+            "Invalid diagnosis session id".to_string(),
+        ));
     }
     Ok(format!("{}.json", session_id))
 }
@@ -228,9 +244,11 @@ mod tests {
 
         // Immediately after saving, cleanup with max_age_days=0 should NOT remove it
         // because max_age_days=0 means instant cutoff, i.e. anything is older
-        let result =
-            cleanup_expired_sessions(&dir, 0).expect("cleanup should succeed");
-        assert!(result.deleted_count > 0, "session just created should be deleted with max_age=0");
+        let result = cleanup_expired_sessions(&dir, 0).expect("cleanup should succeed");
+        assert!(
+            result.deleted_count > 0,
+            "session just created should be deleted with max_age=0"
+        );
         assert_eq!(result.remaining_count, 0);
 
         let error = load_session(&dir, "old-session").expect_err("deleted session should not load");

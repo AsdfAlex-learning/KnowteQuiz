@@ -113,8 +113,9 @@ pub fn read_json_path<T: DeserializeOwned>(data_dir: &Path, filename: &str) -> R
     let content = fs::read_to_string(&path)?;
     match serde_json::from_str(&content) {
         Ok(data) => Ok(data),
-        Err(parse_error) => read_json_backup_path(data_dir, filename)
-            .ok_or_else(|| AppError::Internal(format!("Failed to parse {}: {}", filename, parse_error))),
+        Err(parse_error) => read_json_backup_path(data_dir, filename).ok_or_else(|| {
+            AppError::Internal(format!("Failed to parse {}: {}", filename, parse_error))
+        }),
     }
 }
 
@@ -349,7 +350,8 @@ mod tests {
         let target = temp_data_dir("migrate_legacy_web_data_target");
         fs::write(legacy.join("settings.json"), r#"{"legacy":true}"#)
             .expect("legacy settings should be written");
-        fs::write(legacy.join("mistakes.jsonl"), "{}\n").expect("legacy mistakes should be written");
+        fs::write(legacy.join("mistakes.jsonl"), "{}\n")
+            .expect("legacy mistakes should be written");
         fs::create_dir_all(legacy.join("sessions")).expect("legacy sessions dir");
         fs::write(legacy.join("sessions").join("s1.json"), "{}")
             .expect("legacy session should be written");
@@ -434,8 +436,7 @@ mod tests {
             r#"[{"id":"m1"}]"#
         );
         assert_eq!(
-            fs::read_to_string(backup_dir.join("index.json"))
-                .expect("index backup should exist"),
+            fs::read_to_string(backup_dir.join("index.json")).expect("index backup should exist"),
             r#"{"notes":[]}"#
         );
         assert!(!backup_dir.join("scratch.tmp").exists());

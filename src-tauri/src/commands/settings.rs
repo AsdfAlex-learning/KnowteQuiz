@@ -94,7 +94,11 @@ pub async fn load_mistakes(
 }
 
 #[tauri::command]
-pub async fn mark_mistake_reviewed(app: AppHandle, mistake_id: String, quality: u32) -> Result<bool, AppError> {
+pub async fn mark_mistake_reviewed(
+    app: AppHandle,
+    mistake_id: String,
+    quality: u32,
+) -> Result<bool, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     mistake_service::mark_mistake_reviewed(&data_dir, &mistake_id, quality)?;
     Ok(true)
@@ -152,9 +156,11 @@ pub async fn save_media_file(
         }
     };
 
-    tokio::task::spawn_blocking(move || media_service::save_media_file(&data_dir, &kind, &file_name, &bytes))
-        .await
-        .map_err(|e| AppError::Internal(format!("Media save task failed: {e}")))?
+    tokio::task::spawn_blocking(move || {
+        media_service::save_media_file(&data_dir, &kind, &file_name, &bytes)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Media save task failed: {e}")))?
 }
 
 fn header_value(headers: &tauri::http::HeaderMap, name: &str) -> String {

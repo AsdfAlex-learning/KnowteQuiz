@@ -101,9 +101,9 @@ async fn collect_index_entries(
         }
 
         let path = Path::new(&node.path);
-        let metadata = fs::metadata(path)
-            .await
-            .map_err(|e| AppError::Internal(format!("Failed to inspect note {}: {}", node.path, e)))?;
+        let metadata = fs::metadata(path).await.map_err(|e| {
+            AppError::Internal(format!("Failed to inspect note {}: {}", node.path, e))
+        })?;
         let modified_at = metadata
             .modified()
             .ok()
@@ -152,9 +152,9 @@ async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, A
     let mut dirs: Vec<NoteTreeNode> = Vec::new();
     let mut files: Vec<NoteTreeNode> = Vec::new();
 
-    let mut read_dir = fs::read_dir(dir)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to read directory {}: {}", dir.display(), e)))?;
+    let mut read_dir = fs::read_dir(dir).await.map_err(|e| {
+        AppError::Internal(format!("Failed to read directory {}: {}", dir.display(), e))
+    })?;
 
     while let Some(entry) = read_dir
         .next_entry()
@@ -257,14 +257,17 @@ mod tests {
     async fn scan_directory_ignores_dependency_and_build_directories() {
         let root = temp_notes_dir("scan_directory_ignores_dependency_and_build_directories");
         std_fs::write(root.join("real.md"), "# Real").expect("real note should be written");
-        std_fs::create_dir_all(root.join("node_modules/pkg")).expect("node_modules should be created");
+        std_fs::create_dir_all(root.join("node_modules/pkg"))
+            .expect("node_modules should be created");
         std_fs::write(root.join("node_modules/pkg/ignored.md"), "# Ignored")
             .expect("ignored note should be written");
         std_fs::create_dir_all(root.join("target/debug")).expect("target should be created");
         std_fs::write(root.join("target/debug/ignored.md"), "# Ignored")
             .expect("ignored note should be written");
 
-        let tree = scan_directory(root.to_string_lossy().as_ref()).await.expect("scan should succeed");
+        let tree = scan_directory(root.to_string_lossy().as_ref())
+            .await
+            .expect("scan should succeed");
 
         assert_eq!(tree.len(), 1);
         assert_eq!(tree[0].name, "real.md");
@@ -272,15 +275,20 @@ mod tests {
 
     #[tokio::test]
     async fn scan_directory_accepts_markdown_extensions_case_insensitively() {
-        let root =
-            temp_notes_dir("scan_directory_accepts_markdown_extensions_case_insensitively");
-        std_fs::write(root.join("README.MD"), "# Readme").expect("uppercase note should be written");
+        let root = temp_notes_dir("scan_directory_accepts_markdown_extensions_case_insensitively");
+        std_fs::write(root.join("README.MD"), "# Readme")
+            .expect("uppercase note should be written");
         std_fs::write(root.join("longform.Markdown"), "# Longform")
             .expect("markdown note should be written");
         std_fs::write(root.join("draft.mdx"), "# Draft").expect("mdx file should be written");
 
-        let tree = scan_directory(root.to_string_lossy().as_ref()).await.expect("scan should succeed");
-        let names = tree.iter().map(|node| node.name.as_str()).collect::<Vec<_>>();
+        let tree = scan_directory(root.to_string_lossy().as_ref())
+            .await
+            .expect("scan should succeed");
+        let names = tree
+            .iter()
+            .map(|node| node.name.as_str())
+            .collect::<Vec<_>>();
 
         assert_eq!(names, vec!["README.MD", "longform.Markdown"]);
     }
@@ -305,7 +313,10 @@ mod tests {
 
         assert_eq!(index.root_path, root.to_string_lossy());
         assert_eq!(index.notes.len(), 1);
-        assert_eq!(index.notes[0].path, root.join("ownership.md").to_string_lossy());
+        assert_eq!(
+            index.notes[0].path,
+            root.join("ownership.md").to_string_lossy()
+        );
         assert_eq!(index.notes[0].title, "Cached Ownership");
         assert_eq!(index.notes[0].size_bytes, note_text.len() as u64);
         assert!(index.notes[0].modified_at.is_some());
@@ -313,8 +324,9 @@ mod tests {
 
     #[tokio::test]
     async fn scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed() {
-        let root =
-            temp_notes_dir("scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed");
+        let root = temp_notes_dir(
+            "scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed",
+        );
         let data_dir = temp_notes_dir(
             "scan_directory_with_index_keeps_tree_when_note_content_cannot_be_indexed_data",
         );

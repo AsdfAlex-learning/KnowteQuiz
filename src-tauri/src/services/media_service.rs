@@ -85,14 +85,18 @@ pub fn media_path_by_name(data_dir: &Path, name: &str) -> Result<PathBuf, AppErr
     let invalid = || AppError::InvalidInput(format!("Invalid media name: {}", name));
     let (stem, ext) = name.rsplit_once('.').ok_or_else(invalid)?;
     let ext = ext.to_ascii_lowercase();
-    if uuid::Uuid::parse_str(stem).is_err() || !extension_allowed("image", &ext) && !extension_allowed("video", &ext)
+    if uuid::Uuid::parse_str(stem).is_err()
+        || !extension_allowed("image", &ext) && !extension_allowed("video", &ext)
     {
         return Err(invalid());
     }
 
     let path = media_dir(data_dir).join(name);
     if !path.is_file() {
-        return Err(AppError::NotFound(format!("Media file not found: {}", name)));
+        return Err(AppError::NotFound(format!(
+            "Media file not found: {}",
+            name
+        )));
     }
     Ok(path)
 }

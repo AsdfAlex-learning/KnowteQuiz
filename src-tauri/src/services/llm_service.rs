@@ -66,7 +66,9 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> Result<LlmCapabilities, AppE
         .await
         .map_err(|e| AppError::Llm(format!("Failed to probe models endpoint: {}", e)))?;
     if resp.status().is_success() {
-        let body = resp.text().await
+        let body = resp
+            .text()
+            .await
             .map_err(|e| AppError::Llm(format!("Failed to read models response: {}", e)))?;
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
             if let Some(models) = json["data"].as_array() {
@@ -226,7 +228,8 @@ mod tests {
 
     #[test]
     fn classify_connection_status_identifies_server_errors() {
-        let result = classify_connection_status(StatusCode::INTERNAL_SERVER_ERROR, "internal error");
+        let result =
+            classify_connection_status(StatusCode::INTERNAL_SERVER_ERROR, "internal error");
 
         assert!(!result.ok);
         assert_eq!(result.kind, "server");
