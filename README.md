@@ -16,6 +16,10 @@
 - **Three-pane workspace** — Explorer | Reader | Quiz & Diagnosis panel, with resizable columns and toggle shortcuts (`Ctrl+B` / `Ctrl+Shift+B`).
 - **Custom appearance** — Pick your own background color, accent color, and background image, with an adjustable glassmorphism effect (global or content-area scope).
 - **Dynamic backgrounds** — Use an MP4 as a looping background, with play / pause / stop controls. Stopping captures the current frame as a static wallpaper and releases the video from memory; resuming restarts from the saved position.
+- **SM-2 spaced repetition** — Mistake book uses the SM-2 algorithm (Again / Hard / Good / Easy ratings) to schedule reviews at optimal intervals. Due items are surfaced with a "Due" filter and badge.
+- **Daily streak tracking** — Consecutive study days are tracked and shown in the status bar.
+- **Retry wrong answers** — After a quiz, re-practice only the questions you got wrong.
+- **Markdown quiz content** — Quiz questions and diagnosis reports render full Markdown + KaTeX.
 - **Cross-platform** — Built with Tauri v2 for Windows, macOS, and Linux.
 - **Dual runtime** — Same app runs as a Tauri desktop window **or** as a standalone web server (Axum).
 
@@ -66,12 +70,15 @@ node start.cjs --build      # Or: npm run tauri:build
 | Build full Tauri app | `npm run tauri:build` |
 | Format code | `npm run format` |
 | Check formatting | `npm run format:check` |
+| Lint (ESLint) | `npm run lint` |
 | Frontend unit tests | `npm run test:unit` |
+| Frontend test coverage | `npm run test:coverage` |
 | Rust unit tests | `cd src-tauri && cargo test` |
 | Rust lint | `cd src-tauri && cargo clippy -- -D warnings` |
+| Rust format check | `cd src-tauri && cargo fmt --check` |
 | Smoke test (PowerShell) | `.\scripts\smoke-test.ps1` |
 
-Pre-commit hooks run Prettier automatically on staged files.
+Pre-commit hooks run Prettier + ESLint automatically on staged files. Commit messages are validated by commitlint (conventional commits).
 
 ---
 
@@ -168,22 +175,24 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **91 Rust unit tests** and **191 frontend tests** covering:
+The project includes **104 Rust unit tests** and **207 frontend tests** (32 files) covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation
 - Answer normalization and scoring
 - Note scanning, indexing, and frontmatter extraction
-- Mistake filtering, search, and review flow
+- Mistake filtering, search, and SM-2 spaced repetition
 - Concurrent mistake writes (no lost updates)
 - Web path validation (reads bound to the configured note root)
-- SSE stream parsing
-- Settings persistence
-- Theme color helpers and video-background controls
+- SSE stream parsing (multi-line and malformed events)
+- Settings persistence and write queue serialization
+- Theme color helpers, video-background controls, and glass blur clamping
+- SM-2 golden vectors (shared between Rust and TypeScript)
 
 ```bash
 cd src-tauri && cargo test     # Rust tests
 npm run test:unit              # Frontend tests
+npm run test:coverage          # Frontend coverage report
 ```
 
 ---
