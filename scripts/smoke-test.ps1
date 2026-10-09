@@ -97,7 +97,7 @@ try {
     $readBack = Invoke-RestMethod -Uri "$baseUrl/api/settings"
     if ($readBack.quiz.default_language -ne 'ja') { throw "Settings write/read-back failed: expected ja, got $($readBack.quiz.default_language)" }
     # Restore original
-    $origSettings.quiz.language = $origLang
+    $origSettings.quiz.default_language = $origLang
     $body = $origSettings | ConvertTo-Json -Depth 10
     Invoke-RestMethod -Uri "$baseUrl/api/settings" -Method Post -Body $body -ContentType "application/json" | Out-Null
     Write-Host "  OK - settings persisted and restored" -ForegroundColor Green
