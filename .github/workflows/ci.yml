@@ -208,7 +208,7 @@ jobs:
           sleep 5
 
           curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_after.json
-          SAVED_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['language'])" < /tmp/settings_after.json)
+          SAVED_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['default_language'])" < /tmp/settings_after.json)
           if [ "$SAVED_LANG" != "ja" ]; then echo "Settings did not persist: expected ja, got $SAVED_LANG"; exit 1; fi
           echo "Smoke: settings persisted across restart"
 
