@@ -38,7 +38,7 @@ pub enum QuizStreamEvent {
 }
 
 #[derive(Clone, serde::Serialize)]
-#[serde(rename_all = "camelCase", tag = "event", content = "data")]
+#[serde(rename_all = "snake_case", tag = "event", content = "data")]
 pub enum DiagnosisStreamEvent {
     Initial {
         role: String,
@@ -1601,5 +1601,41 @@ Good luck."#;
         };
 
         assert!(error.contains("blind_spots"));
+    }
+
+    #[test]
+    fn diagnosis_stream_event_wire_names_match_frontend() {
+        use crate::services::quiz_engine::DiagnosisStreamEvent;
+
+        let initial = DiagnosisStreamEvent::Initial {
+            role: "ai".to_string(),
+            content: String::new(),
+            blind_spots: vec![],
+            follow_up: None,
+        };
+        let json = serde_json::to_string(&initial).unwrap();
+        assert!(json.contains(r#""event":"initial""#), "got: {json}");
+
+        let follow_up = DiagnosisStreamEvent::FollowUp {
+            question: "q".to_string(),
+            blind_spots: vec![],
+        };
+        let json = serde_json::to_string(&follow_up).unwrap();
+        assert!(json.contains(r#""event":"follow_up""#), "got: {json}");
+
+        let report = DiagnosisStreamEvent::Report {
+            summary: String::new(),
+            blind_spots: vec![],
+            overall_level: String::new(),
+            next_steps: vec![],
+        };
+        let json = serde_json::to_string(&report).unwrap();
+        assert!(json.contains(r#""event":"report""#), "got: {json}");
+
+        let error = DiagnosisStreamEvent::Error {
+            message: String::new(),
+        };
+        let json = serde_json::to_string(&error).unwrap();
+        assert!(json.contains(r#""event":"error""#), "got: {json}");
     }
 }

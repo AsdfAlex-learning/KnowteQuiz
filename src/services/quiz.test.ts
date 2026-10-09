@@ -153,4 +153,46 @@ describe('quiz service', () => {
 
     await expect(generateDiagnosisReport('session-1')).rejects.toThrow('HTTP 404: Session session-1 not found');
   });
+
+  it('dispatches follow_up wire event to onFollowUp handler', async () => {
+    const onFollowUp = vi.fn();
+    const onInitial = vi.fn();
+    const onReport = vi.fn();
+    const onError = vi.fn();
+
+    vi.mocked(webStream).mockImplementation(async (_url, _body, onMessage) => {
+      // Simulate the Rust serde wire format (snake_case)
+      (onMessage as (msg: unknown) => void)({
+        event: 'follow_up',
+        data: { question: 'Why?', blind_spots: [] },
+      });
+    });
+
+    await submitAnswerAdvanced('Q', 'A', 'B', 'reason', '/notes/x.md', onInitial, onFollowUp, onReport, onError);
+
+    expect(onFollowUp).toHaveBeenCalledWith({ question: 'Why?', blind_spots: [] });
+  });
+
+  it('dispatches initial wire event to onInitial handler', async () => {
+    const onFollowUp = vi.fn();
+    const onInitial = vi.fn();
+    const onReport = vi.fn();
+    const onError = vi.fn();
+
+    vi.mocked(webStream).mockImplementation(async (_url, _body, onMessage) => {
+      (onMessage as (msg: unknown) => void)({
+        event: 'initial',
+        data: { role: 'ai', content: 'Here is a question', blind_spots: [], follow_up: 'follow up?' },
+      });
+    });
+
+    await submitAnswerAdvanced('Q', 'A', 'B', 'reason', '/notes/x.md', onInitial, onFollowUp, onReport, onError);
+
+    expect(onInitial).toHaveBeenCalledWith({
+      role: 'ai',
+      content: 'Here is a question',
+      blind_spots: [],
+      follow_up: 'follow up?',
+    });
+  });
 });
