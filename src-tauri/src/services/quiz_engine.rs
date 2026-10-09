@@ -135,7 +135,7 @@ pub async fn generate_quiz_stream(
     }
 
     let mut stream = response.bytes_stream();
-    let mut accumulated = String::new();
+    let mut accumulated_bytes: Vec<u8> = Vec::new();
 
     loop {
         let next_chunk = match tokio::time::timeout(LLM_STREAM_IDLE_TIMEOUT, stream.next()).await {
@@ -160,27 +160,29 @@ pub async fn generate_quiz_stream(
                     // Client disconnected mid-stream: stop pulling the LLM.
                     return Ok(());
                 }
-                if let Ok(text) = String::from_utf8(bytes.to_vec()) {
-                    for line in text.lines() {
-                        if let Some(data) = line.strip_prefix("data: ") {
-                            if data.trim() == "[DONE]" {
-                                continue;
-                            }
-                            if let Ok(json) = serde_json::from_str::<Value>(data) {
-                                if let Some(content) =
-                                    json["choices"][0]["delta"]["content"].as_str()
-                                {
-                                    accumulated.push_str(content);
-                                }
-                            }
-                        }
-                    }
-                }
+                accumulated_bytes.extend_from_slice(&bytes);
             }
             Err(e) => {
                 let _ = tx.send(QuizStreamEvent::Error {
                     message: format!("Stream error: {}", e),
                 });
+            }
+        }
+    }
+
+    // Decode accumulated bytes once at the end to handle UTF-8 multibyte chars
+    // split across TCP chunk boundaries.
+    let raw_text = String::from_utf8_lossy(&accumulated_bytes).into_owned();
+    let mut accumulated = String::new();
+    for line in raw_text.lines() {
+        if let Some(data) = line.strip_prefix("data: ") {
+            if data.trim() == "[DONE]" {
+                continue;
+            }
+            if let Ok(json) = serde_json::from_str::<Value>(data) {
+                if let Some(text) = json["choices"][0]["delta"]["content"].as_str() {
+                    accumulated.push_str(text);
+                }
             }
         }
     }
