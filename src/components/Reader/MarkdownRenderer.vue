@@ -137,7 +137,7 @@ const readerStore = useReaderStore();
 const { t } = useI18n();
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   highlight(str: string, lang: string): string {
