@@ -151,11 +151,24 @@ jobs:
           cd src-tauri
           # Hermetic data dir: the smoke test must not touch real user data.
           rm -rf /tmp/kq-smoke-data && mkdir -p /tmp/kq-smoke-data
-          ./target/debug/knowtequiz --mode=web --port=14201 --data-dir=/tmp/kq-smoke-data &
-          SERVER_PID=$!
-          sleep 2
+
+          # Startup time varies on CI runners; poll instead of guessing.
+          wait_for_server() {
+            for ((i=1; i<=60; i++)); do
+              if curl -sSf "http://127.0.0.1:14201/api/data/status" > /dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+            done
+            echo "Server did not become ready within 60s"
+            return 1
+          }
 
           set -e
+
+          ./target/debug/knowtequiz --mode=web --port=14201 --data-dir=/tmp/kq-smoke-data &
+          SERVER_PID=$!
+          wait_for_server
 
           # 1. Server ready check
           curl -sSf http://127.0.0.1:14201/api/data/status > /dev/null
@@ -164,15 +177,32 @@ jobs:
           curl -sSf http://127.0.0.1:14201/api/settings > /dev/null
 
           # 3. Scan fixture notes
-          FIXTURE_PATH="$(pwd)/../fixture-notes"
+          FIXTURE_PATH="$(cd "$(pwd)/../fixture-notes" && pwd)"
           curl -sSf "http://127.0.0.1:14201/api/notes/scan?root_path=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1],safe=""))' "$FIXTURE_PATH")" > /tmp/notes.json
           NOTE_COUNT=$(python3 -c 'import json,sys; print(sum(1 for n in json.load(sys.stdin) if not n.get("is_dir")))' < /tmp/notes.json)
           if [ "$NOTE_COUNT" -lt 1 ]; then echo "No markdown files found"; exit 1; fi
           echo "Smoke: scanned $NOTE_COUNT markdown files"
 
+          # 3.5 Register the scanned directory as the configured note root.
+          #     Reads are authorised against settings.workspace.root_path, and the
+          #     web UI performs the same persist after scanning (explorer store),
+          #     so an API-only client must do this before reading a note.
+          curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_root.json
+          ROOT_PATH="$FIXTURE_PATH" python3 -c "
+          import json, os
+          s = json.load(open('/tmp/settings_root.json'))
+          s['workspace']['root_path'] = os.environ['ROOT_PATH']
+          json.dump(s, open('/tmp/settings_root.json', 'w'))
+          "
+          curl -sSf -X POST http://127.0.0.1:14201/api/settings \
+            -H "Content-Type: application/json" \
+            -d @/tmp/settings_root.json > /dev/null
+          echo "Smoke: note root registered at $FIXTURE_PATH"
+
           # 4. Read a markdown note
           NOTE_PATH=$(python3 -c 'import json,sys,urllib.parse; notes=json.load(sys.stdin); leaf=[n for n in notes if not n.get("is_dir")][0]; print(urllib.parse.quote(leaf["path"],safe=""))' < /tmp/notes.json)
           curl -sSf "http://127.0.0.1:14201/api/notes/read?path=$NOTE_PATH" > /tmp/note.json
+          echo "Smoke: read note"
 
           # 5. Save a mistake, then verify it persists
           MISTAKE_ID="smoke-$(date +%s)"
@@ -205,7 +235,7 @@ jobs:
 
           cargo run -- --mode=web --port=14201 --data-dir=/tmp/kq-smoke-data &
           SERVER_PID=$!
-          sleep 5
+          wait_for_server
 
           curl -sSf http://127.0.0.1:14201/api/settings > /tmp/settings_after.json
           SAVED_LANG=$(python3 -c "import json,sys; print(json.load(sys.stdin)['quiz']['default_language'])" < /tmp/settings_after.json)
