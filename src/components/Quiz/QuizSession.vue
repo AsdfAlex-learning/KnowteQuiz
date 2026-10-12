@@ -13,7 +13,7 @@
     <!-- Generating state -->
     <div v-if="quizStore.isGenerating" class="flex-1 flex flex-col items-center justify-center gap-3 p-4">
       <div class="w-8 h-8 border-2 border-[var(--border-focus)] border-t-transparent rounded-full animate-spin" />
-      <p class="text-sm text-[var(--text-muted)]">{{ t('quiz.generating') }}</p>
+      <p class="text-sm text-[var(--text-muted)]">{{ generatingLabel }}</p>
       <p class="text-xs text-[var(--text-faint)]">
         {{ t('quiz.loaded_count', { count: quizStore.questions.length }) }}
       </p>
@@ -87,6 +87,7 @@
         :active="true"
         :completed="false"
         :submitting="diagnosisSubmitting"
+        :phase="quizStore.diagnosisPhase"
         @send-reply="handleDiagnosisReply"
         @end-diagnosis="handleEndDiagnosis"
       />
@@ -192,6 +193,16 @@ const submitted = ref(false);
 const diagnosisSubmitting = ref(false);
 
 const currentQuestion = computed(() => quizStore.currentQuestion);
+
+// Mirrors QuizGenerator's label, but QuizSession is what is rendered while the
+// quiz is generating (QuizGenerator is unmounted at that point).
+const generatingLabel = computed(() => {
+  const phase = quizStore.generatingPhase;
+  if (phase === 'requesting_model') return t('quiz.phase_requesting');
+  if (phase === 'parsing_response') return t('quiz.phase_parsing');
+  return t('quiz.generating');
+});
+
 const renderedExplanation = computed(() =>
   currentQuestion.value ? renderQuizMarkdown(currentQuestion.value.explanation) : ''
 );

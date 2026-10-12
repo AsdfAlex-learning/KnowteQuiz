@@ -169,7 +169,7 @@ describe('quiz store answer evaluation', () => {
 
   it('stores advanced diagnosis messages, session id, and generated report', async () => {
     vi.mocked(submitAnswerAdvanced).mockImplementation(
-      async (_question, _correctAnswer, _answer, _reasoning, _notePath, onInitial, _onFollowUp, onReport) => {
+      async (_question, _correctAnswer, _answer, _reasoning, _notePath, _onPhase, onInitial, _onFollowUp, onReport) => {
         onInitial({
           role: 'ai',
           content: 'Your reasoning skipped the definition.',
@@ -216,6 +216,7 @@ describe('quiz store answer evaluation', () => {
         _answer,
         _reasoning,
         _notePath,
+        _onPhase,
         _onInitial,
         _onFollowUp,
         _onReport,
@@ -261,7 +262,7 @@ describe('quiz store answer evaluation', () => {
   });
 
   it('stores user replies and follow-up questions during diagnosis', async () => {
-    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, onFollowUp) => {
+    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, _onPhase, onFollowUp) => {
       onFollowUp({
         question: 'How does the definition change your answer?',
         blind_spots: [],
@@ -279,6 +280,7 @@ describe('quiz store answer evaluation', () => {
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
+      expect.any(Function),
       { signal: expect.any(AbortSignal) }
     );
     expect(store.diagnosisMessages).toEqual([
@@ -293,7 +295,7 @@ describe('quiz store answer evaluation', () => {
   });
 
   it('clears stale diagnosis errors when a follow-up succeeds', async () => {
-    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, onFollowUp) => {
+    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, userReply, _onPhase, onFollowUp) => {
       onFollowUp({
         question: 'What changes now?',
         blind_spots: [],
@@ -316,9 +318,11 @@ describe('quiz store answer evaluation', () => {
   });
 
   it('records follow-up errors without appending failed replies', async () => {
-    vi.mocked(diagnoseFollowUp).mockImplementation(async (_sessionId, _userReply, _onFollowUp, _onReport, onError) => {
-      onError('Session session-1 not found');
-    });
+    vi.mocked(diagnoseFollowUp).mockImplementation(
+      async (_sessionId, _userReply, _onPhase, _onFollowUp, _onReport, onError) => {
+        onError('Session session-1 not found');
+      }
+    );
     const store = useQuizStore();
     store.sessionId = 'session-1';
     store.quizState = 'diagnosing';

@@ -38,6 +38,12 @@
       </div>
     </div>
 
+    <!-- AI is thinking -->
+    <div v-if="submitting" class="flex items-center gap-2 px-1">
+      <div class="w-3 h-3 border-2 border-[var(--border-focus)] border-t-transparent rounded-full animate-spin" />
+      <span class="text-xs text-[var(--text-muted)]">{{ phaseLabel }}</span>
+    </div>
+
     <!-- User reply input -->
     <div v-if="active && !completed" class="flex gap-2">
       <input
@@ -67,18 +73,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import type { DiagnosisRound } from '@/types/diagnosis';
 
 const { t } = useI18n();
 
-defineProps<{
+const props = defineProps<{
   messages: DiagnosisRound[];
   active: boolean;
   completed: boolean;
   submitting?: boolean;
+  /** Current diagnosis stage reported by the backend, e.g. `requesting_model`. */
+  phase?: string | null;
 }>();
+
+const phaseLabel = computed(() => {
+  if (props.phase === 'requesting_model') return t('quiz.phase_requesting');
+  if (props.phase === 'parsing_response') return t('quiz.phase_parsing');
+  return t('common.loading');
+});
 
 const emit = defineEmits<{
   sendReply: [text: string];

@@ -44,6 +44,11 @@ pub enum QuizStreamEvent {
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "snake_case", tag = "event", content = "data")]
 pub enum DiagnosisStreamEvent {
+    /// Progress marker emitted between LLM calls so the UI can show which stage
+    /// the diagnosis is in (the same values the quiz stream uses).
+    Phase {
+        phase: String,
+    },
     Initial {
         role: String,
         content: String,
@@ -670,6 +675,9 @@ pub async fn submit_diagnosis_initial(
         user_answer,
         user_reasoning,
     );
+    let _ = tx.send(DiagnosisStreamEvent::Phase {
+        phase: "requesting_model".to_string(),
+    });
     let response_text = call_llm(
         &settings.llm,
         &prompt,
@@ -678,6 +686,9 @@ pub async fn submit_diagnosis_initial(
         data_dir,
     )
     .await?;
+    let _ = tx.send(DiagnosisStreamEvent::Phase {
+        phase: "parsing_response".to_string(),
+    });
     let diagnosis = parse_diagnosis_initial(&response_text)?;
     let round = initial_diagnosis_round(&diagnosis);
 
@@ -737,6 +748,9 @@ pub async fn diagnose_follow_up(
         &template_set.diagnosis_followup_template,
         &vars,
     );
+    let _ = tx.send(DiagnosisStreamEvent::Phase {
+        phase: "requesting_model".to_string(),
+    });
     let response_text = call_llm(
         &settings.llm,
         &prompt,
@@ -745,6 +759,9 @@ pub async fn diagnose_follow_up(
         data_dir,
     )
     .await?;
+    let _ = tx.send(DiagnosisStreamEvent::Phase {
+        phase: "parsing_response".to_string(),
+    });
     let follow_up = parse_follow_up(&response_text)?;
 
     session.conversation.push(DiagnosisRound {
@@ -1784,6 +1801,12 @@ Good luck."#;
     #[test]
     fn diagnosis_stream_event_wire_names_match_frontend() {
         use crate::services::quiz_engine::DiagnosisStreamEvent;
+
+        let phase = DiagnosisStreamEvent::Phase {
+            phase: "requesting_model".to_string(),
+        };
+        let json = serde_json::to_string(&phase).unwrap();
+        assert!(json.contains(r#""event":"phase""#), "got: {json}");
 
         let initial = DiagnosisStreamEvent::Initial {
             role: "ai".to_string(),

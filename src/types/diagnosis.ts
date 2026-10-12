@@ -33,6 +33,7 @@ export interface DiagnosisSession {
 }
 
 export type DiagnosisEvent =
+  | { event: 'phase'; data: { phase: string } }
   | { event: 'initial'; data: DiagnosisRound }
   | { event: 'follow_up'; data: { question: string; blind_spots: BlindSpot[] } }
   | { event: 'report'; data: DiagnosisReport }

@@ -42,6 +42,7 @@ describe('quiz service', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
+      vi.fn(),
       vi.fn()
     );
 
@@ -70,6 +71,7 @@ describe('quiz service', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
+      vi.fn(),
       vi.fn()
     );
 
@@ -86,7 +88,7 @@ describe('quiz service', () => {
   it('sends follow-up reply to the web diagnosis endpoint', async () => {
     vi.mocked(webStream).mockResolvedValue(undefined);
 
-    await diagnoseFollowUp('session-123', 'I think the answer is B', vi.fn(), vi.fn(), vi.fn());
+    await diagnoseFollowUp('session-123', 'I think the answer is B', undefined, vi.fn(), vi.fn(), vi.fn());
 
     expect(webStream).toHaveBeenCalledWith(
       '/api/quiz/diagnose/session-123/follow_up',
@@ -134,6 +136,7 @@ describe('quiz service', () => {
       vi.fn(),
       vi.fn(),
       vi.fn(),
+      vi.fn(),
       vi.fn()
     );
 
@@ -168,7 +171,18 @@ describe('quiz service', () => {
       });
     });
 
-    await submitAnswerAdvanced('Q', 'A', 'B', 'reason', '/notes/x.md', onInitial, onFollowUp, onReport, onError);
+    await submitAnswerAdvanced(
+      'Q',
+      'A',
+      'B',
+      'reason',
+      '/notes/x.md',
+      undefined,
+      onInitial,
+      onFollowUp,
+      onReport,
+      onError
+    );
 
     expect(onFollowUp).toHaveBeenCalledWith({ question: 'Why?', blind_spots: [] });
   });
@@ -186,7 +200,18 @@ describe('quiz service', () => {
       });
     });
 
-    await submitAnswerAdvanced('Q', 'A', 'B', 'reason', '/notes/x.md', onInitial, onFollowUp, onReport, onError);
+    await submitAnswerAdvanced(
+      'Q',
+      'A',
+      'B',
+      'reason',
+      '/notes/x.md',
+      undefined,
+      onInitial,
+      onFollowUp,
+      onReport,
+      onError
+    );
 
     expect(onInitial).toHaveBeenCalledWith({
       role: 'ai',

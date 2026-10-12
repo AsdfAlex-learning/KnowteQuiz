@@ -30,6 +30,7 @@ function dispatchQuizEvent(msg: QuizEvent, h: QuizEventHandlers): void {
 }
 
 interface DiagnosisEventHandlers {
+  onPhase?: (phase: string) => void;
   onInitial: (data: DiagnosisRound) => void;
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void;
   onReport: (data: DiagnosisReport) => void;
@@ -37,7 +38,8 @@ interface DiagnosisEventHandlers {
 }
 
 function dispatchDiagnosisEvent(msg: DiagnosisEvent, h: DiagnosisEventHandlers): void {
-  if (msg.event === 'initial') h.onInitial(msg.data);
+  if (msg.event === 'phase') h.onPhase?.(msg.data.phase);
+  else if (msg.event === 'initial') h.onInitial(msg.data);
   else if (msg.event === 'follow_up') h.onFollowUp(msg.data);
   else if (msg.event === 'report') h.onReport(msg.data);
   else if (msg.event === 'error') h.onError(msg.data.message);
@@ -68,13 +70,14 @@ export async function submitAnswerAdvanced(
   user_answer: string,
   user_reasoning: string,
   note_path: string,
+  onPhase: ((phase: string) => void) | undefined,
   onInitial: (data: DiagnosisRound) => void,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
   onError: (msg: string) => void,
   options: StreamOptions = {}
 ): Promise<string> {
-  const handlers: DiagnosisEventHandlers = { onInitial, onFollowUp, onReport, onError };
+  const handlers: DiagnosisEventHandlers = { onPhase, onInitial, onFollowUp, onReport, onError };
   if (isTauri()) {
     const { Channel } = await import('@tauri-apps/api/core');
     const channel = new Channel<DiagnosisEvent>();
@@ -108,12 +111,13 @@ export async function submitAnswerAdvanced(
 export async function diagnoseFollowUp(
   sessionId: string,
   userReply: string,
+  onPhase: ((phase: string) => void) | undefined,
   onFollowUp: (data: { question: string; blind_spots: BlindSpot[] }) => void,
   onReport: (data: DiagnosisReport) => void,
   onError: (msg: string) => void,
   options: StreamOptions = {}
 ): Promise<void> {
-  const handlers: DiagnosisEventHandlers = { onInitial: () => {}, onFollowUp, onReport, onError };
+  const handlers: DiagnosisEventHandlers = { onPhase, onInitial: () => {}, onFollowUp, onReport, onError };
   if (isTauri()) {
     const { Channel } = await import('@tauri-apps/api/core');
     const channel = new Channel<DiagnosisEvent>();

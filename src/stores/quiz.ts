@@ -24,6 +24,7 @@ export const useQuizStore = defineStore('quiz', () => {
   const diagnosisContexts = ref<Map<string, DiagnosisContext>>(new Map());
   const error = ref<string | null>(null);
   const generatingPhase = ref<string | null>(null);
+  const diagnosisPhase = ref<string | null>(null);
 
   // Guards every stream callback against stale events and aborts the web
   // transport when a newer flow (or reset) supersedes the running one.
@@ -80,6 +81,7 @@ export const useQuizStore = defineStore('quiz', () => {
     diagnosisContexts.value = new Map();
     error.value = null;
     generatingPhase.value = null;
+    diagnosisPhase.value = null;
   }
 
   function retryWrongAnswers() {
@@ -153,6 +155,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionId.value = null;
     diagnosisMessages.value = [];
     diagnosisReport.value = null;
+    diagnosisPhase.value = null;
     if (quizState.value === 'diagnosing' || quizState.value === 'report') {
       quizState.value = 'answering';
     }
@@ -163,6 +166,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionId.value = null;
     diagnosisMessages.value = [];
     diagnosisReport.value = null;
+    diagnosisPhase.value = null;
     quizState.value = 'answering';
   }
 
@@ -232,6 +236,10 @@ export const useQuizStore = defineStore('quiz', () => {
         userAnswer,
         userReasoning,
         notePath,
+        (phase) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          diagnosisPhase.value = phase;
+        },
         (data) => {
           if (!streamRequests.isLatest(requestId)) return;
           addDiagnosisMessage(data);
@@ -272,6 +280,10 @@ export const useQuizStore = defineStore('quiz', () => {
       await diagnoseFollowUp(
         sessionId.value,
         userReply,
+        (phase) => {
+          if (!streamRequests.isLatest(requestId)) return;
+          diagnosisPhase.value = phase;
+        },
         (data) => {
           if (!streamRequests.isLatest(requestId)) return;
           addDiagnosisMessage({ role: 'user', content: userReply, blind_spots: [] });
@@ -319,6 +331,7 @@ export const useQuizStore = defineStore('quiz', () => {
     sessionId,
     diagnosisMessages,
     diagnosisReport,
+    diagnosisPhase,
     advancedReasoning,
     diagnosisContexts,
     error,

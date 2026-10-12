@@ -1118,6 +1118,7 @@ mod tests {
 
     fn event_name(event: &quiz_engine::DiagnosisStreamEvent) -> &'static str {
         match event {
+            quiz_engine::DiagnosisStreamEvent::Phase { .. } => "phase",
             quiz_engine::DiagnosisStreamEvent::Initial { .. } => "initial",
             quiz_engine::DiagnosisStreamEvent::FollowUp { .. } => "follow_up",
             quiz_engine::DiagnosisStreamEvent::Report { .. } => "report",
