@@ -22,7 +22,29 @@
   "panel": {
     "quiz": "クイズ",
     "mistakes": "間違い帳",
-    "settings": "設定"
+    "settings": "設定",
+    "llm_runs": "LLM"
+  },
+  "llm_runs": {
+    "title": "LLM 実行記録",
+    "items_count": "{count} 件",
+    "refresh": "更新",
+    "empty": "LLM 実行記録はまだありません",
+    "empty_hint": "クイズ生成や診断を実行すると、ここに記録されます。",
+    "request_params": "リクエスト",
+    "prompt": "プロンプト",
+    "response": "生レスポンス",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "not_recorded": "未記録",
+    "usage_unavailable": "このエンドポイントはトークン使用量を返しません",
+    "kind_quiz": "クイズ",
+    "kind_quiz_fixup": "クイズ修正",
+    "kind_diagnosis_initial": "診断",
+    "kind_diagnosis_followup": "追加質問",
+    "kind_diagnosis_report": "レポート",
+    "kind_connection_test": "接続テスト",
+    "kind_probe": "機能検出"
   },
   "quiz": {
     "start": "クイズ開始",

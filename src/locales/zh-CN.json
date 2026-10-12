@@ -22,7 +22,29 @@
   "panel": {
     "quiz": "出题",
     "mistakes": "错题本",
-    "settings": "设置"
+    "settings": "设置",
+    "llm_runs": "LLM"
+  },
+  "llm_runs": {
+    "title": "LLM 运行记录",
+    "items_count": "{count} 条记录",
+    "refresh": "刷新",
+    "empty": "暂无 LLM 运行记录",
+    "empty_hint": "生成题目或运行诊断后，记录会出现在这里。",
+    "request_params": "请求参数",
+    "prompt": "Prompt",
+    "response": "原始返回",
+    "copy": "复制",
+    "copied": "已复制",
+    "not_recorded": "未记录",
+    "usage_unavailable": "该端点未返回 token 用量",
+    "kind_quiz": "出题",
+    "kind_quiz_fixup": "出题修复",
+    "kind_diagnosis_initial": "诊断",
+    "kind_diagnosis_followup": "追问",
+    "kind_diagnosis_report": "报告",
+    "kind_connection_test": "连接测试",
+    "kind_probe": "能力探测"
   },
   "quiz": {
     "start": "开始出题",

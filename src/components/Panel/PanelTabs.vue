@@ -38,17 +38,19 @@
 import { computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 
+export type PanelTab = 'quiz' | 'mistakes' | 'llm';
+
 interface TabDef {
-  key: 'quiz' | 'mistakes';
+  key: PanelTab;
   label: string;
 }
 
 defineProps<{
-  modelValue: 'quiz' | 'mistakes';
+  modelValue: PanelTab;
 }>();
 
 defineEmits<{
-  'update:modelValue': [value: 'quiz' | 'mistakes'];
+  'update:modelValue': [value: PanelTab];
   openSettings: [];
 }>();
 
@@ -57,5 +59,6 @@ const { t } = useI18n();
 const tabs = computed<TabDef[]>(() => [
   { key: 'quiz', label: t('panel.quiz') },
   { key: 'mistakes', label: t('panel.mistakes') },
+  { key: 'llm', label: t('panel.llm_runs') },
 ]);
 </script>

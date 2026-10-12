@@ -22,7 +22,29 @@
   "panel": {
     "quiz": "Quiz",
     "mistakes": "Mistakes",
-    "settings": "Settings"
+    "settings": "Settings",
+    "llm_runs": "LLM"
+  },
+  "llm_runs": {
+    "title": "LLM Runs",
+    "items_count": "{count} runs",
+    "refresh": "Refresh",
+    "empty": "No LLM runs recorded yet",
+    "empty_hint": "Runs appear here after you generate a quiz or run a diagnosis.",
+    "request_params": "Request",
+    "prompt": "Prompt",
+    "response": "Raw response",
+    "copy": "Copy",
+    "copied": "Copied",
+    "not_recorded": "Not recorded",
+    "usage_unavailable": "Token usage not reported by this endpoint",
+    "kind_quiz": "Quiz",
+    "kind_quiz_fixup": "Quiz fixup",
+    "kind_diagnosis_initial": "Diagnosis",
+    "kind_diagnosis_followup": "Follow-up",
+    "kind_diagnosis_report": "Report",
+    "kind_connection_test": "Connection test",
+    "kind_probe": "Capability probe"
   },
   "quiz": {
     "start": "Start Quiz",

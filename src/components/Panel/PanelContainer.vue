@@ -7,6 +7,7 @@
         <QuizSession v-else :mode="quizStore.mode" />
       </div>
       <ErrorBook v-else-if="activeTab === 'mistakes'" />
+      <LlmRunsPanel v-else-if="activeTab === 'llm'" />
     </div>
     <SettingsModal v-model="showSettings" />
   </div>
@@ -15,13 +16,15 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import PanelTabs from './PanelTabs.vue';
+import type { PanelTab } from './PanelTabs.vue';
 import QuizGenerator from '@/components/Quiz/QuizGenerator.vue';
 import QuizSession from '@/components/Quiz/QuizSession.vue';
 import ErrorBook from './ErrorBook.vue';
+import LlmRunsPanel from './LlmRunsPanel.vue';
 import SettingsModal from './SettingsModal.vue';
 import { useQuizStore } from '@/stores/quiz';
 
-const activeTab = ref<'quiz' | 'mistakes'>('quiz');
+const activeTab = ref<PanelTab>('quiz');
 const showSettings = ref(false);
 const quizStore = useQuizStore();
 </script>
