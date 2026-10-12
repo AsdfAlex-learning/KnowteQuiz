@@ -14,6 +14,12 @@
   - **高级模式**：写出推理过程 → AI 多轮追问诊断 → 生成「知识盲区报告」。
 - **纯本地运行** — 所有数据（笔记、错题、配置）均存储在本地。支持任意 OpenAI 兼容端点（默认 Ollama）。
 - **三栏工作流** — 目录树 | 阅读区 | 出题/诊断/错题本面板，支持拖拽调整宽度与快捷键开关（`Ctrl+B` / `Ctrl+Shift+B`）。
+- **自定义外观** — 自选背景色、主题色、背景图片，毛玻璃效果可调透明度（全局或仅内容区）。
+- **动态背景** — 支持 MP4 循环视频背景，带播放/暂停/停止控制。停止时截取当前帧作为静态壁纸并释放视频内存；恢复时从暂停位置继续。
+- **SM-2 间隔重复** — 错题本使用 SM-2 算法（Again / Hard / Good / Easy 评分）按最优间隔调度复习，待复习条目以「Due」筛选和标签呈现。
+- **每日打卡** — 连续学习天数追踪，状态栏显示 🔥N 天。
+- **重做错题** — 测验结束后，仅重新练习答错的题目。
+- **Markdown 测验内容** — 题目与诊断报告支持完整 Markdown + KaTeX 渲染。
 - **跨平台** — 基于 Tauri v2，支持 Windows、macOS 与 Linux。
 - **双运行时** — 同一应用既可作为 Tauri 桌面窗口运行，也可作为独立 Web 服务器运行（Axum）。
 
@@ -64,12 +70,15 @@ node start.cjs --build      # 或：npm run tauri:build
 | 构建完整 Tauri 应用 | `npm run tauri:build` |
 | 格式化代码 | `npm run format` |
 | 检查格式 | `npm run format:check` |
+| 代码检查（ESLint） | `npm run lint` |
 | 前端单元测试 | `npm run test:unit` |
+| 前端测试覆盖率 | `npm run test:coverage` |
 | Rust 单元测试 | `cd src-tauri && cargo test` |
 | Rust 代码检查 | `cd src-tauri && cargo clippy -- -D warnings` |
+| Rust 格式检查 | `cd src-tauri && cargo fmt --check` |
 | 冒烟测试（PowerShell） | `.\scripts\smoke-test.ps1` |
 
-提交代码时 Prettier 会自动格式化暂存文件。
+提交代码时 Prettier + ESLint 会自动格式化并检查暂存文件。提交信息由 commitlint 校验（conventional commits 格式）。
 
 ---
 
@@ -108,9 +117,9 @@ node start.cjs --build      # 或：npm run tauri:build
 
 | 平台 | 路径 |
 |------|------|
-| Windows | `%APPDATA%\knowtequiz\` |
-| macOS | `~/Library/Application Support/knowtequiz/` |
-| Linux | `~/.local/share/knowtequiz/` |
+| Windows | `%APPDATA%\com.knowtequiz.app\knowtequiz\` |
+| macOS | `~/Library/Application Support/com.knowtequiz.app/knowtequiz/` |
+| Linux | `~/.local/share/com.knowtequiz.app/knowtequiz/` |
 
 ### 托管文件
 
@@ -120,6 +129,7 @@ node start.cjs --build      # 或：npm run tauri:build
 | `mistakes.jsonl` | 错题本（每行一条 JSON 对象） |
 | `index.json` | 笔记元数据索引（自动生成，增量更新） |
 | `sessions/` | 进行中的诊断会话（7 天后自动清理） |
+| `media/` | 主题背景图片和视频 |
 | `debug/` | LLM 原始响应日志（用于调试） |
 | `backups/` | 手动创建的备份 |
 
@@ -166,19 +176,24 @@ KnowteQuiz 支持任意 **OpenAI 兼容** API 端点。
 
 ## 测试
 
-项目包含 **91 个 Rust 单元测试**和 **191 个前端测试**，覆盖：
+项目包含 **105 个 Rust 单元测试**和 **209 个前端测试**（32 个测试文件），覆盖：
 
 - 原子 JSON 写入与备份恢复
 - Quiz JSON 解析与校验
 - 答案归一化与评分
 - 笔记扫描、索引与 frontmatter 提取
-- 错题过滤、搜索与复习流程
-- SSE 流解析
-- 设置持久化
+- 错题过滤、搜索与 SM-2 间隔重复
+- 并发错题写入（不丢数据）
+- Web 端路径校验（读取绑定到已配置的笔记根目录）
+- SSE 流解析（多行与畸形事件）
+- 设置持久化与写入队列序列化
+- 主题颜色工具、视频背景控件与毛玻璃模糊夹取
+- SM-2 黄金测试向量（Rust 与 TypeScript 共享）
 
 ```bash
 cd src-tauri && cargo test     # Rust 测试
 npm run test:unit              # 前端测试
+npm run test:coverage          # 前端覆盖率报告
 ```
 
 ---

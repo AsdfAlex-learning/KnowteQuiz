@@ -117,9 +117,9 @@ See [AGENTS.md](AGENTS.md) for in-depth developer context.
 
 | Platform | Path |
 |----------|------|
-| Windows | `%APPDATA%\knowtequiz\` |
-| macOS | `~/Library/Application Support/knowtequiz/` |
-| Linux | `~/.local/share/knowtequiz/` |
+| Windows | `%APPDATA%\com.knowtequiz.app\knowtequiz\` |
+| macOS | `~/Library/Application Support/com.knowtequiz.app/knowtequiz/` |
+| Linux | `~/.local/share/com.knowtequiz.app/knowtequiz/` |
 
 ### Managed files
 
@@ -129,6 +129,7 @@ See [AGENTS.md](AGENTS.md) for in-depth developer context.
 | `mistakes.jsonl` | Your mistake book (one JSON object per line) |
 | `index.json` | Note metadata index (auto-generated, incremental) |
 | `sessions/` | In-progress diagnosis sessions (auto-cleaned after 7 days) |
+| `media/` | Theme background images and videos |
 | `debug/` | Raw LLM responses for troubleshooting |
 | `backups/` | Manual backups you create |
 
@@ -175,7 +176,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **104 Rust unit tests** and **207 frontend tests** (32 files) covering:
+The project includes **105 Rust unit tests** and **209 frontend tests** (32 files) covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation

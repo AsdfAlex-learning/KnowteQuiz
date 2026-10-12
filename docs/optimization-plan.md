@@ -1,8 +1,8 @@
 # KnowteQuiz 全面优化方案 — 进度追踪
 
-> 最后同步：2026-09-18 | 基于 git commit 历史自动标记
+> 最后同步：2026-10-09 | 基于 git commit 历史自动标记
 >
-> **状态：v3-review-complete**（2026-09-18）。v2 的五项优化已完成；之后新增「自定义外观」与「MP4 动态背景」两个功能，并按审查结论完成一批修复（安全、功能可用性、IO 安全、代码卫生）。当前 83 Rust + 175 前端测试全绿。
+> **状态：v4-review-complete**（2026-10-09）。v2 五项优化、v3 外观/视频功能均已完成；之后补齐工程质量门禁（ESLint、commitlint、CI 强化、rustfmt）、修复核心 bug（诊断事件序列化、Markdown XSS、LLM 流 UTF-8 缓冲、SM-2 时区）、并新增 SM-2 间隔重复与打卡追踪。当前 **105 Rust + 209 前端测试** 全绿，CI 通过。
 >
 > ✅ = 已完成 | ◐ = 部分完成 | ❌ = 未开始
 
@@ -427,7 +427,7 @@ KnowteQuiz 的方向是正确的：
 
 ## 当前完成度总结
 
-> **截至 2026-08-18 v2-complete 版本**。所有 5 个优先级已 100% 完成。代码库已冻结。
+> **截至 2026-10-09 v4-review-complete 版本**。所有 5 个优先级已 100% 完成，并已补齐工程质量门禁与核心 bug 修复。详见 `docs/project-review-2026-10.md` 与 `docs/review-2026-10-09.md`。
 
 | 优先级 | 内容 | 进度 | 已完成 | 未完成 |
 |--------|------|------|--------|--------|
@@ -435,7 +435,7 @@ KnowteQuiz 的方向是正确的：
 | P2 运行风险 | LLM 连接、session 持久化、Web 安全 | ✅ 100% | 全部完成 | — |
 | P3 LLM 稳定性 | JSON 校验、流式展示、能力探测 | ✅ 100% | schema 校验、多题型支持、答案归一/高亮一致性、raw 日志、阶段进度、自动修复、能力探测、NDJSON 方案 A 确认 | — |
 | P4 笔记体验 | 目录扫描、阅读器、错题本 | ✅ 100% | 滚动/图片/降级、分页、模式过滤、导出、搜索、大纲、frontmatter、复习、盲区标签、竞态保护、增量 index.json | — |
-| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 83 Rust + 175 前端测试、冒烟脚本（9 步）、CI/CD（7 步冒烟）、Husky + Prettier、发布检查清单 | — |
+| P5 测试门禁 | Rust/前端测试、冒烟流程 | ✅ 100% | 105 Rust + 209 前端测试、冒烟脚本（9 步）、CI/CD（含 Windows job）、Husky + Prettier + ESLint、commitlint、发布检查清单 | — |
 
 ### 最推荐下一步
 
@@ -495,6 +495,17 @@ KnowteQuiz 的方向是正确的：
 
 - 大笔记库首次扫描仍可能卡顿（已有增量索引缓解）。
 - 题目生成仍非真正逐题流式（NDJSON 方案 A 已确认维持现状）。
-- 桌面模式读取文件未做根目录绑定（信任边界不同，仅 Web 端为网络暴露面）。
-- `MarkdownContent.vue` 与 `MarkdownRenderer.vue` 各自持有 MarkdownIt 实例（配置有意不同，未强行统一）。
+- 媒体文件未纳入备份（`media/` 不在 `MANAGED_DATA_FILES`），且无垃圾回收。
+- 数据写入锁为进程级；桌面端与独立 Web 服务同时运行会互相覆盖（需文件锁）。
+
+### v4 审查修复（2026-10-09）✅
+
+| # | 类别 | 修复内容 |
+|---|---|---|
+| 1 | 功能 | 诊断事件 serde 改 `snake_case`——此前 `FollowUp` 序列化为 `followUp`，前端期望 `follow_up`，多轮诊断静默失败；补 wire-format 测试 |
+| 2 | 安全 | Markdown 阅读器禁用原始 HTML（`html: false`）；桌面 `read_note` 加 `resolve_note_path` 根目录校验 |
+| 3 | 正确性 | LLM 流累积原始字节、末尾一次性解码，修复 UTF-8 多字节跨 chunk 边界被丢弃（CJK 输出） |
+| 4 | CI | CI 冒烟测试 `quiz.language` → `default_language`；`smoke-test.ps1` 恢复步骤修正 |
+| 5 | 工程 | ESLint + commitlint + rustfmt；CI 增加 Windows job、超时、并发取消、smoke 缓存；`@vitest/coverage-v8` 对齐 vitest 4 |
+| 6 | 功能 | SM-2 间隔重复调度、每日打卡追踪、重做错题、诊断来源标注 |
 
