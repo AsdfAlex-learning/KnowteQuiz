@@ -198,6 +198,39 @@ npm run test:coverage          # Frontend coverage report
 
 ---
 
+## LLM Run Observability
+
+Every LLM call is recorded so you can see what the model was asked and what it
+returned. Open the **LLM** tab in the right-hand panel for a quick view: each
+run shows its kind, duration, token usage, and status; expanding it reveals the
+request parameters, the prompt, and the raw response with copy buttons.
+
+External tools and custom pages can consume the same data through a read-only
+API (web mode) or the on-disk JSONL file:
+
+```bash
+# Web mode: list the most recent runs
+curl -s 'http://127.0.0.1:14200/api/llm/runs?limit=20' | jq
+
+# Fetch the raw response of one run
+curl -s 'http://127.0.0.1:14200/api/llm/runs/<id>/response'
+```
+
+```bash
+# Every mode: greppable, tool-friendly JSONL
+jq -c 'select(.error != null)' <app-data>/knowtequiz/llm_runs/llm_runs.jsonl
+```
+
+Browser-based tools require an origin allow-list in `settings.cors.allow_origins`
+and a web-server restart; scripts and CLIs are unaffected. See
+[`docs/llm-runs-schema.md`](docs/llm-runs-schema.md) for the full record schema,
+endpoint reference, and integration examples.
+
+Set `settings.llm.record_llm_io = false` to stop writing prompt/response bodies
+while still recording timing and token usage. The API key is never recorded.
+
+---
+
 ## License
 
 [MIT](LICENSE)

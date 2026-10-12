@@ -1,8 +1,8 @@
 # KnowteQuiz 全面优化方案 — 进度追踪
 
-> 最后同步：2026-10-09 | 基于 git commit 历史自动标记
+> 最后同步：2026-10-12 | 基于 git commit 历史自动标记
 >
-> **状态：v4-review-complete**（2026-10-09）。v2 五项优化、v3 外观/视频功能均已完成；之后补齐工程质量门禁（ESLint、commitlint、CI 强化、rustfmt）、修复核心 bug（诊断事件序列化、Markdown XSS、LLM 流 UTF-8 缓冲、SM-2 时区）、并新增 SM-2 间隔重复与打卡追踪。当前 **105 Rust + 209 前端测试** 全绿，CI 通过。
+> **状态：v5-llm-observability**（2026-10-12）。v2 五项优化、v3 外观/视频功能、v4 工程门禁与核心 bug 修复均已完成；v5 新增 **LLM 运行可观测性**（记录每次 LLM 调用的 prompt/原始返回/耗时/token，内置面板 + 开放 REST/JSONL 接口），并修复阶段标签死链、补齐诊断阶段事件。当前 **128 Rust + 219 前端测试** 全绿，CI 通过。
 >
 > ✅ = 已完成 | ◐ = 部分完成 | ❌ = 未开始
 
@@ -508,4 +508,21 @@ KnowteQuiz 的方向是正确的：
 | 4 | CI | CI 冒烟测试 `quiz.language` → `default_language`；`smoke-test.ps1` 恢复步骤修正 |
 | 5 | 工程 | ESLint + commitlint + rustfmt；CI 增加 Windows job、超时、并发取消、smoke 缓存；`@vitest/coverage-v8` 对齐 vitest 4 |
 | 6 | 功能 | SM-2 间隔重复调度、每日打卡追踪、重做错题、诊断来源标注 |
+
+### v5 LLM 运行可视化（2026-10-12）✅
+
+新增「LLM 运行可观测性」能力，补齐此前审查中发现的可视化缺口（无 token/耗时/请求历史/原始返回查看器）。
+
+| # | 类别 | 内容 |
+|---|---|---|
+| 1 | 数据层 | `llm_run.rs`（`LlmRunRecord`/`LlmRunSummary`/`LlmUsage`）+ `llm_run_store.rs`（JSONL 追加写、500 条滚动、`debug/` 100 文件裁剪、路径穿越防护） |
+| 2 | 埋点 | `call_llm` 收口埋点（计时 + `usage` 解析 + 请求/返回落盘）；流式路径独立埋点（`stream_options.include_usage` 三级降级：body / stream_options / unavailable） |
+| 3 | 接口 | REST：`GET /api/llm/runs[?limit&kind]`、`/:id`、`/:id/prompt`、`/:id/response`（`text/plain` + `nosniff`）；Tauri 命令 `llm_list_runs` / `llm_get_run` / `llm_get_run_content` |
+| 4 | CORS | `settings.cors.allow_origins` 白名单（默认空 = 浏览器外部工具不可用），改后需重启 Web 服务 |
+| 5 | 面板 | PanelTabs 新增 **LLM** 标签 → `LlmRunsPanel.vue`：运行列表（类型徽章/耗时/token/状态）+ 展开查看请求参数、prompt、原始返回，支持一键复制 |
+| 6 | 修复 | 阶段标签死链（`PanelContainer` 生成时卸载 `QuizGenerator`）→ 阶段文字迁至 `QuizSession`；`DiagnosisStreamEvent` 增加 `Phase` 变体，诊断对话显示阶段 + spinner |
+| 7 | 隐私 | `settings.llm.record_llm_io` 开关（默认 true）；`endpoint_host` 仅记 host，API Key 永不入档 |
+| 8 | 文档 | `docs/llm-runs-schema.md`（完整 schema + 接口 + curl/Python/Node 接入示例）；README 中英双语新增「LLM 运行可视化」章节 |
+
+测试：Rust **128**（+23），前端 **219**（+13）。
 

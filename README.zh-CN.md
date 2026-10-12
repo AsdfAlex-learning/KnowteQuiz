@@ -198,6 +198,31 @@ npm run test:coverage          # 前端覆盖率报告
 
 ---
 
+## LLM 运行可视化
+
+每次 LLM 调用都会被记录，便于查看模型收到了什么、又返回了什么。在右侧面板打开 **LLM** 标签即可快速查看：每条运行显示类型、耗时、token 用量与状态，展开后可看到请求参数、prompt 与原始返回，并支持一键复制。
+
+外部工具和自定义页面可通过只读 API（Web 模式）或磁盘上的 JSONL 文件消费同一份数据：
+
+```bash
+# Web 模式：列出最近的运行
+curl -s 'http://127.0.0.1:14200/api/llm/runs?limit=20' | jq
+
+# 获取某条运行的原始返回
+curl -s 'http://127.0.0.1:14200/api/llm/runs/<id>/response'
+```
+
+```bash
+# 任意模式：可 grep 的 JSONL
+jq -c 'select(.error != null)' <app-data>/knowtequiz/llm_runs/llm_runs.jsonl
+```
+
+浏览器类工具需在 `settings.cors.allow_origins` 中加入 origin 并重启 Web 服务；脚本与命令行不受 CORS 限制。完整记录结构、接口说明与接入示例见 [`docs/llm-runs-schema.md`](docs/llm-runs-schema.md)。
+
+设置 `settings.llm.record_llm_io = false` 可停止记录 prompt 与原始返回正文，仅保留计时与 token 用量。API Key 永远不会被记录。
+
+---
+
 ## 许可证
 
 [MIT](LICENSE)
