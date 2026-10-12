@@ -1,7 +1,11 @@
 use crate::errors::AppError;
 use crate::models::diagnosis::*;
+use crate::models::llm_run::{
+    endpoint_host_of, LlmRunKind, LlmRunRecord, LlmUsage, LlmUsageSource,
+};
 use crate::models::quiz::*;
 use crate::models::settings::LlmConfig;
+use crate::services::llm_run_store;
 use crate::services::llm_service::{http_client, streaming_http_client};
 use futures_util::StreamExt;
 use serde_json::Value;
@@ -102,6 +106,10 @@ pub async fn generate_quiz_stream(
     }
 
     let client = streaming_http_client();
+    let llm_started = std::time::Instant::now();
+    let llm_ts_start = chrono::Local::now().to_rfc3339();
+    let mut stream_usage: Option<LlmUsage> = None;
+    let mut stream_usage_source = LlmUsageSource::Unavailable;
     let request_body = serde_json::json!({
         "model": llm.model,
         "messages": [
@@ -109,6 +117,7 @@ pub async fn generate_quiz_stream(
             { "role": "user", "content": prompt }
         ],
         "stream": true,
+        "stream_options": { "include_usage": true },
         "temperature": llm.temperature,
         "max_tokens": llm.max_tokens,
     });
@@ -125,12 +134,27 @@ pub async fn generate_quiz_stream(
         .await
         .map_err(|e| AppError::Llm(format!("LLM API request failed: {}", e)))?;
 
+    let http_status = Some(response.status().as_u16());
+
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
         let _ = tx.send(QuizStreamEvent::Error {
             message: format!("LLM API error {}: {}", status, body),
         });
+        record_quiz_stream_run(
+            data_dir,
+            llm,
+            &prompt,
+            llm_started,
+            &llm_ts_start,
+            http_status,
+            None,
+            LlmUsageSource::Unavailable,
+            Some(format!("LLM API error {status}")),
+            Some(&body),
+            llm.record_llm_io,
+        );
         return Err(AppError::Llm(format!("LLM API error {}: {}", status, body)));
     }
 
@@ -148,6 +172,20 @@ pub async fn generate_quiz_stream(
                 let _ = tx.send(QuizStreamEvent::Error {
                     message: message.clone(),
                 });
+                let partial = String::from_utf8_lossy(&accumulated_bytes).into_owned();
+                record_quiz_stream_run(
+                    data_dir,
+                    llm,
+                    &prompt,
+                    llm_started,
+                    &llm_ts_start,
+                    http_status,
+                    stream_usage,
+                    stream_usage_source,
+                    Some(message.clone()),
+                    Some(&partial),
+                    llm.record_llm_io,
+                );
                 return Err(AppError::Llm(message));
             }
         };
@@ -183,11 +221,30 @@ pub async fn generate_quiz_stream(
                 if let Some(text) = json["choices"][0]["delta"]["content"].as_str() {
                     accumulated.push_str(text);
                 }
+                // With `stream_options.include_usage` the endpoint sends a final
+                // chunk carrying `usage` (usually with `"choices": []`).
+                let (usage, source) = parse_usage(&json);
+                if usage.is_some() {
+                    stream_usage = usage;
+                    stream_usage_source = source;
+                }
             }
         }
     }
 
-    save_llm_debug_log(data_dir, "quiz", &accumulated);
+    record_quiz_stream_run(
+        data_dir,
+        llm,
+        &prompt,
+        llm_started,
+        &llm_ts_start,
+        http_status,
+        stream_usage,
+        stream_usage_source,
+        None,
+        Some(&accumulated),
+        llm.record_llm_io,
+    );
 
     if tx
         .send(QuizStreamEvent::Phase {
@@ -229,36 +286,33 @@ pub async fn generate_quiz_stream(
                 "你刚才返回了以下内容，但它不是有效的 JSON 格式。请用标准 JSON 格式重新输出完整的题目数组。\n\n原始返回内容：\n```\n{}\n```\n\n请严格按照以下格式输出：\n```json\n{{\n  \"questions\": [\n    {{\n      \"question_type\": \"single\",\n      \"question\": \"题目文本\",\n      \"options\": [\"A. 选项\", \"B. 选项\"],\n      \"answer\": \"正确答案字母或文本\",\n      \"explanation\": \"解释\"\n    }}\n  ]\n}}\n```",
                 accumulated
             );
-            match call_llm(llm, &fixup_prompt, 0.3).await {
-                Ok(fixup_text) => {
-                    save_llm_debug_log(data_dir, "quiz_fixup", &fixup_text);
-                    match parse_quiz_response(&fixup_text) {
-                        Ok(questions) => {
-                            for q in &questions {
-                                let _ = tx.send(QuizStreamEvent::Chunk {
-                                    id: q.id.clone(),
-                                    question_type: format!("{:?}", q.question_type).to_lowercase(),
-                                    question: q.question.clone(),
-                                    options: q.options.clone(),
-                                    answer: q.answer.clone(),
-                                    explanation: q.explanation.clone(),
-                                });
-                            }
-                            let _ = tx.send(QuizStreamEvent::Done {
-                                total: questions.len() as u32,
-                            });
-                            return Ok(());
-                        }
-                        Err(fixup_error) => {
-                            let _ = tx.send(QuizStreamEvent::Error {
-                                message: format!(
-                                    "Failed to parse quiz response after retry: {} (original: {})",
-                                    fixup_error, e
-                                ),
+            match call_llm(llm, &fixup_prompt, 0.3, LlmRunKind::QuizFixup, data_dir).await {
+                Ok(fixup_text) => match parse_quiz_response(&fixup_text) {
+                    Ok(questions) => {
+                        for q in &questions {
+                            let _ = tx.send(QuizStreamEvent::Chunk {
+                                id: q.id.clone(),
+                                question_type: format!("{:?}", q.question_type).to_lowercase(),
+                                question: q.question.clone(),
+                                options: q.options.clone(),
+                                answer: q.answer.clone(),
+                                explanation: q.explanation.clone(),
                             });
                         }
+                        let _ = tx.send(QuizStreamEvent::Done {
+                            total: questions.len() as u32,
+                        });
+                        return Ok(());
                     }
-                }
+                    Err(fixup_error) => {
+                        let _ = tx.send(QuizStreamEvent::Error {
+                            message: format!(
+                                "Failed to parse quiz response after retry: {} (original: {})",
+                                fixup_error, e
+                            ),
+                        });
+                    }
+                },
                 Err(fixup_err) => {
                     let _ = tx.send(QuizStreamEvent::Error {
                         message: format!(
@@ -616,8 +670,14 @@ pub async fn submit_diagnosis_initial(
         user_answer,
         user_reasoning,
     );
-    let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
-    save_llm_debug_log(data_dir, "diagnosis_initial", &response_text);
+    let response_text = call_llm(
+        &settings.llm,
+        &prompt,
+        0.3,
+        LlmRunKind::DiagnosisInitial,
+        data_dir,
+    )
+    .await?;
     let diagnosis = parse_diagnosis_initial(&response_text)?;
     let round = initial_diagnosis_round(&diagnosis);
 
@@ -677,8 +737,14 @@ pub async fn diagnose_follow_up(
         &template_set.diagnosis_followup_template,
         &vars,
     );
-    let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
-    save_llm_debug_log(data_dir, "diagnosis_followup", &response_text);
+    let response_text = call_llm(
+        &settings.llm,
+        &prompt,
+        0.3,
+        LlmRunKind::DiagnosisFollowup,
+        data_dir,
+    )
+    .await?;
     let follow_up = parse_follow_up(&response_text)?;
 
     session.conversation.push(DiagnosisRound {
@@ -740,8 +806,14 @@ pub async fn generate_diagnosis_report(
         &template_set.diagnosis_report_template,
         &vars,
     );
-    let response_text = call_llm(&settings.llm, &prompt, 0.3).await?;
-    save_llm_debug_log(data_dir, "diagnosis_report", &response_text);
+    let response_text = call_llm(
+        &settings.llm,
+        &prompt,
+        0.3,
+        LlmRunKind::DiagnosisReport,
+        data_dir,
+    )
+    .await?;
     parse_diagnosis_report(&response_text)
 }
 
@@ -755,10 +827,69 @@ fn wants_json_mode(llm: &LlmConfig) -> bool {
     }
 }
 
+/// Public entry point: performs the request AND records the run for
+/// observability. The business logic lives in `llm_exchange`; this wrapper
+/// adds timing, prompt/response file recording and the `llm_runs.jsonl` entry.
+///
+/// Recording is best effort — a failure to write the run record never fails the
+/// actual LLM call.
 async fn call_llm(
     settings: &LlmConfig,
     prompt: &str,
     temperature: f64,
+    kind: LlmRunKind,
+    data_dir: &Path,
+) -> Result<String, AppError> {
+    let started = std::time::Instant::now();
+    let mut record = LlmRunRecord {
+        id: uuid::Uuid::new_v4().simple().to_string(),
+        kind,
+        ts_start: chrono::Local::now().to_rfc3339(),
+        ts_end: String::new(),
+        duration_ms: 0,
+        model: settings.model.clone(),
+        endpoint_host: endpoint_host_of(&settings.base_url),
+        request_params: serde_json::json!({
+            "temperature": temperature,
+            "max_tokens": settings.max_tokens,
+            "stream": false,
+            "response_format": wants_json_mode(settings),
+        }),
+        usage: None,
+        usage_source: LlmUsageSource::Unavailable,
+        http_status: None,
+        error: None,
+        prompt_file: None,
+        response_file: None,
+    };
+    let mut raw_body: Option<String> = None;
+
+    let outcome = llm_exchange(settings, prompt, temperature, &mut record, &mut raw_body).await;
+
+    record.ts_end = chrono::Local::now().to_rfc3339();
+    record.duration_ms = started.elapsed().as_millis() as u64;
+    if let Err(e) = &outcome {
+        record.error = Some(e.to_string());
+    }
+    if settings.record_llm_io {
+        record.prompt_file =
+            llm_run_store::write_debug_file(data_dir, kind.as_str(), "prompt", prompt);
+        if let Some(raw) = raw_body.as_deref() {
+            record.response_file = save_llm_debug_log(data_dir, kind.as_str(), raw);
+        }
+    }
+    let _ = llm_run_store::record_llm_run(data_dir, &record);
+    outcome
+}
+
+/// The actual HTTP exchange. Populates `record.http_status` / `record.usage` and
+/// `raw_body` as it goes; never writes files or records runs itself.
+async fn llm_exchange(
+    settings: &LlmConfig,
+    prompt: &str,
+    temperature: f64,
+    record: &mut LlmRunRecord,
+    raw_body: &mut Option<String>,
 ) -> Result<String, AppError> {
     let client = http_client();
 
@@ -794,21 +925,54 @@ async fn call_llm(
         .await
         .map_err(|e| AppError::Llm(format!("LLM API request failed: {}", e)))?;
 
+    record.http_status = Some(response.status().as_u16());
+
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
+        *raw_body = Some(body.clone());
         return Err(AppError::Llm(format!("LLM API error {}: {}", status, body)));
     }
 
-    let json: Value = response
-        .json()
+    // Read as text first so the raw body can be recorded, then parse.
+    let body_text = response
+        .text()
         .await
+        .map_err(|e| AppError::Llm(format!("Failed to read LLM response body: {}", e)))?;
+    *raw_body = Some(body_text.clone());
+
+    let json: Value = serde_json::from_str(&body_text)
         .map_err(|e| AppError::Llm(format!("Failed to parse LLM response: {}", e)))?;
+
+    let (usage, usage_source) = parse_usage(&json);
+    record.usage = usage;
+    record.usage_source = usage_source;
 
     json["choices"][0]["message"]["content"]
         .as_str()
         .map(String::from)
         .ok_or_else(|| AppError::Llm("No content in LLM response".to_string()))
+}
+
+/// Extract token usage from an OpenAI-style response body. Returns
+/// `(None, Unavailable)` when the endpoint did not report usage.
+fn parse_usage(json: &Value) -> (Option<LlmUsage>, LlmUsageSource) {
+    let usage = json.get("usage").filter(|u| u.is_object());
+    match usage {
+        Some(u) => {
+            let parsed = LlmUsage {
+                prompt_tokens: u["prompt_tokens"].as_u64().map(|v| v as u32),
+                completion_tokens: u["completion_tokens"].as_u64().map(|v| v as u32),
+                total_tokens: u["total_tokens"].as_u64().map(|v| v as u32),
+            };
+            if parsed.is_empty() {
+                (None, LlmUsageSource::Unavailable)
+            } else {
+                (Some(parsed), LlmUsageSource::Body)
+            }
+        }
+        None => (None, LlmUsageSource::Unavailable),
+    }
 }
 
 #[derive(Debug)]
@@ -978,51 +1142,62 @@ fn parse_non_empty_string_array(value: &Value, field: &str) -> Result<Vec<String
     }
 }
 
-/// Keep at most this many raw LLM debug files per data dir.
-const DEBUG_LOG_RETENTION: usize = 100;
-
-fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) {
-    let debug_dir = data_dir.join("debug");
-    if std::fs::create_dir_all(&debug_dir).is_err() {
-        return;
+/// Record a completed streaming quiz generation run for observability.
+///
+/// The streaming path does not go through `call_llm`, so it assembles its own
+/// `LlmRunRecord`. Best effort — a failure here never fails generation.
+#[allow(clippy::too_many_arguments)]
+fn record_quiz_stream_run(
+    data_dir: &Path,
+    llm: &LlmConfig,
+    prompt: &str,
+    started: std::time::Instant,
+    ts_start: &str,
+    http_status: Option<u16>,
+    usage: Option<LlmUsage>,
+    usage_source: LlmUsageSource,
+    error: Option<String>,
+    raw: Option<&str>,
+    record_io: bool,
+) {
+    let mut record = LlmRunRecord {
+        id: uuid::Uuid::new_v4().simple().to_string(),
+        kind: LlmRunKind::Quiz,
+        ts_start: ts_start.to_string(),
+        ts_end: chrono::Local::now().to_rfc3339(),
+        duration_ms: started.elapsed().as_millis() as u64,
+        model: llm.model.clone(),
+        endpoint_host: endpoint_host_of(&llm.base_url),
+        request_params: serde_json::json!({
+            "temperature": llm.temperature,
+            "max_tokens": llm.max_tokens,
+            "stream": true,
+            "stream_options": { "include_usage": true },
+        }),
+        usage,
+        usage_source,
+        http_status,
+        error,
+        prompt_file: None,
+        response_file: None,
+    };
+    if record_io {
+        record.prompt_file =
+            llm_run_store::write_debug_file(data_dir, LlmRunKind::Quiz.as_str(), "prompt", prompt);
+        if let Some(raw) = raw {
+            record.response_file = save_llm_debug_log(data_dir, LlmRunKind::Quiz.as_str(), raw);
+        }
     }
-
-    let timestamp = chrono::Local::now().format("%Y%m%d-%H%M%S").to_string();
-    // uuid suffix: concurrent calls within the same second must not overwrite.
-    let filename = format!(
-        "{}_{}_{}_raw.txt",
-        timestamp,
-        uuid::Uuid::new_v4().simple(),
-        kind
-    );
-
-    if std::fs::write(debug_dir.join(filename), raw).is_err() {
-        return;
-    }
-    prune_debug_logs(&debug_dir);
+    let _ = llm_run_store::record_llm_run(data_dir, &record);
 }
 
-/// Remove the oldest debug files beyond the retention cap. Best effort.
-fn prune_debug_logs(debug_dir: &Path) {
-    let Ok(entries) = std::fs::read_dir(debug_dir) else {
-        return;
-    };
-    let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = entries
-        .flatten()
-        .filter(|entry| entry.path().is_file())
-        .filter_map(|entry| {
-            let modified = entry.metadata().ok()?.modified().ok()?;
-            Some((modified, entry.path()))
-        })
-        .collect();
-    if files.len() <= DEBUG_LOG_RETENTION {
-        return;
-    }
-    files.sort_by_key(|(modified, _)| *modified);
-    let excess = files.len() - DEBUG_LOG_RETENTION;
-    for (_, path) in files.into_iter().take(excess) {
-        let _ = std::fs::remove_file(path);
-    }
+/// Persist a raw LLM response under `debug/` and return its bare filename.
+///
+/// Delegates to `llm_run_store::write_debug_file` so naming and retention are
+/// shared with the prompt files that `llm_run_store` writes. `None` means the
+/// file could not be written (best effort — never fails the caller).
+fn save_llm_debug_log(data_dir: &Path, kind: &str, raw: &str) -> Option<String> {
+    crate::services::llm_run_store::write_debug_file(data_dir, kind, "raw", raw)
 }
 
 #[cfg(test)]
@@ -1253,6 +1428,7 @@ Good luck."#;
             max_tokens: 1024,
             temperature: 0.7,
             supports_response_format: None,
+            record_llm_io: true,
         };
         // Unprobed: legacy URL heuristic (non-ollama, non-openai host).
         assert!(!wants_json_mode(&llm));

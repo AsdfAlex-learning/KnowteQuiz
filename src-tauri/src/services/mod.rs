@@ -1,6 +1,7 @@
 pub mod config;
 pub mod diagnosis_session_service;
 pub mod fs_service;
+pub mod llm_run_store;
 pub mod llm_service;
 pub mod media_service;
 pub mod mistake_service;

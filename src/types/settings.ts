@@ -7,8 +7,8 @@ export interface LlmConfig {
   model: string;
   max_tokens: number;
   temperature: number;
-  /** Persisted probe result; absent means "never probed". */
-  supports_response_format?: boolean | null;
+  /** Whether to persist prompt/raw response of each LLM call under `debug/`. */
+  record_llm_io?: boolean;
 }
 
 export type SettingsLLM = LlmConfig;
@@ -95,6 +95,15 @@ export interface ThemeConfig {
   video_time: number;
 }
 
+/**
+ * Extra browser origins permitted to call the web API (in addition to the
+ * built-in Vite dev origins). Empty = external browser tools are blocked.
+ * Changing this requires a web-server restart.
+ */
+export interface CorsSettings {
+  allow_origins: string[];
+}
+
 export interface Settings {
   version: string;
   ui_language: string;
@@ -103,4 +112,5 @@ export interface Settings {
   quiz: QuizDefaults;
   workspace: WorkspaceState;
   theme_config: ThemeConfig;
+  cors: CorsSettings;
 }

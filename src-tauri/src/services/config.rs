@@ -18,6 +18,7 @@ fn default_settings() -> Settings {
             max_tokens: 4096,
             temperature: 0.7,
             supports_response_format: None,
+            record_llm_io: true,
         },
         ui: UiLayoutContainer {
             layout: UiLayout {
@@ -42,6 +43,7 @@ fn default_settings() -> Settings {
         },
         workspace: WorkspaceState::default(),
         theme_config: ThemeConfig::default(),
+        cors: crate::models::settings::CorsSettings::default(),
     }
 }
 

@@ -29,8 +29,8 @@ use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
-    config, diagnosis_session_service, fs_service, llm_service, media_service, mistake_service,
-    note_service, quiz_engine, storage,
+    config, diagnosis_session_service, fs_service, llm_run_store, llm_service, media_service,
+    mistake_service, note_service, quiz_engine, storage,
 };
 
 pub struct AppState {
@@ -66,9 +66,31 @@ fn allowed_cors_origins() -> Vec<HeaderValue> {
     ]
 }
 
-fn local_cors_layer() -> CorsLayer {
+/// Combine the built-in dev origins with any user-configured extras.
+/// Empty or malformed origin strings are ignored (they are user-entered).
+fn cors_origins(extra_origins: &[String]) -> Vec<HeaderValue> {
+    let mut origins = allowed_cors_origins();
+    for origin in extra_origins {
+        let trimmed = origin.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if let Ok(value) = HeaderValue::from_str(trimmed) {
+            origins.push(value);
+        }
+    }
+    origins
+}
+
+/// Build the CORS layer. Beyond the built-in dev origins, any origin listed in
+/// `settings.cors.allow_origins` is permitted so external browser tools and
+/// custom pages can consume the LLM-run API.
+///
+/// The layer is built once when the router is constructed, so changes to the
+/// allow-list require a web-server restart.
+fn local_cors_layer(extra_origins: &[String]) -> CorsLayer {
     CorsLayer::new()
-        .allow_origin(allowed_cors_origins())
+        .allow_origin(cors_origins(extra_origins))
         .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_headers([header::CONTENT_TYPE])
 }
@@ -171,6 +193,11 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
     let index_path = dist_dir.join("index.html");
     let serve_dir = ServeDir::new(dist_dir).fallback(ServeFile::new(index_path));
 
+    // CORS is baked in at construction time; changes need a server restart.
+    let extra_origins = config::get_settings_path(&state.data_dir)
+        .map(|settings| settings.cors.allow_origins)
+        .unwrap_or_default();
+
     Router::new()
         .route("/api/notes/scan", get(scan_notes_handler))
         .route("/api/notes/read", get(read_note_handler))
@@ -181,6 +208,10 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         )
         .route("/api/test-connection", post(test_connection_handler))
         .route("/api/probe-llm", post(probe_llm_handler))
+        .route("/api/llm/runs", get(llm_list_runs_handler))
+        .route("/api/llm/runs/:id", get(llm_get_run_handler))
+        .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
+        .route("/api/llm/runs/:id/response", get(llm_run_response_handler))
         .route("/api/data/backup", post(backup_data_handler))
         .route("/api/data/status", get(data_status_handler))
         .route(
@@ -210,7 +241,7 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         )
         .route("/api/sessions/cleanup", post(cleanup_sessions_handler))
         .fallback_service(serve_dir)
-        .layer(local_cors_layer())
+        .layer(local_cors_layer(&extra_origins))
         .with_state(state)
 }
 
@@ -338,6 +369,84 @@ async fn probe_llm_handler(
     updated.llm.supports_response_format = Some(capabilities.supports_response_format);
     config::save_settings_path(&state.data_dir, &updated)?;
     Ok(Json(capabilities))
+}
+
+#[derive(Deserialize)]
+struct LlmRunListQuery {
+    limit: Option<usize>,
+    kind: Option<String>,
+}
+
+/// List recorded LLM runs (newest first). Metadata only — never the prompt or
+/// the raw response, so this stays cheap to poll.
+async fn llm_list_runs_handler(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<LlmRunListQuery>,
+) -> Result<Json<Vec<crate::models::llm_run::LlmRunSummary>>, AppError> {
+    let runs = llm_run_store::list_llm_runs(
+        &state.data_dir,
+        query.limit.unwrap_or(50),
+        query.kind.as_deref(),
+    )?;
+    Ok(Json(runs))
+}
+
+/// Full record for a single run, including references to its prompt/response
+/// files. The file contents themselves are served by the two content routes.
+async fn llm_get_run_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(id): AxumPath<String>,
+) -> Result<Json<crate::models::llm_run::LlmRunRecord>, AppError> {
+    let run = llm_run_store::get_llm_run(&state.data_dir, &id)?;
+    Ok(Json(run))
+}
+
+fn text_response(content: String) -> Response {
+    (
+        [
+            (
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("text/plain; charset=utf-8"),
+            ),
+            (
+                header::X_CONTENT_TYPE_OPTIONS,
+                HeaderValue::from_static("nosniff"),
+            ),
+        ],
+        content,
+    )
+        .into_response()
+}
+
+/// Read the prompt text recorded for a run (empty body when prompts were not
+/// recorded, e.g. `record_llm_io = false`).
+async fn llm_run_prompt_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(id): AxumPath<String>,
+) -> Result<Response, AppError> {
+    let run = llm_run_store::get_llm_run(&state.data_dir, &id)?;
+    match run.prompt_file {
+        Some(filename) => Ok(text_response(llm_run_store::read_run_content(
+            &state.data_dir,
+            &filename,
+        )?)),
+        None => Ok(text_response(String::new())),
+    }
+}
+
+/// Read the raw LLM response recorded for a run (empty body when not recorded).
+async fn llm_run_response_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(id): AxumPath<String>,
+) -> Result<Response, AppError> {
+    let run = llm_run_store::get_llm_run(&state.data_dir, &id)?;
+    match run.response_file {
+        Some(filename) => Ok(text_response(llm_run_store::read_run_content(
+            &state.data_dir,
+            &filename,
+        )?)),
+        None => Ok(text_response(String::new())),
+    }
 }
 
 async fn backup_data_handler(
@@ -741,6 +850,20 @@ mod tests {
         assert_eq!(origins.len(), 2);
         assert!(origins.contains(&HeaderValue::from_static("http://localhost:1420")));
         assert!(origins.contains(&HeaderValue::from_static("http://127.0.0.1:1420")));
+    }
+
+    #[test]
+    fn cors_layer_adds_configured_origins_and_ignores_malformed_ones() {
+        let origins = cors_origins(&[
+            "http://localhost:3000".to_string(),
+            "   ".to_string(),
+            String::new(),
+        ]);
+
+        assert_eq!(origins.len(), 3, "two dev origins plus one valid extra");
+        assert!(origins.contains(&HeaderValue::from_static("http://localhost:3000")));
+        // Blank entries must not produce empty headers.
+        assert!(origins.iter().all(|value| !value.is_empty()));
     }
 
     #[test]
@@ -1158,5 +1281,234 @@ mod tests {
             }
         });
         std::fs::write(data_dir.join("settings.json"), settings.to_string()).unwrap();
+    }
+
+    fn seeded_llm_run(id: &str) -> crate::models::llm_run::LlmRunRecord {
+        crate::models::llm_run::LlmRunRecord {
+            id: id.to_string(),
+            kind: crate::models::llm_run::LlmRunKind::Quiz,
+            ts_start: "2026-10-12T12:00:00.000Z".to_string(),
+            ts_end: "2026-10-12T12:00:01.000Z".to_string(),
+            duration_ms: 1000,
+            model: "test-model".to_string(),
+            endpoint_host: "localhost:11434".to_string(),
+            request_params: serde_json::json!({ "temperature": 0.3 }),
+            usage: None,
+            usage_source: crate::models::llm_run::LlmUsageSource::Unavailable,
+            http_status: Some(200),
+            error: None,
+            prompt_file: None,
+            response_file: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn llm_runs_route_lists_records() {
+        let data_dir = temp_data_dir("llm_runs_route_lists_records");
+        llm_run_store::record_llm_run(&data_dir, &seeded_llm_run("run-1"))
+            .expect("record should persist");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/llm/runs?limit=10")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
+        assert!(
+            body_text.contains("run-1"),
+            "list should include the run: {body_text}"
+        );
+        // The list view must never leak prompt/response file references.
+        assert!(
+            !body_text.contains("prompt_file"),
+            "summary leaked prompt_file"
+        );
+        assert!(
+            !body_text.contains("response_file"),
+            "summary leaked response_file"
+        );
+    }
+
+    #[tokio::test]
+    async fn llm_run_detail_returns_record_but_not_file_contents() {
+        let data_dir = temp_data_dir("llm_run_detail_returns_record_but_not_file_contents");
+        llm_run_store::record_llm_run(&data_dir, &seeded_llm_run("run-1"))
+            .expect("record should persist");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/llm/runs/run-1")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
+        assert!(
+            body_text.contains("test-model"),
+            "detail should include model"
+        );
+    }
+
+    #[tokio::test]
+    async fn llm_run_detail_returns_404_for_unknown_id() {
+        let data_dir = temp_data_dir("llm_run_detail_returns_404_for_unknown_id");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/llm/runs/does-not-exist")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn llm_run_prompt_route_serves_text_with_nosniff() {
+        let data_dir = temp_data_dir("llm_run_prompt_route_serves_text_with_nosniff");
+        let mut run = seeded_llm_run("run-1");
+        run.prompt_file =
+            llm_run_store::write_debug_file(&data_dir, "quiz", "prompt", "PROMPT-BODY-123");
+        llm_run_store::record_llm_run(&data_dir, &run).expect("record should persist");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/llm/runs/run-1/prompt")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .expect("content-type header should be set")
+            .to_str()
+            .expect("content-type should be ascii")
+            .to_string();
+        assert!(
+            content_type.starts_with("text/plain"),
+            "prompt should be text/plain, got {content_type}"
+        );
+        assert!(
+            response
+                .headers()
+                .contains_key(header::X_CONTENT_TYPE_OPTIONS),
+            "nosniff header must be set"
+        );
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
+        assert!(body_text.contains("PROMPT-BODY-123"), "prompt body missing");
+    }
+
+    #[tokio::test]
+    async fn llm_run_response_route_serves_raw_response() {
+        let data_dir = temp_data_dir("llm_run_response_route_serves_raw_response");
+        let mut run = seeded_llm_run("run-1");
+        run.response_file =
+            llm_run_store::write_debug_file(&data_dir, "quiz", "raw", "RAW-RESPONSE-XYZ");
+        llm_run_store::record_llm_run(&data_dir, &run).expect("record should persist");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/llm/runs/run-1/response")
+                    .body(Body::empty())
+                    .expect("request should build"),
+            )
+            .await
+            .expect("request should complete");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body should be readable");
+        let body_text = String::from_utf8(bytes.to_vec()).expect("body should be utf8");
+        assert!(
+            body_text.contains("RAW-RESPONSE-XYZ"),
+            "raw response missing"
+        );
+    }
+
+    #[tokio::test]
+    async fn llm_run_content_routes_return_empty_when_not_recorded() {
+        let data_dir = temp_data_dir("llm_run_content_routes_return_empty_when_not_recorded");
+        llm_run_store::record_llm_run(&data_dir, &seeded_llm_run("run-1"))
+            .expect("record should persist");
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        for uri in ["/api/llm/runs/run-1/prompt", "/api/llm/runs/run-1/response"] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .uri(uri)
+                        .body(Body::empty())
+                        .expect("request should build"),
+                )
+                .await
+                .expect("request should complete");
+            assert_eq!(response.status(), StatusCode::OK, "{uri}");
+            let bytes = to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("body should be readable");
+            assert!(
+                bytes.is_empty(),
+                "{uri} should be empty when content was not recorded"
+            );
+        }
     }
 }

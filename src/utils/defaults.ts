@@ -56,5 +56,8 @@ export function defaultSettings(): Settings {
       video_playing: true,
       video_time: 0,
     },
+    cors: {
+      allow_origins: [],
+    },
   };
 }

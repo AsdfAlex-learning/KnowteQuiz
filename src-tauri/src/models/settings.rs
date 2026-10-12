@@ -15,6 +15,15 @@ pub struct LlmConfig {
     /// legacy base_url heuristic applies in `call_llm`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub supports_response_format: Option<bool>,
+    /// Whether to persist the prompt and raw response of each LLM call under
+    /// `debug/` (referenced from `llm_runs.jsonl`). Metadata (timing, token
+    /// usage, status) is always recorded regardless of this flag.
+    #[serde(default = "default_record_llm_io")]
+    pub record_llm_io: bool,
+}
+
+fn default_record_llm_io() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -204,10 +213,21 @@ pub struct Settings {
     pub workspace: WorkspaceState,
     #[serde(default)]
     pub theme_config: ThemeConfig,
+    #[serde(default)]
+    pub cors: CorsSettings,
 }
 
 fn default_ui_language() -> String {
     "zh-CN".to_string()
+}
+
+/// Browser origins permitted to call the web API in addition to the built-in
+/// dev origins. Empty by default — external browser plugins / custom pages
+/// must be allow-listed here before they can fetch LLM run data.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CorsSettings {
+    #[serde(default)]
+    pub allow_origins: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
