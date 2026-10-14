@@ -13,6 +13,15 @@
     "refresh": "Refresh",
     "enter_path_prompt": "Enter the full path to your notes folder:"
   },
+  "document": {
+    "convert": "Convert to Markdown",
+    "converting": "Converting…",
+    "open_converted": "Open note",
+    "reconvert": "Re-convert",
+    "reconvert_overwrites": "This overwrites the converted note, including any edits you made to it.",
+    "stale_hint": "The source document changed after it was converted.",
+    "warnings": "Conversion notes"
+  },
   "reader": {
     "no_file": "No file open",
     "loading": "Loading note...",

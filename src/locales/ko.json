@@ -13,6 +13,15 @@
     "refresh": "새로고침",
     "enter_path_prompt": "노트 폴더의 전체 경로를 입력하세요:"
   },
+  "document": {
+    "convert": "Markdown으로 변환",
+    "converting": "변환 중…",
+    "open_converted": "노트 열기",
+    "reconvert": "다시 변환",
+    "reconvert_overwrites": "다시 변환하면 변환된 노트(수정 내용 포함)가 덮어쓰기됩니다.",
+    "stale_hint": "소스 파일이 변환 이후에 변경되었습니다.",
+    "warnings": "변환 참고사항"
+  },
   "reader": {
     "no_file": "파일이 열여 있지 않습니다",
     "loading": "노트 로딩 중...",

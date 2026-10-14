@@ -13,6 +13,15 @@
     "refresh": "刷新",
     "enter_path_prompt": "请输入笔记文件夹的完整路径："
   },
+  "document": {
+    "convert": "转换为 Markdown",
+    "converting": "正在转换…",
+    "open_converted": "打开笔记",
+    "reconvert": "重新转换",
+    "reconvert_overwrites": "重新转换会覆盖转换后的笔记，包括你对它做的修改。",
+    "stale_hint": "源文件在转换之后又发生了变化。",
+    "warnings": "转换提示"
+  },
   "reader": {
     "no_file": "未打开文件",
     "loading": "加载笔记中...",

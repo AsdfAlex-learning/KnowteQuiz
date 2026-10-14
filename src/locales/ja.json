@@ -13,6 +13,15 @@
     "refresh": "更新",
     "enter_path_prompt": "ノートフォルダのフルパスを入力してください:"
   },
+  "document": {
+    "convert": "Markdown に変換",
+    "converting": "変換中…",
+    "open_converted": "ノートを開く",
+    "reconvert": "再変換",
+    "reconvert_overwrites": "再変換すると、変換済みノート（編集内容を含む）が上書きされます。",
+    "stale_hint": "ソースファイルは変換後に変更されています。",
+    "warnings": "変換の注意"
+  },
   "reader": {
     "no_file": "ファイルが開かれていません",
     "loading": "ノートを読み込み中...",
