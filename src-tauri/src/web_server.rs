@@ -29,8 +29,8 @@ use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
-    config, diagnosis_session_service, fs_service, llm_run_store, llm_service, media_service,
-    mistake_service, note_service, quiz_engine, storage,
+    config, diagnosis_session_service, doc_parser, fs_service, llm_run_store, llm_service,
+    media_service, mistake_service, note_service, quiz_engine, storage,
 };
 
 pub struct AppState {
@@ -209,6 +209,8 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route("/api/test-connection", post(test_connection_handler))
         .route("/api/probe-llm", post(probe_llm_handler))
         .route("/api/llm/runs", get(llm_list_runs_handler))
+        .route("/api/documents/convert", post(convert_document_handler))
+        .route("/api/documents/status", get(document_status_handler))
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
         .route("/api/llm/runs/:id/response", get(llm_run_response_handler))
@@ -379,6 +381,37 @@ struct LlmRunListQuery {
 
 /// List recorded LLM runs (newest first). Metadata only — never the prompt or
 /// the raw response, so this stays cheap to poll.
+#[derive(Deserialize)]
+struct ConvertDocumentBody {
+    source_path: String,
+}
+
+#[derive(Deserialize)]
+struct DocumentStatusQuery {
+    path: String,
+}
+
+/// Convert a document into a Markdown note next to its source.
+async fn convert_document_handler(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<ConvertDocumentBody>,
+) -> Result<Json<crate::models::doc_parse::ConvertOutcome>, AppError> {
+    let resolved =
+        crate::services::fs_service::resolve_note_path(&state.data_dir, &body.source_path).await?;
+    let outcome = doc_parser::convert_document(&resolved.to_string_lossy()).await?;
+    Ok(Json(outcome))
+}
+
+/// Whether a document has a converted note, and whether that note is stale.
+async fn document_status_handler(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<DocumentStatusQuery>,
+) -> Result<Json<crate::models::doc_parse::DocumentStatus>, AppError> {
+    let resolved =
+        crate::services::fs_service::resolve_note_path(&state.data_dir, &query.path).await?;
+    Ok(Json(doc_parser::document_status(&resolved)))
+}
+
 async fn llm_list_runs_handler(
     State(state): State<Arc<AppState>>,
     Query(query): Query<LlmRunListQuery>,
@@ -1282,6 +1315,131 @@ mod tests {
             }
         });
         std::fs::write(data_dir.join("settings.json"), settings.to_string()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn convert_document_route_converts_html_next_to_source() {
+        let data_dir = temp_data_dir("convert_document_route_converts_html_next_to_source");
+        let root = temp_dir_in(&data_dir, "notes");
+        std::fs::create_dir_all(&root).expect("root");
+        let source = root.join("guide.html");
+        std::fs::write(
+            &source,
+            "<html><head><title>Guide</title></head><body><h1>Setup</h1><p>Install it.</p></body></html>",
+        )
+        .expect("html");
+        write_settings_with_root(&data_dir, &root);
+
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        let body = serde_json::json!({ "source_path": source.to_string_lossy() });
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/documents/convert")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body.to_string()))
+                    .expect("request"),
+            )
+            .await
+            .expect("request completes");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("body readable");
+        let json: serde_json::Value =
+            serde_json::from_slice(&bytes).expect("response should be json");
+        assert_eq!(json["title"], "Guide");
+        assert!(json["output_path"]
+            .as_str()
+            .expect("output_path")
+            .ends_with("guide.html.md"));
+
+        // The converted note is a real file next to the source, so the scan
+        // pipeline will pick it up.
+        assert!(
+            std::fs::metadata(root.join("guide.html.md")).is_ok(),
+            "converted note should exist next to the source"
+        );
+    }
+
+    #[tokio::test]
+    async fn document_status_route_reports_converted_and_stale() {
+        let data_dir = temp_dir_in(
+            &temp_data_dir("document_status_route_reports_converted_and_stale"),
+            "root",
+        );
+        let root = data_dir.join("notes");
+        std::fs::create_dir_all(&root).expect("root");
+        let source = root.join("spec.docx");
+        std::fs::write(&source, "PK").expect("source");
+        write_settings_with_root(&data_dir, &root);
+
+        let state = Arc::new(AppState {
+            data_dir,
+            diagnosis_sessions: Mutex::new(HashMap::new()),
+        });
+        let app = build_router(state, Path::new("../dist"));
+
+        // Before conversion.
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/api/documents/status?path={}",
+                        urlencoding_minimal(&source.to_string_lossy())
+                    ))
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("request completes");
+        assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["converted"], false);
+        assert_eq!(json["stale"], false);
+
+        // After conversion.
+        std::fs::write(root.join("spec.docx.md"), "# Converted").expect("output");
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/api/documents/status?path={}",
+                        urlencoding_minimal(&source.to_string_lossy())
+                    ))
+                    .body(Body::empty())
+                    .expect("request"),
+            )
+            .await
+            .expect("request completes");
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(json["converted"], true);
+    }
+
+    /// Minimal path -> percent-encoded path helper for query strings.
+    fn urlencoding_minimal(path: &str) -> String {
+        path.chars()
+            .map(|c| match c {
+                '/' | '\\' | ':' | ' ' => format!("%{:02X}", c as u32),
+                _ => c.to_string(),
+            })
+            .collect()
+    }
+
+    fn temp_dir_in(data_dir: &Path, name: &str) -> PathBuf {
+        let dir = data_dir.join(name);
+        std::fs::create_dir_all(&dir).expect("dir");
+        dir
     }
 
     fn seeded_llm_run(id: &str) -> crate::models::llm_run::LlmRunRecord {

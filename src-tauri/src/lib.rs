@@ -5,7 +5,7 @@ mod services;
 mod utils;
 mod web_server;
 
-use commands::{llm_run, note, quiz, settings};
+use commands::{doc_convert, llm_run, note, quiz, settings};
 use quiz::DiagnosisSessions;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -25,6 +25,8 @@ pub fn run_desktop() {
             quiz::diagnose_follow_up,
             quiz::generate_diagnosis_report,
             quiz::cleanup_sessions,
+            doc_convert::convert_document,
+            doc_convert::get_document_status,
             llm_run::llm_list_runs,
             llm_run::llm_get_run,
             llm_run::llm_get_run_content,
