@@ -8,7 +8,7 @@
 > - `docs/project-review-2026-10.md` + `docs/review-2026-10-09.md` — 近期审查与修复
 > - `docs/optimization-plan.md` — 进度追踪
 >
-> 当前实际：32 前端测试文件 / 219 用例 + 128 Rust 测试；无 `doc_parser.rs`/`ocr_engine.rs`（V1.1 未实现，技术方案见附录 A 决策 2：纯 Rust）；无 `views/`、无 `tailwind.config.js`。
+> 当前实际：36 前端测试文件 / 227 用例 + 146 Rust 测试；`doc_parser`（纯 Rust，PDF/DOCX/PPTX/HTML→Markdown）**已实现**，`ocr_engine.rs`（扫描件升级项）未实现；无 `views/`、无 `tailwind.config.js`。
 
 > 基于 Grill-Me 决策会话收敛的终版方案。本文档替代 `idea.md` 作为项目开发的核心依据。
 
@@ -802,14 +802,14 @@
 
 ### V1.1 — 文档智能增强
 
-- [ ] **PDF / Word / PPT / HTML → Markdown 转换（纯 Rust，无外部运行时）**
-  - [ ] `doc_parser` 分派与 `ParseResult` 统一输出契约（Markdown + 元数据 + 错误）
-  - [ ] `ooxml` 子模块：DOCX/PPTX 解析（`zip` + `quick-xml`，提取 `w:t`/`a:t`）
-  - [ ] `pdf` 子模块：PDF 文本层抽取（`pdf-extract`/`lopdf`），保留阅读顺序与分页
-  - [ ] `html` 子模块：复用 MarkdownIt 管线做 HTML→MD 清洗
-  - [ ] 前端：非 MD 文件右键菜单、转换进度展示、结果通知
-  - [ ] 文件树让非 MD 文件可见（当前 `fs_service` 只列 `.md`/`.markdown`，PDF/PPT/DOCX 被完全过滤）
-- [ ] **OCR 扫描件识别（Rust + ONNX + RapidOCR）** — 与 `doc_parser` 解耦：PDF 无文本层时触发 OCR 分支；模型按需下载
+- [x] **PDF / Word / PPT / HTML → Markdown 转换（纯 Rust，无外部运行时）**（2026-10-12 完成）
+  - [x] `doc_parser` 分派与 `ParsedDocument` 统一输出契约（Markdown + 图片 + 标题 + warnings）
+  - [x] `ooxml` 子模块：DOCX/PPTX 解析（`zip` + `quick-xml`，提取 `w:t`/`a:t`、`w:pStyle` 标题、`w:tbl` 管道表格、`a:blip` 图片引用）
+  - [x] `pdf` 子模块：PDF 文本层抽取（`pdf-extract`）；无文本层时提示"扫描件，OCR 未启用"
+  - [x] `html` 子模块：无依赖的 HTML→MD（`#` 标题、段落、`-` 列表，跳过 script/style/head）
+  - [x] 前端：`DocumentEmptyState` 提供转换按钮 / 打开笔记 / 重新转换（含覆盖提示），并展示 warnings
+  - [x] 文件树让非 MD 文件可见（`fs_service` 按白名单放行 PDF/DOCX/PPTX/HTML，淡化显示 + 类型角标）
+- [ ] **OCR 扫描件识别（Rust + ONNX + RapidOCR）** — 与 `doc_parser` 解耦：PDF 无文本层时触发 OCR 分支；模型按需下载（**升级项，v1 未做**）
 - [ ] 用户自定义提示词模板引擎（JSON 模板，变量替换）
 - [ ] 错题复习模式（随机抽错题重练）
 - [ ] 笔记内搜索（全文检索，基于 `grep` 或简易索引）

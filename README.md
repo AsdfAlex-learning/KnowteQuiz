@@ -20,6 +20,7 @@
 - **Daily streak tracking** — Consecutive study days are tracked and shown in the status bar.
 - **Retry wrong answers** — After a quiz, re-practice only the questions you got wrong.
 - **Markdown quiz content** — Quiz questions and diagnosis reports render full Markdown + KaTeX.
+- **Document conversion** — Drop PDF / DOCX / PPTX / HTML files into your vault; they show up in the tree and convert to Markdown with one click. Text, headings, DOCX tables and embedded images are recovered, and the source file stays for lineage (a "stale" badge appears if you edit the original afterwards). Conversion is pure Rust — no Python, no external runtime.
 - **Cross-platform** — Built with Tauri v2 for Windows, macOS, and Linux.
 - **Dual runtime** — Same app runs as a Tauri desktop window **or** as a standalone web server (Axum).
 
@@ -176,7 +177,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **105 Rust unit tests** and **209 frontend tests** (32 files) covering:
+The project includes **146 Rust unit tests** and **227 frontend tests** (36 files) covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation
