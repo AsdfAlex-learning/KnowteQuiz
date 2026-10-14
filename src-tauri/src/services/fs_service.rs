@@ -1,5 +1,5 @@
 use crate::errors::AppError;
-use crate::models::note::{NoteIndex, NoteIndexEntry, NoteTreeNode};
+use crate::models::note::{NoteIndex, NoteIndexEntry, NoteNodeKind, NoteTreeNode};
 use crate::services::{config, note_service, storage};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -184,6 +184,7 @@ async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, A
             dirs.push(NoteTreeNode {
                 name,
                 path: full_path,
+                kind: NoteNodeKind::Markdown,
                 is_dir: true,
                 children,
             });
@@ -191,6 +192,15 @@ async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, A
             files.push(NoteTreeNode {
                 name,
                 path: full_path,
+                kind: NoteNodeKind::Markdown,
+                is_dir: false,
+                children: vec![],
+            });
+        } else if is_document_path(&path) {
+            files.push(NoteTreeNode {
+                name,
+                path: full_path,
+                kind: NoteNodeKind::Document,
                 is_dir: false,
                 children: vec![],
             });
@@ -205,6 +215,11 @@ async fn scan_recursive(dir: &Path, _root: &Path) -> Result<Vec<NoteTreeNode>, A
 }
 
 fn should_ignore_entry(name: &str) -> bool {
+    // Derived asset directories produced by document conversion
+    // (`design.docx.images/`) belong to a note and must not appear in the tree.
+    if name.ends_with(".images") && name.len() > ".images".len() {
+        return true;
+    }
     matches!(
         name,
         ".git"
@@ -227,6 +242,18 @@ pub(crate) fn is_markdown_path(path: &Path) -> bool {
             .as_deref(),
         Some("md" | "markdown")
     )
+}
+
+/// Extensions the document-conversion feature accepts. Mirrors the `doc_parser`
+/// whitelist; keep the two in sync.
+pub(crate) const DOCUMENT_EXTENSIONS: [&str; 5] = ["pdf", "docx", "pptx", "html", "htm"];
+
+/// True when the file is a conversion candidate (PDF / DOCX / PPTX / HTML).
+pub(crate) fn is_document_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())
+        .is_some_and(|ext| DOCUMENT_EXTENSIONS.contains(&ext.as_str()))
 }
 
 pub async fn read_file_content(path: &str) -> Result<String, AppError> {
@@ -413,5 +440,89 @@ mod tests {
             .await
             .expect("read should succeed");
         assert_eq!(content, "# Hello");
+    }
+
+    #[tokio::test]
+    async fn scan_directory_lists_documents_as_document_kind() {
+        let root = temp_notes_dir("scan_directory_lists_documents_as_document_kind");
+        std_fs::write(root.join("paper.pdf"), "%PDF").expect("pdf should be written");
+        std_fs::write(root.join("deck.pptx"), "PK").expect("pptx should be written");
+        std_fs::write(root.join("spec.docx"), "PK").expect("docx should be written");
+        std_fs::write(root.join("page.html"), "<p>").expect("html should be written");
+        std_fs::write(root.join("note.md"), "# Note").expect("md should be written");
+
+        let tree = scan_directory(root.to_string_lossy().as_ref())
+            .await
+            .expect("scan should succeed");
+
+        let by_name = |name: &str| {
+            tree.iter()
+                .find(|node| node.name == name)
+                .unwrap_or_else(|| panic!("{name} should be in the tree"))
+        };
+
+        assert_eq!(by_name("note.md").kind, NoteNodeKind::Markdown);
+        for doc in ["paper.pdf", "deck.pptx", "spec.docx", "page.html"] {
+            assert_eq!(
+                by_name(doc).kind,
+                NoteNodeKind::Document,
+                "{doc} should be a document"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn scan_directory_hides_derived_asset_directories() {
+        let root = temp_notes_dir("scan_directory_hides_derived_asset_directories");
+        std_fs::write(root.join("design.docx.md"), "# Converted")
+            .expect("converted note should be written");
+        std_fs::create_dir_all(root.join("design.docx.images"))
+            .expect("images dir should be created");
+        std_fs::write(root.join("design.docx.images/image001.png"), "PNG")
+            .expect("image should be written");
+        std_fs::create_dir_all(root.join("assets")).expect("user dir should be created");
+        std_fs::write(root.join("assets/real.png"), "PNG").expect("user image should be written");
+
+        let tree = scan_directory(root.to_string_lossy().as_ref())
+            .await
+            .expect("scan should succeed");
+        let names = tree
+            .iter()
+            .map(|node| node.name.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(
+            !names.contains(&"design.docx.images"),
+            "derived asset dir must be hidden, got {names:?}"
+        );
+        assert!(
+            !names.contains(&"design.docx.images/image001.png"),
+            "derived asset content must not leak"
+        );
+        assert!(
+            names.contains(&"design.docx.md"),
+            "converted note must show"
+        );
+        assert!(names.contains(&"assets"), "user dirs must still show");
+        assert!(
+            !names.contains(&"assets/real.png"),
+            "non-whitelisted files stay hidden"
+        );
+    }
+
+    #[test]
+    fn is_document_path_accepts_only_whitelisted_extensions() {
+        for doc in ["a.pdf", "a.PDF", "a.docx", "a.pptx", "a.html", "a.htm"] {
+            assert!(
+                is_document_path(std::path::Path::new(doc)),
+                "{doc} should be accepted"
+            );
+        }
+        for other in ["a.md", "a.png", "a.txt", "a", "a.doc", "a.xls"] {
+            assert!(
+                !is_document_path(std::path::Path::new(other)),
+                "{other} should be rejected"
+            );
+        }
     }
 }

@@ -8,6 +8,8 @@
     "open_folder": "폭다 열기",
     "enter_path": "노트 폭다 경로 입력...",
     "no_files": "Markdown 파일을 찾을 수 없습니다",
+    "document_hint": "{name}는 아직 변환되지 않은 문서입니다",
+    "document_description": "PDF / DOCX / PPTX / HTML은 읽거나 퀴즈로 만들기 전에 Markdown으로 변환해야 합니다.",
     "refresh": "새로고침",
     "enter_path_prompt": "노트 폴더의 전체 경로를 입력하세요:"
   },

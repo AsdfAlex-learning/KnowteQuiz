@@ -8,6 +8,8 @@
     "open_folder": "フォルダを開く",
     "enter_path": "ノートフォルダのパスを入力...",
     "no_files": "Markdown ファイルが見つかりません",
+    "document_hint": "{name} は未変換のドキュメントです",
+    "document_description": "PDF / DOCX / PPTX / HTML は、読み取ったりクイズにする前に Markdown へ変換する必要があります。",
     "refresh": "更新",
     "enter_path_prompt": "ノートフォルダのフルパスを入力してください:"
   },

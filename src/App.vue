@@ -31,6 +31,7 @@
         @scroll="onReaderScroll"
       >
         <MarkdownRenderer v-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
+        <DocumentEmptyState v-else-if="readerStore.pendingDocument" />
         <EmptyState v-else />
       </main>
 
@@ -67,6 +68,7 @@ import BackgroundLayer from './components/Layout/BackgroundLayer.vue';
 import FolderSelector from './components/Explorer/FolderSelector.vue';
 import FileTree from './components/Explorer/FileTree.vue';
 import MarkdownRenderer from './components/Reader/MarkdownRenderer.vue';
+import DocumentEmptyState from './components/Reader/DocumentEmptyState.vue';
 import EmptyState from './components/Reader/EmptyState.vue';
 import PanelContainer from './components/Panel/PanelContainer.vue';
 

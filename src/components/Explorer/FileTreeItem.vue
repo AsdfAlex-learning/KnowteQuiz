@@ -38,14 +38,15 @@
     <div
       v-else
       class="tree-item"
-      :class="{ 'tree-item--active': isSelected }"
+      :class="{ 'tree-item--active': isSelected, 'tree-item--document': isDocument }"
       :style="{ paddingLeft: depth * 12 + 20 + 'px' }"
-      :title="node.name"
-      @click="navigationStore.openNote(node.path)"
+      :title="isDocument ? t('sidebar.document_hint', { name: node.name }) : node.name"
+      @click="handleClick"
     >
       <!-- File icon -->
       <svg
-        class="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]"
+        class="w-4 h-4 flex-shrink-0"
+        :class="isDocument ? 'text-[var(--text-faint)]' : 'text-[var(--text-muted)]'"
         viewBox="0 0 16 16"
         fill="none"
         stroke="currentColor"
@@ -56,6 +57,12 @@
       </svg>
 
       <span class="truncate">{{ displayName }}</span>
+      <span
+        v-if="isDocument"
+        class="ml-auto shrink-0 px-1 rounded text-[9px] uppercase font-semibold text-[var(--text-faint)]"
+      >
+        {{ documentExt }}
+      </span>
     </div>
   </div>
 </template>
@@ -64,6 +71,7 @@
 import { computed } from 'vue';
 import { useExplorerStore } from '@/stores/explorer';
 import { useNavigationStore } from '@/stores/navigation';
+import { useI18n } from '@/composables/useI18n';
 import type { NoteTreeNode } from '@/types/note';
 
 const props = defineProps<{
@@ -73,13 +81,28 @@ const props = defineProps<{
 
 const explorerStore = useExplorerStore();
 const navigationStore = useNavigationStore();
+const { t } = useI18n();
 
 const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path));
 const isSelected = computed(() => explorerStore.selectedPath === props.node.path);
+const isDocument = computed(() => props.node.kind === 'document');
+
+const documentExt = computed(() => {
+  const match = props.node.name.match(/\.([^.]+)$/);
+  return match ? match[1].toUpperCase() : '';
+});
 
 const displayName = computed(() => {
   return props.node.name.replace(/\.(md|markdown)$/i, '');
 });
+
+function handleClick() {
+  if (isDocument.value) {
+    void navigationStore.openDocument(props.node.path);
+  } else {
+    void navigationStore.openNote(props.node.path);
+  }
+}
 </script>
 
 <style scoped>
@@ -111,5 +134,15 @@ const displayName = computed(() => {
 .tree-item--active:hover {
   background: color-mix(in srgb, var(--accent-purple) 20%, transparent);
   color: var(--accent-purple);
+}
+
+/* Documents are conversion candidates, not readable notes — keep them quiet
+   so the tree still reads as a list of notes. */
+.tree-item--document {
+  color: var(--text-faint);
+}
+
+.tree-item--document:hover {
+  color: var(--text-muted);
 }
 </style>

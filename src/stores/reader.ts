@@ -7,6 +7,8 @@ import { useSettingsStore } from './settings';
 
 export const useReaderStore = defineStore('reader', () => {
   const currentNote = ref<NoteContent | null>(null);
+  /** Path of a selected document (PDF/DOCX/PPTX/HTML) awaiting conversion. */
+  const pendingDocument = ref<string | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const scrollTop = ref(0);
@@ -34,6 +36,7 @@ export const useReaderStore = defineStore('reader', () => {
         scrollTop.value = 0;
       }
       currentNote.value = note;
+      pendingDocument.value = null;
       return true;
     } catch (e) {
       if (loadId !== activeLoadId) return false;
@@ -64,18 +67,32 @@ export const useReaderStore = defineStore('reader', () => {
   function clearNote() {
     activeLoadId += 1;
     currentNote.value = null;
+    pendingDocument.value = null;
     scrollTop.value = 0;
     loading.value = false;
   }
 
+  /// Select a document (PDF/DOCX/PPTX/HTML) instead of a note. The reader shows
+  /// a conversion prompt for it rather than trying to render it as Markdown.
+  function openDocumentPath(path: string) {
+    activeLoadId += 1;
+    currentNote.value = null;
+    pendingDocument.value = path;
+    scrollTop.value = 0;
+    loading.value = false;
+    error.value = null;
+  }
+
   return {
     currentNote,
+    pendingDocument,
     loading,
     isLoading,
     error,
     wordCount,
     scrollTop,
     loadNote,
+    openDocumentPath,
     saveScrollPosition,
     clearNote,
   };

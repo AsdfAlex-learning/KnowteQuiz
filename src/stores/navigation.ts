@@ -27,6 +27,16 @@ export const useNavigationStore = defineStore('navigation', () => {
     }
   }
 
+  /// Select a document (PDF/DOCX/PPTX/HTML). No I/O — the reader shows a
+  /// conversion prompt instead of rendering the file as Markdown.
+  async function openDocument(path: string) {
+    error.value = null;
+    const explorerStore = useExplorerStore();
+    const readerStore = useReaderStore();
+    readerStore.openDocumentPath(path);
+    await explorerStore.selectPath(path);
+  }
+
   async function openRootPath(path: string) {
     opening.value = true;
     error.value = null;
@@ -80,6 +90,7 @@ export const useNavigationStore = defineStore('navigation', () => {
     opening,
     error,
     openNote,
+    openDocument,
     openRootPath,
     restoreSelectedNote,
     chooseFolder,

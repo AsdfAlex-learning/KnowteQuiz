@@ -8,6 +8,8 @@
     "open_folder": "打开文件夹",
     "enter_path": "输入笔记文件夹路径...",
     "no_files": "未找到 Markdown 文件",
+    "document_hint": "{name} 是文档文件，尚未转换",
+    "document_description": "PDF / DOCX / PPTX / HTML 需先转换为 Markdown，才能阅读和出题。",
     "refresh": "刷新",
     "enter_path_prompt": "请输入笔记文件夹的完整路径："
   },

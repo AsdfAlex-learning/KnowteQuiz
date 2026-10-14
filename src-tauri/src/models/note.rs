@@ -16,10 +16,22 @@ pub struct NoteIndexEntry {
     pub modified_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
+/// What kind of file a tree node represents. Markdown notes are readable and
+/// quizzable; documents (PDF/DOCX/PPTX/HTML) are conversion candidates only.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum NoteNodeKind {
+    #[default]
+    Markdown,
+    Document,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteTreeNode {
     pub name: String,
     pub path: String,
+    #[serde(default)]
+    pub kind: NoteNodeKind,
     pub is_dir: bool,
     pub children: Vec<NoteTreeNode>,
 }
