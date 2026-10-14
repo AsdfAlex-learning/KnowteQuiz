@@ -26,9 +26,9 @@ Thumbs.db
 *~
 
 # Project specific / internal docs (not for GitHub)
+# TECH_SPEC.md is tracked — it is the authoritative design record (see 附录 A).
 .sisyphus/
 AGENTS.md
-TECH_SPEC.md
 .codegraph/
 .agents/
 .zcode/
