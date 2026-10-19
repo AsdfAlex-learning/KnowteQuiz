@@ -14,7 +14,6 @@
         :style="{ width: layoutStore.explorerWidth + 'px' }"
         data-glass-panel="sidebar"
       >
-        <FolderSelector />
         <FileTree />
       </aside>
       <div
@@ -65,7 +64,6 @@ import { useTheme } from './composables/useTheme';
 import TitleBar from './components/Layout/TitleBar.vue';
 import StatusBar from './components/Layout/StatusBar.vue';
 import BackgroundLayer from './components/Layout/BackgroundLayer.vue';
-import FolderSelector from './components/Explorer/FolderSelector.vue';
 import FileTree from './components/Explorer/FileTree.vue';
 import MarkdownRenderer from './components/Reader/MarkdownRenderer.vue';
 import DocumentEmptyState from './components/Reader/DocumentEmptyState.vue';
