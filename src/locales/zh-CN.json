@@ -74,6 +74,7 @@
     "generating": "正在生成题目...",
     "phase_requesting": "请求模型中...",
     "phase_parsing": "解析响应中...",
+    "llm_not_configured": "未配置 LLM 端点，请先在设置中配置再出题。",
     "no_questions": "未生成题目",
     "reasoning_placeholder": "解释你的推理过程。你为什么选择这个答案？使用了什么逻辑或公式？",
     "submit_diagnosis": "提交并诊断",

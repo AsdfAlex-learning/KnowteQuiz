@@ -6,11 +6,14 @@ export function defaultSettings(): Settings {
     ui_language: 'en',
     llm: {
       provider: 'openai-compatible',
-      base_url: 'http://localhost:11434/v1',
+      // Blank on purpose: "ready" must come from a real connection test,
+      // never from a pre-filled local address.
+      base_url: '',
       api_key: '',
       model: 'qwen2.5:7b',
       max_tokens: 4096,
       temperature: 0.7,
+      verified_at: null,
     },
     ui: {
       layout: {

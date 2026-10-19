@@ -74,6 +74,7 @@
     "generating": "Generating questions...",
     "phase_requesting": "Requesting model...",
     "phase_parsing": "Parsing response...",
+    "llm_not_configured": "No LLM endpoint configured — set it up in Settings before generating.",
     "no_questions": "No questions generated",
     "reasoning_placeholder": "Explain your reasoning. Why did you choose this answer? What logic or formula did you use?",
     "submit_diagnosis": "Submit & Diagnose",

@@ -436,6 +436,12 @@ const restoring = ref(false);
 const probing = ref(false);
 const saving = ref(false);
 const connectionResult = ref<ConnectionTestResult | null>(null);
+/**
+ * The base_url that most recently passed a connection test this session.
+ * Verification is only recorded for a config that was actually tested, so
+ * merely having a URL in the field never reads as "ready".
+ */
+const testedUrl = ref<string | null>(null);
 
 function updateLLM(llm: SettingsLLM) {
   localSettings.llm = llm;
@@ -466,6 +472,9 @@ async function handleTestConnection() {
   try {
     // Probe the edited-but-unsaved config directly; saved settings stay untouched.
     connectionResult.value = await settingsStore.testConnection(localSettings.llm);
+    if (connectionResult.value.ok) {
+      testedUrl.value = localSettings.llm.base_url;
+    }
   } catch {
     connectionResult.value = {
       ok: false,
@@ -481,6 +490,16 @@ async function handleTestConnection() {
 async function handleSaveAndQuit() {
   saving.value = true;
   try {
+    // Resolve verification state for the config we are about to save:
+    //  - just tested this exact URL this session -> verified now
+    //  - URL changed since the last test        -> verification is void
+    //  - URL untouched                          -> keep the stored verdict
+    if (testedUrl.value === localSettings.llm.base_url) {
+      localSettings.llm.verified_at = new Date().toISOString();
+    } else if (localSettings.llm.base_url !== settingsStore.settings.llm.base_url) {
+      localSettings.llm.verified_at = null;
+    }
+
     // Apply local settings through the store's write queue so concurrent
     // persists (streaks, scroll positions) can't overwrite them.
     await settingsStore.queueUpdate((s) => {

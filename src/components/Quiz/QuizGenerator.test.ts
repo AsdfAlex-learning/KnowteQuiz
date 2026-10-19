@@ -64,9 +64,18 @@ describe('QuizGenerator', () => {
     });
   }
 
+  /**
+   * The start button is gated on having an endpoint configured. Tests exercise
+   * the generation flow itself, so give them a configured endpoint.
+   */
+  function useConfiguredLlm() {
+    useSettingsStore().settings.llm.base_url = 'http://localhost:11434/v1';
+  }
+
   it('starts an advanced quiz when advanced mode is selected', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     mockGeneratedQuiz();
@@ -93,6 +102,7 @@ describe('QuizGenerator', () => {
   it('clears stale mistake save state before starting a new quiz', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     const mistakeStore = useMistakeStore();
@@ -120,6 +130,7 @@ describe('QuizGenerator', () => {
   it('uses quiz defaults that load after the generator is mounted', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     const settingsStore = useSettingsStore();
@@ -165,6 +176,7 @@ describe('QuizGenerator', () => {
   it('falls back to supported quiz defaults when saved defaults are invalid', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     const settingsStore = useSettingsStore();
@@ -207,6 +219,7 @@ describe('QuizGenerator', () => {
   it('falls back to a supported quiz count when the saved default count is out of range', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     const settingsStore = useSettingsStore();
@@ -245,6 +258,7 @@ describe('QuizGenerator', () => {
   it('uses the loaded default quiz mode when starting a quiz', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const explorerStore = useExplorerStore();
     explorerStore.selectedPath = '/notes/rust.md';
     const settingsStore = useSettingsStore();
@@ -274,6 +288,7 @@ describe('QuizGenerator', () => {
   it('does not mutate saved quiz default types when toggling generator types', async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
+    useConfiguredLlm();
     const settingsStore = useSettingsStore();
     settingsStore.settings.quiz.default_types = ['single', 'short'];
 

@@ -44,17 +44,15 @@ const streakDays = computed(() => settingsStore.settings.workspace.streak_days |
 
 const statusDotClass = computed(() => {
   if (settingsStore.llmConnected) return 'bg-[var(--color-success)]';
-  if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
-    return 'bg-[var(--color-warning)]';
-  }
+  // Ready means "this endpoint once passed a real connection test" — never
+  // inferred from the configured address alone.
+  if (settingsStore.settings.llm.verified_at) return 'bg-[var(--color-warning)]';
   return 'bg-[var(--text-faint)]';
 });
 
 const statusLabel = computed(() => {
   if (settingsStore.llmConnected) return t('status.llm_connected');
-  if (settingsStore.settings.llm.api_key || settingsStore.settings.llm.base_url.includes('localhost')) {
-    return t('status.llm_ready');
-  }
+  if (settingsStore.settings.llm.verified_at) return t('status.llm_ready');
   return t('status.llm_not_configured');
 });
 </script>

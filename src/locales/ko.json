@@ -74,6 +74,7 @@
     "generating": "문제 생성 중...",
     "phase_requesting": "모델 요청 중...",
     "phase_parsing": "응답 분석 중...",
+    "llm_not_configured": "LLM 엔드포인트가 설정되지 않았습니다. 문제를 내기 전에 설정해 주세요.",
     "no_questions": "문제가 생성되지 않았습니다",
     "reasoning_placeholder": "추론 과정을 설명하세요. 왜 이 답을 선택했나요? 어떤 논리나 공식을 사용했나요?",
     "submit_diagnosis": "제출 및 진단",

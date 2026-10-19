@@ -1446,6 +1446,7 @@ Good luck."#;
             temperature: 0.7,
             supports_response_format: None,
             record_llm_io: true,
+            verified_at: None,
         };
         // Unprobed: legacy URL heuristic (non-ollama, non-openai host).
         assert!(!wants_json_mode(&llm));

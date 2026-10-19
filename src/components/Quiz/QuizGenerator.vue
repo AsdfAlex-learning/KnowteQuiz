@@ -76,13 +76,17 @@
           ? 'bg-[var(--bg-active)] text-[var(--text-muted)] cursor-wait'
           : 'bg-[var(--accent-purple)] text-[var(--bg-base)] hover:bg-[var(--accent-lavender)]'
       "
-      :disabled="quizStore.isGenerating || !notePath"
+      :disabled="quizStore.isGenerating || !notePath || !llmConfigured"
       @click="handleGenerate"
     >
       {{ generatingLabel }}
     </button>
 
     <p v-if="!notePath" class="text-[11px] text-[var(--text-faint)] text-center">{{ t('reader.no_file') }}</p>
+
+    <p v-else-if="llmMissing" class="text-[11px] text-[var(--color-warning)] text-center">
+      {{ t('quiz.llm_not_configured') }}
+    </p>
 
     <div v-if="quizStore.error" class="rounded-md border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-3">
       <p class="text-xs font-medium text-[var(--color-error)]">{{ t('common.error') }}</p>
@@ -117,6 +121,10 @@ const difficulty = ref<QuizDifficulty>('medium');
 const lang = ref<QuizLanguage>('zh');
 
 const notePath = ref<string | null>(null);
+
+/** Preflight: refuse to start a generation with no endpoint to send it to. */
+const llmConfigured = computed(() => settingsStore.settings.llm.base_url.trim().length > 0);
+const llmMissing = computed(() => !quizStore.isGenerating && !llmConfigured.value);
 const fallbackQuestionTypes: QuestionType[] = ['single', 'short'];
 const supportedQuestionTypes: QuestionType[] = ['single', 'multiple', 'short'];
 const supportedLanguages: QuizLanguage[] = ['zh', 'en', 'ja', 'ko'];

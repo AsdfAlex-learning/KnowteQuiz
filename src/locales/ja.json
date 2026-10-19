@@ -74,6 +74,7 @@
     "generating": "問題を生成中...",
     "phase_requesting": "モデルにリクエスト中...",
     "phase_parsing": "レスポンスを解析中...",
+    "llm_not_configured": "LLM エンドポイントが未設定です。出題前に設定してください。",
     "no_questions": "問題が生成されませんでした",
     "reasoning_placeholder": "推理過程を説明してください。なぜその答えを選びましたか？どのような論理や公式を使いましたか？",
     "submit_diagnosis": "回答して診断",

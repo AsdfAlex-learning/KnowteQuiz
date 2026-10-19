@@ -12,13 +12,16 @@ fn default_settings() -> Settings {
         ui_language: "zh-CN".to_string(),
         llm: LlmConfig {
             provider: "openai-compatible".to_string(),
-            base_url: "http://localhost:11434/v1".to_string(),
+            // Deliberately blank: readiness must come from a real connection
+            // test (`verified_at`), never from a pre-filled address.
+            base_url: String::new(),
             api_key: String::new(),
             model: "qwen2.5:7b".to_string(),
             max_tokens: 4096,
             temperature: 0.7,
             supports_response_format: None,
             record_llm_io: true,
+            verified_at: None,
         },
         ui: UiLayoutContainer {
             layout: UiLayout {

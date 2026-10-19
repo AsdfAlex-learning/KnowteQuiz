@@ -155,7 +155,7 @@ KnowteQuiz 支持任意 **OpenAI 兼容** API 端点。
 
 | 设置项 | 默认值 | 说明 |
 |--------|--------|------|
-| Base URL | `http://localhost:11434/v1` | Ollama 本地端点 |
+| Base URL | *(留空)* | 必填。Ollama 示例：`http://localhost:11434/v1` |
 | Model | `qwen2.5:7b` | 端点上可用的任意模型 |
 | API Key | *（空）* | 远程端点需要 |
 | Temperature | `0.7` | 越低越确定性 |

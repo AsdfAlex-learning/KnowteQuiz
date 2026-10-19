@@ -20,6 +20,14 @@ pub struct LlmConfig {
     /// usage, status) is always recorded regardless of this flag.
     #[serde(default = "default_record_llm_io")]
     pub record_llm_io: bool,
+    /// When this endpoint last passed a connection test.
+    ///
+    /// `None` means "never verified" — the status indicator must not infer
+    /// readiness from the URL alone (a pre-filled local address is not evidence
+    /// that anything is listening). Cleared automatically when `base_url`
+    /// changes to a value that has not been tested.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified_at: Option<String>,
 }
 
 fn default_record_llm_io() -> bool {

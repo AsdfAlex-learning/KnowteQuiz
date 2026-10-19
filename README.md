@@ -155,7 +155,7 @@ KnowteQuiz connects to any **OpenAI-compatible** API endpoint.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Base URL | `http://localhost:11434/v1` | Ollama local endpoint |
+| Base URL | *(empty)* | Required. Ollama example: `http://localhost:11434/v1` |
 | Model | `qwen2.5:7b` | Any model available at your endpoint |
 | API Key | *(empty)* | Required for remote endpoints |
 | Temperature | `0.7` | Lower = more deterministic |

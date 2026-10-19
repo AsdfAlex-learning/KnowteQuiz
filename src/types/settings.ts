@@ -9,6 +9,11 @@ export interface LlmConfig {
   temperature: number;
   /** Whether to persist prompt/raw response of each LLM call under `debug/`. */
   record_llm_io?: boolean;
+  /**
+   * When this endpoint last passed a connection test. `null` means never
+   * verified — the status indicator must not infer readiness from the URL.
+   */
+  verified_at?: string | null;
 }
 
 export type SettingsLLM = LlmConfig;
