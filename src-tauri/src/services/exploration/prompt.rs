@@ -77,3 +77,16 @@ Keep the same meaning; change only the formatting. Return the JSON object only.\
 PREVIOUS RESPONSE:\n{raw_response}"
     )
 }
+
+/// `/btw` side question: answer only, never advance the path.
+pub fn aside_prompt(context_json: &str) -> String {
+    format!(
+        "Answer a side question the learner asked while studying.\n\n\
+Rules:\n\
+- Answer from the note context below; if it is not covered there, say so plainly.\n\
+- Do not advance the learning path and do not ask a question back.\n\
+- Keep the source language. Be concise.\n\
+- Return Markdown only; no JSON, no markdown fences.\n\n\
+CONTEXT (JSON):\n{context_json}"
+    )
+}

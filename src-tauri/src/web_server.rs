@@ -24,8 +24,8 @@ use tower_http::services::{ServeDir, ServeFile};
 use crate::errors::AppError;
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::exploration::{
-    AskExplorationRequest, ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest,
-    ExplorationSession, ExplorationSessionSummary,
+    AsideExplorationRequest, AskExplorationRequest, ConfirmExplorationDomainsRequest,
+    CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
 };
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
@@ -241,6 +241,26 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route(
             "/api/exploration/sessions/:id/ask",
             post(exploration_ask_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/undo",
+            post(exploration_undo_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/redo",
+            post(exploration_redo_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/finish",
+            post(exploration_finish_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/skip",
+            post(exploration_skip_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/btw",
+            post(exploration_aside_handler),
         )
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
@@ -507,6 +527,54 @@ async fn exploration_ask_handler(
 ) -> Result<Json<ExplorationSession>, AppError> {
     let session =
         exploration_engine::ask_turn(&state.data_dir, &session_id, &request.answer).await?;
+    Ok(Json(session))
+}
+
+async fn exploration_undo_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    Ok(Json(exploration_engine::undo(
+        &state.data_dir,
+        &session_id,
+    )?))
+}
+
+async fn exploration_redo_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    Ok(Json(exploration_engine::redo(
+        &state.data_dir,
+        &session_id,
+    )?))
+}
+
+async fn exploration_finish_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    Ok(Json(exploration_engine::finish_early(
+        &state.data_dir,
+        &session_id,
+    )?))
+}
+
+async fn exploration_skip_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session = exploration_engine::skip_concept(&state.data_dir, &session_id).await?;
+    Ok(Json(session))
+}
+
+async fn exploration_aside_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+    Json(request): Json<AsideExplorationRequest>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session =
+        exploration_engine::ask_aside(&state.data_dir, &session_id, &request.question).await?;
     Ok(Json(session))
 }
 

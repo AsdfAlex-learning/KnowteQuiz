@@ -309,6 +309,9 @@
     "continue": "继续",
     "completed_title": "你已学完整个脉络",
     "completed_summary": "已覆盖 {covered}/{total} 个概念",
-    "uncovered_label": "尚未覆盖"
+    "uncovered_label": "尚未覆盖",
+    "command_hint": "/undo · /redo · /btw <问题> · /skip · /end",
+    "aside_label": "旁支",
+    "completed_early": "已提前结束——仍有概念未覆盖。"
   }
 }

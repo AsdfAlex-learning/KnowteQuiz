@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+﻿use serde::{Deserialize, Serialize};
 
 /// Version stamped on every persisted exploration session and learning-history
 /// export. Bump only when the on-disk shape changes incompatibly.
@@ -125,6 +125,18 @@ pub struct WhiteboardStep {
     pub group_index: usize,
 }
 
+/// A `/btw` question. Kept out of the timeline: it never advances the cursor
+/// and never marks anything as covered.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AsideTurn {
+    pub id: String,
+    pub question: String,
+    pub answer_md: String,
+    /// Timeline position the aside belongs to (the pending group index).
+    pub group_index: usize,
+    pub created_at: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TurnGroup {
     pub concept_id: String,
@@ -159,6 +171,10 @@ pub struct ExplorationSession {
     pub groups: Vec<TurnGroup>,
     #[serde(default)]
     pub active_group: usize,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub asides: Vec<AsideTurn>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub skipped: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub domain_warning: Option<String>,
     #[serde(default)]
@@ -188,6 +204,12 @@ pub struct ConfirmExplorationDomainsRequest {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AskExplorationRequest {
     pub answer: String,
+}
+
+/// Payload for a `/btw` side question.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AsideExplorationRequest {
+    pub question: String,
 }
 
 /// Lightweight row used by the session list endpoint.
@@ -319,6 +341,8 @@ mod tests {
             },
             groups: vec![group("c1", &["c1"], 0), group("c2", &["c2"], 1)],
             active_group: 2,
+            asides: vec![],
+            skipped: vec![],
             domain_warning: None,
             completed_early: false,
         }

@@ -309,6 +309,9 @@
     "continue": "계속",
     "completed_title": "지식 지도를 모두 학습했습니다",
     "completed_summary": "{covered}/{total}개 개념 학습",
-    "uncovered_label": "아직 학습하지 않음"
+    "uncovered_label": "아직 학습하지 않음",
+    "command_hint": "/undo · /redo · /btw <질문> · /skip · /end",
+    "aside_label": "곁가지",
+    "completed_early": "일찍 종료했습니다. 아직 학습하지 않은 개념이 있습니다."
   }
 }

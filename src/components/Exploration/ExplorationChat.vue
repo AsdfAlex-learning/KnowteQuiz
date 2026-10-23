@@ -35,6 +35,9 @@
           <h2 class="text-[var(--text-sm)] font-semibold text-[var(--color-success)]">
             {{ t('exploration.completed_title') }}
           </h2>
+          <p v-if="session.completed_early" class="text-[var(--text-xs)] text-[var(--color-warning)]">
+            {{ t('exploration.completed_early') }}
+          </p>
           <p class="text-[var(--text-xs)] text-[var(--text-secondary)]">
             {{
               t('exploration.completed_summary', {
@@ -56,13 +59,15 @@
         </div>
 
         <div class="space-y-5">
-          <ExplorationTurn
-            v-for="(group, index) in answeredGroups"
-            :key="index"
-            :group="group"
-            :concept-title="conceptTitle(group.concept_id)"
-          />
+          <template v-for="(group, index) in answeredGroups" :key="index">
+            <ExplorationTurn :group="group" :concept-title="conceptTitle(group.concept_id)" />
+            <AsideBubble v-for="aside in asidesAt(index)" :key="aside.id" :aside="aside" />
+          </template>
         </div>
+
+        <template v-if="!currentGroup">
+          <AsideBubble v-for="aside in asidesAt(activeIndex)" :key="aside.id" :aside="aside" />
+        </template>
 
         <div
           v-if="currentGroup"
@@ -83,6 +88,7 @@
             class="quiz-md text-[var(--text-sm)] text-[var(--text-primary)] leading-relaxed"
             v-html="currentQuestionHtml"
           ></div>
+          <AsideBubble v-for="aside in asidesAt(activeIndex)" :key="aside.id" :aside="aside" />
           <ExplorationComposer :busy="explorationStore.thinking" />
         </div>
 
@@ -157,6 +163,7 @@ import DomainConfirm from './DomainConfirm.vue';
 import ExplorationGraph from './ExplorationGraph.vue';
 import ExplorationTurn from './ExplorationTurn.vue';
 import ExplorationComposer from './ExplorationComposer.vue';
+import AsideBubble from './AsideBubble.vue';
 
 const explorationStore = useExplorationStore();
 const { t } = useI18n();
@@ -171,6 +178,13 @@ const answeredGroups = computed(() => {
 });
 
 const currentGroup = computed(() => explorationStore.currentGroup);
+
+const activeIndex = computed(() => session.value?.active_group ?? 0);
+const asides = computed(() => session.value?.asides ?? []);
+
+function asidesAt(index: number) {
+  return asides.value.filter((aside) => aside.group_index === index);
+}
 
 const currentQuestionHtml = computed(() =>
   currentGroup.value ? renderQuizMarkdown(currentGroup.value.question.prompt_md) : ''

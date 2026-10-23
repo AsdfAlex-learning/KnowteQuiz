@@ -65,6 +65,15 @@ export interface WhiteboardStep {
   group_index: number;
 }
 
+/** A `/btw` question and answer, kept outside the learning timeline. */
+export interface AsideTurn {
+  id: string;
+  question: string;
+  answer_md: string;
+  group_index: number;
+  created_at: string;
+}
+
 export interface TurnGroup {
   concept_id: string;
   question: Question;
@@ -87,6 +96,8 @@ export interface ExplorationSession {
   graph: KnowledgeGraph;
   groups: TurnGroup[];
   active_group: number;
+  asides?: AsideTurn[];
+  skipped?: string[];
   domain_warning?: string | null;
   completed_early: boolean;
 }

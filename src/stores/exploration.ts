@@ -2,13 +2,18 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
   askExploration,
+  askExplorationAside,
   confirmExplorationDomains,
   createExplorationSession,
   deleteExplorationSession,
+  finishExploration,
   getExplorationSession,
   listExplorationSessions,
   nextExplorationQuestion,
+  redoExploration,
+  skipExploration,
   startExplorationStream,
+  undoExploration,
 } from '../services/exploration';
 import type {
   Domain,
@@ -209,6 +214,45 @@ export const useExplorationStore = defineStore('exploration', () => {
     }
   }
 
+  /** Runs one cursor-only session action and replaces the local snapshot. */
+  async function runSessionAction(action: (sessionId: string) => Promise<ExplorationSession>): Promise<boolean> {
+    const current = session.value;
+    if (!current || thinking.value) return false;
+    thinking.value = true;
+    error.value = null;
+    try {
+      session.value = await action(current.id);
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    } finally {
+      thinking.value = false;
+    }
+  }
+
+  function undo(): Promise<boolean> {
+    return runSessionAction(undoExploration);
+  }
+
+  function redo(): Promise<boolean> {
+    return runSessionAction(redoExploration);
+  }
+
+  function finish(): Promise<boolean> {
+    return runSessionAction(finishExploration);
+  }
+
+  function skip(): Promise<boolean> {
+    return runSessionAction(skipExploration);
+  }
+
+  function askAside(question: string): Promise<boolean> {
+    const trimmed = question.trim();
+    if (!trimmed) return Promise.resolve(false);
+    return runSessionAction((sessionId) => askExplorationAside(sessionId, trimmed));
+  }
+
   async function confirmDomains(domains: Domain[]): Promise<void> {
     const current = session.value;
     if (!current || streaming.value) return;
@@ -321,6 +365,11 @@ export const useExplorationStore = defineStore('exploration', () => {
     retryInitialization,
     answer,
     requestNextQuestion,
+    undo,
+    redo,
+    finish,
+    skip,
+    askAside,
     confirmDomains,
     loadSessions,
     openSession,

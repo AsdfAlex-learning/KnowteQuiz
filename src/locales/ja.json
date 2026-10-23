@@ -309,6 +309,9 @@
     "continue": "続ける",
     "completed_title": "知識マップを最後まで学びました",
     "completed_summary": "{covered}/{total} 個の概念を学習",
-    "uncovered_label": "未学習"
+    "uncovered_label": "未学習",
+    "command_hint": "/undo · /redo · /btw <質問> · /skip · /end",
+    "aside_label": "補足",
+    "completed_early": "途中で終了しました。未学習の概念が残っています。"
   }
 }

@@ -150,3 +150,47 @@ export async function askExploration(sessionId: string, answer: string): Promise
   if (!res.ok) await throwHttpError(res);
   return parseJsonResponse<ExplorationSession>(res);
 }
+
+async function postSessionAction(sessionId: string, action: string, body?: unknown): Promise<ExplorationSession> {
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/${action}`, {
+    method: 'POST',
+    ...(body === undefined
+      ? {}
+      : {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationSession>(res);
+}
+
+export async function undoExploration(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) return invoke<ExplorationSession>('exploration_undo', { sessionId });
+  return postSessionAction(sessionId, 'undo');
+}
+
+export async function redoExploration(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) return invoke<ExplorationSession>('exploration_redo', { sessionId });
+  return postSessionAction(sessionId, 'redo');
+}
+
+export async function finishExploration(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) return invoke<ExplorationSession>('exploration_finish', { sessionId });
+  return postSessionAction(sessionId, 'finish');
+}
+
+export async function skipExploration(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) return invoke<ExplorationSession>('exploration_skip', { sessionId });
+  return postSessionAction(sessionId, 'skip');
+}
+
+export async function askExplorationAside(sessionId: string, question: string): Promise<ExplorationSession> {
+  if (isTauri()) {
+    return invoke<ExplorationSession>('exploration_aside', {
+      sessionId,
+      request: { question },
+    });
+  }
+  return postSessionAction(sessionId, 'btw', { question });
+}

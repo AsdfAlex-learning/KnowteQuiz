@@ -324,6 +324,11 @@ pub async fn ask_turn(
     }
 
     let current_index = session.active_group;
+    // Re-answering after /undo replaces the discarded future.
+    session.groups.truncate(current_index + 1);
+    session
+        .asides
+        .retain(|aside| aside.group_index <= current_index);
     let concept_id = session.groups[current_index].concept_id.clone();
     let concept = session
         .graph
@@ -365,6 +370,168 @@ pub async fn ask_turn(
     let response = parse_turn(&value)?;
     apply_turn(&mut session, answer, response);
     session.updated_at = chrono::Local::now().to_rfc3339();
+    session_store::save_session(data_dir, &session)?;
+    Ok(session)
+}
+
+/// Moves the cursor back one step. The answered data is kept so `/redo` can
+/// restore the step; coverage is derived from the cursor, so it rolls back too.
+pub fn undo(data_dir: &Path, session_id: &str) -> Result<ExplorationSession, AppError> {
+    let mut session = session_store::load_session(data_dir, session_id)?;
+    if session.active_group == 0 {
+        return Ok(session);
+    }
+    session.active_group -= 1;
+    if session.status == SessionStatus::Completed {
+        session.status = SessionStatus::Active;
+        session.completed_early = false;
+    }
+    session.updated_at = chrono::Local::now().to_rfc3339();
+    session_store::save_session(data_dir, &session)?;
+    Ok(session)
+}
+
+/// Moves the cursor forward through the retained tail.
+pub fn redo(data_dir: &Path, session_id: &str) -> Result<ExplorationSession, AppError> {
+    let mut session = session_store::load_session(data_dir, session_id)?;
+    if session.status == SessionStatus::Completed {
+        return Ok(session);
+    }
+    if session.active_group + 1 >= session.groups.len() {
+        return Ok(session);
+    }
+    session.active_group += 1;
+    session.updated_at = chrono::Local::now().to_rfc3339();
+    session_store::save_session(data_dir, &session)?;
+    Ok(session)
+}
+
+/// Ends the session without covering every concept.
+pub fn finish_early(data_dir: &Path, session_id: &str) -> Result<ExplorationSession, AppError> {
+    let mut session = session_store::load_session(data_dir, session_id)?;
+    if session.status == SessionStatus::Completed {
+        return Ok(session);
+    }
+    session.status = SessionStatus::Completed;
+    session.completed_early = true;
+    session.updated_at = chrono::Local::now().to_rfc3339();
+    session_store::save_session(data_dir, &session)?;
+    Ok(session)
+}
+
+/// Skips the current concept: it stays uncovered, but the path moves on.
+pub async fn skip_concept(
+    data_dir: &Path,
+    session_id: &str,
+) -> Result<ExplorationSession, AppError> {
+    let mut session = session_store::load_session(data_dir, session_id)?;
+    if session.status != SessionStatus::Active || session.active_group >= session.groups.len() {
+        return Ok(session);
+    }
+
+    let concept_id = session.groups[session.active_group].concept_id.clone();
+    if !session.skipped.contains(&concept_id) {
+        session.skipped.push(concept_id);
+    }
+    // Drop the pending question so the transcript never shows an unanswered
+    // question that was explicitly skipped.
+    session.groups.truncate(session.active_group);
+    session
+        .asides
+        .retain(|aside| aside.group_index < session.active_group);
+
+    ensure_current_question(data_dir, &mut session).await?;
+    session.updated_at = chrono::Local::now().to_rfc3339();
+    session_store::save_session(data_dir, &session)?;
+    Ok(session)
+}
+
+/// `/btw`: answers a side question without advancing the path.
+pub async fn ask_aside(
+    data_dir: &Path,
+    session_id: &str,
+    question: &str,
+) -> Result<ExplorationSession, AppError> {
+    let question = question.trim();
+    if question.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Question must not be empty".to_string(),
+        ));
+    }
+
+    let mut session = session_store::load_session(data_dir, session_id)?;
+    if session.graph.concepts.is_empty() {
+        return Err(AppError::InvalidInput(
+            "Session has no knowledge graph yet".to_string(),
+        ));
+    }
+    let settings = config::get_settings_path(data_dir)?;
+    if settings.llm.base_url.trim().is_empty() {
+        return Err(AppError::InvalidInput(
+            "No LLM endpoint configured".to_string(),
+        ));
+    }
+
+    let current_concept = session
+        .groups
+        .get(session.active_group)
+        .and_then(|group| {
+            session
+                .graph
+                .concepts
+                .iter()
+                .find(|concept| concept.id == group.concept_id)
+        })
+        .cloned();
+    let context = serde_json::json!({
+        "current_concept": current_concept,
+        "recent_turns": session
+            .active_groups()
+            .iter()
+            .rev()
+            .take(3)
+            .rev()
+            .map(|group| serde_json::json!({
+                "question": group.question.prompt_md,
+                "answer": group.answer,
+            }))
+            .collect::<Vec<_>>(),
+        "note_summaries": session
+            .source_digests
+            .iter()
+            .map(|digest| serde_json::json!({
+                "path": digest.path,
+                "title": digest.title,
+                "summary": digest.summary,
+            }))
+            .collect::<Vec<_>>(),
+        "question": question,
+    });
+    let context_json = serde_json::to_string(&context)
+        .map_err(|e| AppError::Internal(format!("Failed to serialize aside context: {e}")))?;
+    let raw = quiz_engine::call_llm_with_system(
+        &settings.llm,
+        prompt::EXPLORATION_SYSTEM_PROMPT,
+        &prompt::aside_prompt(&context_json),
+        0.3,
+        LlmRunKind::ExplorationAside,
+        data_dir,
+    )
+    .await?;
+    let answer_md = clean_question(&raw);
+    if answer_md.is_empty() {
+        return Err(AppError::Llm("Model returned an empty answer".to_string()));
+    }
+
+    let now = chrono::Local::now().to_rfc3339();
+    session.asides.push(crate::models::exploration::AsideTurn {
+        id: uuid::Uuid::new_v4().simple().to_string(),
+        question: question.to_string(),
+        answer_md,
+        group_index: session.active_group,
+        created_at: now.clone(),
+    });
+    session.updated_at = now;
     session_store::save_session(data_dir, &session)?;
     Ok(session)
 }
@@ -562,7 +729,10 @@ fn consecutive_hints(session: &ExplorationSession, concept_id: &str) -> u32 {
 fn next_uncovered_id(session: &ExplorationSession) -> Option<String> {
     let covered: HashSet<String> = session.covered_concept_ids().into_iter().collect();
     for id in &session.graph.root_order {
-        if !covered.contains(id) && session.graph.concepts.iter().any(|c| &c.id == id) {
+        if !covered.contains(id)
+            && !session.skipped.contains(id)
+            && session.graph.concepts.iter().any(|c| &c.id == id)
+        {
             return Some(id.clone());
         }
     }
@@ -570,7 +740,7 @@ fn next_uncovered_id(session: &ExplorationSession) -> Option<String> {
         .graph
         .concepts
         .iter()
-        .find(|concept| !covered.contains(&concept.id))
+        .find(|concept| !covered.contains(&concept.id) && !session.skipped.contains(&concept.id))
         .map(|concept| concept.id.clone())
 }
 
@@ -800,6 +970,8 @@ mod tests {
             graph: graph(),
             groups: vec![pending_group("c1", false)],
             active_group: 0,
+            asides: vec![],
+            skipped: vec![],
             domain_warning: None,
             completed_early: false,
         }
@@ -978,5 +1150,109 @@ mod tests {
         }];
 
         assert!(sanitize_domains(&graph(), domains).is_err());
+    }
+
+    fn temp_data_dir(test_name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir()
+            .join("knowtequiz-exploration-engine-tests")
+            .join(test_name)
+            .join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(&dir).expect("test temp dir should be created");
+        dir
+    }
+
+    fn persisted_session(dir: &std::path::Path, session: &ExplorationSession) {
+        session_store::save_session(dir, session).expect("session should save");
+    }
+
+    fn session_with_two_groups() -> ExplorationSession {
+        let mut session = active_session();
+        session.groups = vec![
+            TurnGroup {
+                concept_id: "c1".to_string(),
+                question: Question {
+                    prompt_md: "Why?".to_string(),
+                    hint_used: false,
+                },
+                answer: Some("Because.".to_string()),
+                result: Some(TurnResult {
+                    verdict: Verdict::Correct,
+                    feedback_md: "Yes.".to_string(),
+                    next_action: NextAction::Advance,
+                    hint: None,
+                }),
+                whiteboard: None,
+                covered_after: vec!["c1".to_string()],
+            },
+            pending_group("c2", false),
+        ];
+        session.active_group = 1;
+        session
+    }
+
+    #[test]
+    fn undo_rolls_back_the_cursor_and_redo_restores_it() {
+        let dir = temp_data_dir("undo_rolls_back_the_cursor_and_redo_restores_it");
+        let session = session_with_two_groups();
+        persisted_session(&dir, &session);
+
+        let undone = undo(&dir, &session.id).expect("undo should succeed");
+        assert_eq!(undone.active_group, 0);
+        assert!(undone.covered_concept_ids().is_empty());
+        assert_eq!(undone.status, SessionStatus::Active);
+
+        let redone = redo(&dir, &session.id).expect("redo should succeed");
+        assert_eq!(redone.active_group, 1);
+        assert_eq!(redone.covered_concept_ids(), vec!["c1"]);
+    }
+
+    #[test]
+    fn undo_reopens_a_completed_session() {
+        let dir = temp_data_dir("undo_reopens_a_completed_session");
+        let mut session = session_with_two_groups();
+        session.status = SessionStatus::Completed;
+        session.completed_early = true;
+        persisted_session(&dir, &session);
+
+        let undone = undo(&dir, &session.id).expect("undo should succeed");
+
+        assert_eq!(undone.status, SessionStatus::Active);
+        assert!(!undone.completed_early);
+        assert_eq!(undone.active_group, 0);
+    }
+
+    #[test]
+    fn redo_does_nothing_without_a_retained_tail() {
+        let dir = temp_data_dir("redo_does_nothing_without_a_retained_tail");
+        let session = active_session();
+        persisted_session(&dir, &session);
+
+        let redone = redo(&dir, &session.id).expect("redo should be a no-op");
+
+        assert_eq!(redone.active_group, 0);
+        assert_eq!(redone.groups.len(), 1);
+    }
+
+    #[test]
+    fn finish_early_marks_the_session_completed() {
+        let dir = temp_data_dir("finish_early_marks_the_session_completed");
+        let session = active_session();
+        persisted_session(&dir, &session);
+
+        let finished = finish_early(&dir, &session.id).expect("finish should succeed");
+
+        assert_eq!(finished.status, SessionStatus::Completed);
+        assert!(finished.completed_early);
+    }
+
+    #[test]
+    fn next_uncovered_skips_explicitly_skipped_concepts() {
+        let mut session = active_session();
+        session.skipped = vec!["c1".to_string()];
+
+        assert_eq!(next_uncovered_id(&session).as_deref(), Some("c2"));
+
+        session.skipped.push("c2".to_string());
+        assert_eq!(next_uncovered_id(&session), None);
     }
 }

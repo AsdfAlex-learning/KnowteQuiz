@@ -309,6 +309,9 @@
     "continue": "Continue",
     "completed_title": "You covered the whole map",
     "completed_summary": "{covered}/{total} concepts covered",
-    "uncovered_label": "Not covered yet"
+    "uncovered_label": "Not covered yet",
+    "command_hint": "/undo · /redo · /btw <question> · /skip · /end",
+    "aside_label": "Side note",
+    "completed_early": "Ended early — some concepts are still uncovered."
   }
 }

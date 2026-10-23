@@ -1,4 +1,4 @@
-use crate::errors::AppError;
+﻿use crate::errors::AppError;
 use crate::models::exploration::{
     ExplorationSession, ExplorationSessionSummary, KnowledgeGraph, SessionOrigin, SessionStatus,
     EXPLORATION_FORMAT_VERSION,
@@ -45,6 +45,8 @@ pub fn create_session(
         graph: KnowledgeGraph::default(),
         groups: Vec::new(),
         active_group: 0,
+        asides: vec![],
+        skipped: vec![],
         domain_warning: None,
         completed_early: false,
     };
@@ -248,6 +250,8 @@ mod tests {
             graph: KnowledgeGraph::default(),
             groups: Vec::new(),
             active_group: 0,
+            asides: vec![],
+            skipped: vec![],
             domain_warning: None,
             completed_early: false,
         };

@@ -9,6 +9,7 @@
       @keydown.enter.exact.prevent="submit"
       @keydown.ctrl.enter.prevent="submit"
     ></textarea>
+    <p class="text-[10px] text-[var(--text-faint)]">{{ t('exploration.command_hint') }}</p>
     <div class="flex items-center justify-between gap-3">
       <p class="text-[11px] text-[var(--text-faint)]">{{ t('exploration.answer_hint') }}</p>
       <button
@@ -26,6 +27,7 @@
 import { ref } from 'vue';
 import { useExplorationStore } from '@/stores/exploration';
 import { useI18n } from '@/composables/useI18n';
+import { parseExplorationCommand } from '@/utils/explorationCommands';
 
 defineProps<{
   busy?: boolean;
@@ -38,7 +40,29 @@ const text = ref('');
 async function submit() {
   const value = text.value.trim();
   if (!value || explorationStore.thinking) return;
-  const ok = await explorationStore.answer(value);
+
+  const command = parseExplorationCommand(value);
+  let ok = false;
+  switch (command.kind) {
+    case 'answer':
+      ok = await explorationStore.answer(command.text);
+      break;
+    case 'undo':
+      ok = await explorationStore.undo();
+      break;
+    case 'redo':
+      ok = await explorationStore.redo();
+      break;
+    case 'skip':
+      ok = await explorationStore.skip();
+      break;
+    case 'end':
+      ok = await explorationStore.finish();
+      break;
+    case 'btw':
+      ok = await explorationStore.askAside(command.question);
+      break;
+  }
   if (ok) text.value = '';
 }
 </script>

@@ -13,6 +13,11 @@ vi.mock('../services/exploration', () => ({
   confirmExplorationDomains: vi.fn(),
   askExploration: vi.fn(),
   nextExplorationQuestion: vi.fn(),
+  undoExploration: vi.fn(),
+  redoExploration: vi.fn(),
+  finishExploration: vi.fn(),
+  skipExploration: vi.fn(),
+  askExplorationAside: vi.fn(),
 }));
 
 function graph(): KnowledgeGraph {
@@ -314,5 +319,40 @@ describe('exploration store', () => {
 
     expect(ok).toBe(true);
     expect(explorationService.nextExplorationQuestion).toHaveBeenCalledWith('s1');
+  });
+
+  it('undoes through the service and replaces the session', async () => {
+    const undone = session({ status: 'active', graph: graph(), active_group: 0 });
+    vi.mocked(explorationService.undoExploration).mockResolvedValue(undone);
+    const store = useExplorationStore();
+    store.session = session({ status: 'active', graph: graph(), active_group: 1 });
+
+    const ok = await store.undo();
+
+    expect(ok).toBe(true);
+    expect(explorationService.undoExploration).toHaveBeenCalledWith('s1');
+    expect(store.session?.active_group).toBe(0);
+  });
+
+  it('asks a side question through the aside service', async () => {
+    const withAside = session({ status: 'active', graph: graph() });
+    withAside.asides = [
+      {
+        id: 'a1',
+        question: 'Why?',
+        answer_md: 'Because.',
+        group_index: 0,
+        created_at: '2026-10-23T10:00:00+08:00',
+      },
+    ];
+    vi.mocked(explorationService.askExplorationAside).mockResolvedValue(withAside);
+    const store = useExplorationStore();
+    store.session = session({ status: 'active', graph: graph() });
+
+    const ok = await store.askAside('  Why?  ');
+
+    expect(ok).toBe(true);
+    expect(explorationService.askExplorationAside).toHaveBeenCalledWith('s1', 'Why?');
+    expect(store.session?.asides).toHaveLength(1);
   });
 });
