@@ -2,9 +2,11 @@ import type {
   ConfirmExplorationDomainsRequest,
   CreateExplorationSessionRequest,
   Domain,
+  ExplorationExportResult,
   ExplorationSession,
   ExplorationSessionSummary,
   ExplorationStreamEvent,
+  ImportExplorationRequest,
   KnowledgeGraph,
 } from '../types/exploration';
 import { invoke, isTauri, webStream } from './tauri';
@@ -193,4 +195,48 @@ export async function askExplorationAside(sessionId: string, question: string): 
     });
   }
   return postSessionAction(sessionId, 'btw', { question });
+}
+
+export async function exportExplorationSession(sessionId: string): Promise<ExplorationExportResult> {
+  if (isTauri()) {
+    return invoke<ExplorationExportResult>('exploration_export', { sessionId });
+  }
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/export`, { method: 'POST' });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationExportResult>(res);
+}
+
+export async function saveExplorationToVault(sessionId: string, fileName: string): Promise<string> {
+  if (isTauri()) {
+    return invoke<string>('exploration_save_to_vault', { sessionId, fileName });
+  }
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file_name: fileName }),
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<string>(res);
+}
+
+export async function importExplorationHistory(request: ImportExplorationRequest): Promise<ExplorationSession> {
+  if (isTauri()) {
+    return invoke<ExplorationSession>('exploration_import', { request });
+  }
+  const res = await fetch('/api/exploration/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationSession>(res);
+}
+
+export async function continueExploration(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) {
+    return invoke<ExplorationSession>('exploration_continue', { sessionId });
+  }
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/continue`, { method: 'POST' });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationSession>(res);
 }

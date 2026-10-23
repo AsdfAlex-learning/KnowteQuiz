@@ -673,6 +673,8 @@ fn apply_turn(session: &mut ExplorationSession, answer: &str, response: TurnResp
         .iter()
         .all(|concept| covered_set.contains(&concept.id));
     if next_action == NextAction::Complete || all_covered {
+        // Keep the final group inside the timeline so its coverage counts.
+        session.active_group = current_index + 1;
         session.status = SessionStatus::Completed;
         return;
     }
@@ -744,7 +746,7 @@ fn next_uncovered_id(session: &ExplorationSession) -> Option<String> {
         .map(|concept| concept.id.clone())
 }
 
-async fn ensure_current_question(
+pub(crate) async fn ensure_current_question(
     data_dir: &Path,
     session: &mut ExplorationSession,
 ) -> Result<(), AppError> {
@@ -1063,6 +1065,8 @@ mod tests {
         );
         assert_eq!(session.status, SessionStatus::Completed);
         assert_eq!(session.groups.len(), 1);
+        assert_eq!(session.active_group, 1);
+        assert_eq!(session.covered_concept_ids(), vec!["c1"]);
 
         let mut session = active_session();
         apply_turn(
@@ -1072,6 +1076,8 @@ mod tests {
         );
         assert_eq!(session.status, SessionStatus::Completed);
         assert_eq!(session.groups.len(), 1);
+        assert_eq!(session.active_group, 1);
+        assert_eq!(session.covered_concept_ids(), vec!["c1", "c2"]);
     }
 
     #[test]

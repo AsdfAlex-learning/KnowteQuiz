@@ -26,12 +26,14 @@ use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::exploration::{
     AsideExplorationRequest, AskExplorationRequest, ConfirmExplorationDomainsRequest,
     CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
+    ImportExplorationRequest, SaveExplorationToVaultRequest,
 };
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
 use crate::services::exploration::engine::{self as exploration_engine, ExplorationStreamEvent};
+use crate::services::exploration::export::{self as exploration_export, ExportResult};
 use crate::services::exploration::session_store as exploration_store;
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
@@ -262,6 +264,19 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
             "/api/exploration/sessions/:id/btw",
             post(exploration_aside_handler),
         )
+        .route(
+            "/api/exploration/sessions/:id/export",
+            post(exploration_export_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/save",
+            post(exploration_save_to_vault_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/continue",
+            post(exploration_continue_handler),
+        )
+        .route("/api/exploration/import", post(exploration_import_handler))
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
         .route("/api/llm/runs/:id/response", get(llm_run_response_handler))
@@ -575,6 +590,47 @@ async fn exploration_aside_handler(
 ) -> Result<Json<ExplorationSession>, AppError> {
     let session =
         exploration_engine::ask_aside(&state.data_dir, &session_id, &request.question).await?;
+    Ok(Json(session))
+}
+
+async fn exploration_export_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExportResult>, AppError> {
+    let session = exploration_store::load_session(&state.data_dir, &session_id)?;
+    Ok(Json(exploration_export::export_session(
+        &state.data_dir,
+        &session,
+    )?))
+}
+
+async fn exploration_save_to_vault_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+    Json(request): Json<SaveExplorationToVaultRequest>,
+) -> Result<Json<String>, AppError> {
+    let session = exploration_store::load_session(&state.data_dir, &session_id)?;
+    let path = exploration_export::save_to_vault(&state.data_dir, &session, &request.file_name)?;
+    Ok(Json(path))
+}
+
+async fn exploration_import_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ImportExplorationRequest>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session = exploration_export::import_session(
+        &state.data_dir,
+        &request.markdown,
+        request.source_name,
+    )?;
+    Ok(Json(session))
+}
+
+async fn exploration_continue_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session = exploration_export::continue_session(&state.data_dir, &session_id).await?;
     Ok(Json(session))
 }
 

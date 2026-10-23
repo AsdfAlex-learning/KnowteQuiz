@@ -312,6 +312,16 @@
     "uncovered_label": "아직 학습하지 않음",
     "command_hint": "/undo · /redo · /btw <질문> · /skip · /end",
     "aside_label": "곁가지",
-    "completed_early": "일찍 종료했습니다. 아직 학습하지 않은 개념이 있습니다."
+    "completed_early": "일찍 종료했습니다. 아직 학습하지 않은 개념이 있습니다.",
+    "import_history": "학습 기록 가져오기",
+    "readonly_badge": "가져온 기록",
+    "readonly_hint": "읽기 전용입니다. /btw로 질문하거나 마지막 단계부터 계속할 수 있습니다.",
+    "continue_learning": "여기서 계속",
+    "export": "내보내기",
+    "save_to_vault": "노트에 저장",
+    "save": "저장",
+    "vault_file_name": "파일 이름 (예: compiler-notes.md)",
+    "export_saved": "내보냄",
+    "vault_saved": "저장됨"
   }
 }

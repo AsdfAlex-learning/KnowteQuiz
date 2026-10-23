@@ -312,6 +312,16 @@
     "uncovered_label": "尚未覆盖",
     "command_hint": "/undo · /redo · /btw <问题> · /skip · /end",
     "aside_label": "旁支",
-    "completed_early": "已提前结束——仍有概念未覆盖。"
+    "completed_early": "已提前结束——仍有概念未覆盖。",
+    "import_history": "导入学习史",
+    "readonly_badge": "导入的学习史",
+    "readonly_hint": "只读。可用 /btw 提问，或从最后一轮继续学习。",
+    "continue_learning": "从此继续",
+    "export": "导出",
+    "save_to_vault": "保存到笔记库",
+    "save": "保存",
+    "vault_file_name": "文件名（如 compiler-notes.md）",
+    "export_saved": "已导出",
+    "vault_saved": "已保存"
   }
 }

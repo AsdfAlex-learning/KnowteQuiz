@@ -2,8 +2,10 @@ use crate::errors::AppError;
 use crate::models::exploration::{
     AsideExplorationRequest, AskExplorationRequest, ConfirmExplorationDomainsRequest,
     CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
+    ImportExplorationRequest,
 };
 use crate::services::exploration::engine::{self, ExplorationStreamEvent};
+use crate::services::exploration::export::{self, ExportResult};
 use crate::services::exploration::session_store;
 use crate::services::storage;
 use tauri::ipc::Channel;
@@ -151,4 +153,43 @@ pub async fn exploration_aside(
 ) -> Result<ExplorationSession, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     engine::ask_aside(&data_dir, &session_id, &request.question).await
+}
+
+#[tauri::command]
+pub async fn exploration_export(
+    app: AppHandle,
+    session_id: String,
+) -> Result<ExportResult, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let session = session_store::load_session(&data_dir, &session_id)?;
+    export::export_session(&data_dir, &session)
+}
+
+#[tauri::command]
+pub async fn exploration_save_to_vault(
+    app: AppHandle,
+    session_id: String,
+    file_name: String,
+) -> Result<String, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let session = session_store::load_session(&data_dir, &session_id)?;
+    export::save_to_vault(&data_dir, &session, &file_name)
+}
+
+#[tauri::command]
+pub async fn exploration_import(
+    app: AppHandle,
+    request: ImportExplorationRequest,
+) -> Result<ExplorationSession, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    export::import_session(&data_dir, &request.markdown, request.source_name)
+}
+
+#[tauri::command]
+pub async fn exploration_continue(
+    app: AppHandle,
+    session_id: String,
+) -> Result<ExplorationSession, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    export::continue_session(&data_dir, &session_id).await
 }

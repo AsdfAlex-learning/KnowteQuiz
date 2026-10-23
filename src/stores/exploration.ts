@@ -4,19 +4,24 @@ import {
   askExploration,
   askExplorationAside,
   confirmExplorationDomains,
+  continueExploration,
   createExplorationSession,
   deleteExplorationSession,
+  exportExplorationSession,
   finishExploration,
   getExplorationSession,
+  importExplorationHistory,
   listExplorationSessions,
   nextExplorationQuestion,
   redoExploration,
+  saveExplorationToVault,
   skipExploration,
   startExplorationStream,
   undoExploration,
 } from '../services/exploration';
 import type {
   Domain,
+  ExplorationExportResult,
   ExplorationSession,
   ExplorationSessionSummary,
   TurnGroup,
@@ -44,6 +49,8 @@ export const useExplorationStore = defineStore('exploration', () => {
   const phase = ref<string | null>(null);
   const pendingDomains = ref<Domain[] | null>(null);
   const error = ref<string | null>(null);
+  const lastExport = ref<ExplorationExportResult | null>(null);
+  const lastVaultPath = ref<string | null>(null);
   const streamRequest = useRequestId();
 
   const selectedCount = computed(() => selectedPaths.value.length);
@@ -54,6 +61,9 @@ export const useExplorationStore = defineStore('exploration', () => {
   );
 
   const hasGraph = computed(() => (session.value?.graph.concepts.length ?? 0) > 0);
+
+  /** Imported histories stay read-only until the learner continues them. */
+  const isReadOnly = computed(() => session.value?.origin.kind === 'imported' && session.value.status === 'completed');
 
   const coverage = computed(() => {
     const current = session.value;
@@ -253,6 +263,53 @@ export const useExplorationStore = defineStore('exploration', () => {
     return runSessionAction((sessionId) => askExplorationAside(sessionId, trimmed));
   }
 
+  async function exportSession(): Promise<boolean> {
+    const current = session.value;
+    if (!current) return false;
+    error.value = null;
+    try {
+      lastExport.value = await exportExplorationSession(current.id);
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    }
+  }
+
+  async function saveToVault(fileName: string): Promise<boolean> {
+    const current = session.value;
+    const name = fileName.trim();
+    if (!current || !name) return false;
+    error.value = null;
+    try {
+      lastVaultPath.value = await saveExplorationToVault(current.id, name);
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    }
+  }
+
+  async function importHistory(markdown: string, sourceName?: string): Promise<boolean> {
+    const text = markdown.trim();
+    if (!text) return false;
+    error.value = null;
+    try {
+      session.value = await importExplorationHistory({
+        markdown: text,
+        source_name: sourceName ?? null,
+      });
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    }
+  }
+
+  function continueSession(): Promise<boolean> {
+    return runSessionAction(continueExploration);
+  }
+
   async function confirmDomains(domains: Domain[]): Promise<void> {
     const current = session.value;
     if (!current || streaming.value) return;
@@ -337,6 +394,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     selectedPaths.value = [];
     sessions.value = [];
     error.value = null;
+    lastExport.value = null;
+    lastVaultPath.value = null;
   }
 
   return {
@@ -350,10 +409,13 @@ export const useExplorationStore = defineStore('exploration', () => {
     phase,
     pendingDomains,
     error,
+    lastExport,
+    lastVaultPath,
     selectedCount,
     canStart,
     isInitializing,
     hasGraph,
+    isReadOnly,
     coverage,
     currentWhiteboard,
     currentGroup,
@@ -370,6 +432,10 @@ export const useExplorationStore = defineStore('exploration', () => {
     finish,
     skip,
     askAside,
+    exportSession,
+    saveToVault,
+    importHistory,
+    continueSession,
     confirmDomains,
     loadSessions,
     openSession,

@@ -17,6 +17,21 @@
       </button>
     </header>
 
+    <div
+      v-if="explorationStore.isReadOnly"
+      class="px-6 py-2 border-b border-[var(--border-subtle)] bg-[var(--color-warning)]/10 flex items-center justify-between gap-3"
+    >
+      <p class="text-[var(--text-xs)] text-[var(--text-muted)]">
+        {{ t('exploration.readonly_badge') }} · {{ t('exploration.readonly_hint') }}
+      </p>
+      <button
+        class="shrink-0 px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--accent-purple)] text-[var(--bg-base)] text-[var(--text-xs)] font-medium hover:bg-[var(--accent-purple)]/85 transition-colors"
+        @click="explorationStore.continueSession()"
+      >
+        {{ t('exploration.continue_learning') }}
+      </button>
+    </div>
+
     <div class="flex-1 overflow-auto px-6 py-6">
       <!-- Domain confirmation blocks initialization -->
       <DomainConfirm
@@ -56,6 +71,41 @@
               </li>
             </ul>
           </div>
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <button
+              class="px-3 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-purple)] text-[var(--bg-base)] text-[var(--text-xs)] font-medium hover:bg-[var(--accent-purple)]/85 transition-colors"
+              @click="explorationStore.exportSession()"
+            >
+              {{ t('exploration.export') }}
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[var(--text-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              @click="showVault = !showVault"
+            >
+              {{ t('exploration.save_to_vault') }}
+            </button>
+          </div>
+          <div v-if="showVault" class="flex items-center gap-2">
+            <input
+              v-model="vaultName"
+              type="text"
+              :placeholder="t('exploration.vault_file_name')"
+              class="flex-1 px-2 py-1 text-[var(--text-xs)] bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
+            />
+            <button
+              class="px-3 py-1 rounded-[var(--radius-sm)] bg-[var(--accent-purple)] text-[var(--bg-base)] text-[var(--text-xs)] font-medium disabled:opacity-50"
+              :disabled="!vaultName.trim() || savingVault"
+              @click="saveVault"
+            >
+              {{ t('exploration.save') }}
+            </button>
+          </div>
+          <p v-if="explorationStore.lastExport" class="text-[11px] text-[var(--text-faint)] break-all">
+            {{ t('exploration.export_saved') }}: {{ explorationStore.lastExport.path }}
+          </p>
+          <p v-if="explorationStore.lastVaultPath" class="text-[11px] text-[var(--color-success)] break-all">
+            {{ t('exploration.vault_saved') }}: {{ explorationStore.lastVaultPath }}
+          </p>
         </div>
 
         <div class="space-y-5">
@@ -154,7 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useExplorationStore } from '@/stores/exploration';
 import { useI18n } from '@/composables/useI18n';
 import { renderQuizMarkdown } from '@/utils/markdown';
@@ -167,6 +217,9 @@ import AsideBubble from './AsideBubble.vue';
 
 const explorationStore = useExplorationStore();
 const { t } = useI18n();
+const showVault = ref(false);
+const vaultName = ref('');
+const savingVault = ref(false);
 
 const session = computed(() => explorationStore.session);
 const isCompleted = computed(() => session.value?.status === 'completed');
@@ -202,6 +255,18 @@ const uncovered = computed<Concept[]>(() => {
 
 function conceptTitle(id: string): string {
   return session.value?.graph.concepts.find((concept) => concept.id === id)?.title ?? '';
+}
+
+async function saveVault() {
+  savingVault.value = true;
+  try {
+    if (await explorationStore.saveToVault(vaultName.value)) {
+      vaultName.value = '';
+      showVault.value = false;
+    }
+  } finally {
+    savingVault.value = false;
+  }
 }
 
 const phaseLabel = computed(() => {

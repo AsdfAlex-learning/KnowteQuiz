@@ -312,6 +312,16 @@
     "uncovered_label": "Not covered yet",
     "command_hint": "/undo · /redo · /btw <question> · /skip · /end",
     "aside_label": "Side note",
-    "completed_early": "Ended early — some concepts are still uncovered."
+    "completed_early": "Ended early — some concepts are still uncovered.",
+    "import_history": "Import history",
+    "readonly_badge": "Imported history",
+    "readonly_hint": "Read-only. Use /btw to ask, or continue from the last step.",
+    "continue_learning": "Continue from here",
+    "export": "Export",
+    "save_to_vault": "Save to notes",
+    "save": "Save",
+    "vault_file_name": "File name (e.g. compiler-notes.md)",
+    "export_saved": "Exported",
+    "vault_saved": "Saved"
   }
 }

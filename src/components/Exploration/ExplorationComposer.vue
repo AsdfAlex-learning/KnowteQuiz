@@ -42,6 +42,10 @@ async function submit() {
   if (!value || explorationStore.thinking) return;
 
   const command = parseExplorationCommand(value);
+  if (explorationStore.isReadOnly && command.kind !== 'btw') {
+    explorationStore.error = t('exploration.readonly_hint');
+    return;
+  }
   let ok = false;
   switch (command.kind) {
     case 'answer':

@@ -212,6 +212,20 @@ pub struct AsideExplorationRequest {
     pub question: String,
 }
 
+/// Payload for importing a learning-history Markdown file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ImportExplorationRequest {
+    pub markdown: String,
+    #[serde(default)]
+    pub source_name: Option<String>,
+}
+
+/// Payload for saving a history into the note vault.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SaveExplorationToVaultRequest {
+    pub file_name: String,
+}
+
 /// Lightweight row used by the session list endpoint.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExplorationSessionSummary {

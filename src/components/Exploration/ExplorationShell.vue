@@ -64,6 +64,19 @@
             >
               {{ t('exploration.open_folder') }}
             </button>
+            <button
+              class="px-4 py-2 rounded-[var(--radius-md)] border border-[var(--border-default)] text-[var(--text-sm)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              @click="fileInput?.click()"
+            >
+              {{ t('exploration.import_history') }}
+            </button>
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".md,.markdown,text/markdown"
+              class="hidden"
+              @change="handleImport"
+            />
           </div>
           <p v-if="explorationStore.error" class="text-[var(--text-xs)] text-[var(--color-error)]">
             {{ explorationStore.error }}
@@ -75,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useExplorationStore } from '@/stores/exploration';
 import { useExplorerStore } from '@/stores/explorer';
 import { useI18n } from '@/composables/useI18n';
@@ -84,6 +97,19 @@ import ExplorationChat from './ExplorationChat.vue';
 const explorationStore = useExplorationStore();
 const explorerStore = useExplorerStore();
 const { t } = useI18n();
+const fileInput = ref<HTMLInputElement | null>(null);
 
 const steps = computed(() => [t('exploration.step_select'), t('exploration.step_graph'), t('exploration.step_learn')]);
+
+async function handleImport(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const markdown = await file.text();
+    await explorationStore.importHistory(markdown, file.name);
+  } finally {
+    input.value = '';
+  }
+}
 </script>

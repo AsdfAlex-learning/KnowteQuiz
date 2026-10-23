@@ -18,6 +18,10 @@ vi.mock('../services/exploration', () => ({
   finishExploration: vi.fn(),
   skipExploration: vi.fn(),
   askExplorationAside: vi.fn(),
+  exportExplorationSession: vi.fn(),
+  saveExplorationToVault: vi.fn(),
+  importExplorationHistory: vi.fn(),
+  continueExploration: vi.fn(),
 }));
 
 function graph(): KnowledgeGraph {
@@ -354,5 +358,62 @@ describe('exploration store', () => {
     expect(ok).toBe(true);
     expect(explorationService.askExplorationAside).toHaveBeenCalledWith('s1', 'Why?');
     expect(store.session?.asides).toHaveLength(1);
+  });
+
+  it('exports the session and records the result', async () => {
+    const result = {
+      path: 'C:/data/exploration/exports/x.md',
+      file_name: 'x.md',
+      markdown: '# history',
+    };
+    vi.mocked(explorationService.exportExplorationSession).mockResolvedValue(result);
+    const store = useExplorationStore();
+    store.session = session({ status: 'completed', graph: graph() });
+
+    const ok = await store.exportSession();
+
+    expect(ok).toBe(true);
+    expect(explorationService.exportExplorationSession).toHaveBeenCalledWith('s1');
+    expect(store.lastExport).toEqual(result);
+  });
+
+  it('imports a history as a read-only session', async () => {
+    const imported = session({
+      status: 'completed',
+      graph: graph(),
+      origin: { kind: 'imported', source_path: 'friend.md' },
+    });
+    vi.mocked(explorationService.importExplorationHistory).mockResolvedValue(imported);
+    const store = useExplorationStore();
+
+    const ok = await store.importHistory('# history', 'friend.md');
+
+    expect(ok).toBe(true);
+    expect(explorationService.importExplorationHistory).toHaveBeenCalledWith({
+      markdown: '# history',
+      source_name: 'friend.md',
+    });
+    expect(store.isReadOnly).toBe(true);
+  });
+
+  it('continues an imported session', async () => {
+    const continued = session({
+      status: 'active',
+      graph: graph(),
+      origin: { kind: 'imported', source_path: 'friend.md' },
+    });
+    vi.mocked(explorationService.continueExploration).mockResolvedValue(continued);
+    const store = useExplorationStore();
+    store.session = session({
+      status: 'completed',
+      graph: graph(),
+      origin: { kind: 'imported', source_path: 'friend.md' },
+    });
+
+    const ok = await store.continueSession();
+
+    expect(ok).toBe(true);
+    expect(store.session?.status).toBe('active');
+    expect(store.isReadOnly).toBe(false);
   });
 });

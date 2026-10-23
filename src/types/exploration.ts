@@ -134,3 +134,14 @@ export type ExplorationStreamEvent =
   | { event: 'graph_ready'; data: { graph: KnowledgeGraph } }
   | { event: 'error'; data: { message: string } }
   | { event: 'done'; data: { session_id: string } };
+
+export interface ExplorationExportResult {
+  path: string;
+  file_name: string;
+  markdown: string;
+}
+
+export interface ImportExplorationRequest {
+  markdown: string;
+  source_name?: string | null;
+}
