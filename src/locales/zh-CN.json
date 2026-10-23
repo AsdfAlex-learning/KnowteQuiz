@@ -281,6 +281,20 @@
     "coverage": "覆盖 {covered}/{total}",
     "status_active": "进行中",
     "status_awaiting_domains": "确认领域",
-    "status_completed": "已完成"
+    "status_completed": "已完成",
+    "phase_reading": "正在读取所选笔记…",
+    "phase_summarizing": "正在总结第 {current}/{total} 篇笔记…",
+    "phase_merging": "正在合并为知识脉络…",
+    "domains_title": "这些笔记跨越了多个领域",
+    "domains_hint": "请确认识别出的领域，可重命名或全部合并为一个领域。学习路径会按这些分组展开。",
+    "domain_name": "领域名称",
+    "domain_concept_count": "{count} 个概念",
+    "domain_confirm": "确认并继续",
+    "domain_merge_all": "合并为一个领域",
+    "all_domains": "全部主题",
+    "graph_ready": "知识脉络已生成",
+    "graph_summary": "{concepts} 个概念 · {domains} 个领域",
+    "graph_next": "第一个问题会出现在这里。",
+    "retry_initialization": "重试初始化"
   }
 }

@@ -28,6 +28,23 @@ pub struct SourceRef {
     pub snippet: String,
 }
 
+/// Per-note extraction produced by the map stage. Stored in the session so the
+/// turn engine can ground questions without re-reading every note.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoteDigest {
+    pub path: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub headings: Vec<String>,
+    #[serde(default)]
+    pub summary: String,
+    #[serde(default)]
+    pub key_terms: Vec<String>,
+    #[serde(default)]
+    pub domain_guess: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Concept {
     pub id: String,
@@ -134,6 +151,8 @@ pub struct ExplorationSession {
     pub origin: SessionOrigin,
     #[serde(default)]
     pub source_paths: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub source_digests: Vec<NoteDigest>,
     #[serde(default)]
     pub graph: KnowledgeGraph,
     #[serde(default)]
@@ -156,6 +175,13 @@ pub struct CreateExplorationSessionRequest {
     pub source_paths: Vec<String>,
     #[serde(default)]
     pub title: Option<String>,
+}
+
+/// Payload for confirming (possibly edited) domains after initialization
+/// detected several subject areas.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConfirmExplorationDomainsRequest {
+    pub domains: Vec<Domain>,
 }
 
 /// Lightweight row used by the session list endpoint.
@@ -259,6 +285,7 @@ mod tests {
             status: SessionStatus::Active,
             origin: SessionOrigin::New,
             source_paths: vec!["a.md".to_string()],
+            source_digests: vec![],
             graph: KnowledgeGraph {
                 concepts: vec![
                     Concept {

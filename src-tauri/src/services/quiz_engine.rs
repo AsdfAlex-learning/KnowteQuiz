@@ -719,7 +719,7 @@ fn build_diagnosis_initial_prompt(
     crate::utils::prompt_templates::fill_template(template, &vars)
 }
 
-fn note_content_for_prompt(raw_content: &str) -> String {
+pub(crate) fn note_content_for_prompt(raw_content: &str) -> String {
     crate::services::note_service::extract_body_content(raw_content)
         .chars()
         .take(8000)
@@ -844,14 +844,39 @@ fn wants_json_mode(llm: &LlmConfig) -> bool {
     }
 }
 
+const DEFAULT_SYSTEM_PROMPT: &str =
+    "你是一位严格的学科导师。请用中文输出，并严格按 JSON 格式返回。";
+
 /// Public entry point: performs the request AND records the run for
 /// observability. The business logic lives in `llm_exchange`; this wrapper
 /// adds timing, prompt/response file recording and the `llm_runs.jsonl` entry.
 ///
 /// Recording is best effort — a failure to write the run record never fails the
 /// actual LLM call.
-async fn call_llm(
+pub(crate) async fn call_llm(
     settings: &LlmConfig,
+    prompt: &str,
+    temperature: f64,
+    kind: LlmRunKind,
+    data_dir: &Path,
+) -> Result<String, AppError> {
+    call_llm_with_system(
+        settings,
+        DEFAULT_SYSTEM_PROMPT,
+        prompt,
+        temperature,
+        kind,
+        data_dir,
+    )
+    .await
+}
+
+/// Same instrumentation as [`call_llm`], with an explicit system prompt.
+/// Used by features whose output language must follow the source content
+/// instead of the shared Chinese tutor persona.
+pub(crate) async fn call_llm_with_system(
+    settings: &LlmConfig,
+    system_prompt: &str,
     prompt: &str,
     temperature: f64,
     kind: LlmRunKind,
@@ -881,7 +906,15 @@ async fn call_llm(
     };
     let mut raw_body: Option<String> = None;
 
-    let outcome = llm_exchange(settings, prompt, temperature, &mut record, &mut raw_body).await;
+    let outcome = llm_exchange(
+        settings,
+        system_prompt,
+        prompt,
+        temperature,
+        &mut record,
+        &mut raw_body,
+    )
+    .await;
 
     record.ts_end = chrono::Local::now().to_rfc3339();
     record.duration_ms = started.elapsed().as_millis() as u64;
@@ -903,6 +936,7 @@ async fn call_llm(
 /// `raw_body` as it goes; never writes files or records runs itself.
 async fn llm_exchange(
     settings: &LlmConfig,
+    system_prompt: &str,
     prompt: &str,
     temperature: f64,
     record: &mut LlmRunRecord,
@@ -913,7 +947,7 @@ async fn llm_exchange(
     let mut request_body = serde_json::json!({
         "model": settings.model,
         "messages": [
-            { "role": "system", "content": "你是一位严格的学科导师。请用中文输出，并严格按 JSON 格式返回。" },
+            { "role": "system", "content": system_prompt },
             { "role": "user", "content": prompt }
         ],
         "stream": false,

@@ -1,12 +1,15 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
+  confirmExplorationDomains,
   createExplorationSession,
   deleteExplorationSession,
   getExplorationSession,
   listExplorationSessions,
+  startExplorationStream,
 } from '../services/exploration';
-import type { ExplorationSession, ExplorationSessionSummary, WhiteboardStep } from '../types/exploration';
+import type { Domain, ExplorationSession, ExplorationSessionSummary, WhiteboardStep } from '../types/exploration';
+import { useRequestId } from '../composables/useRequestId';
 
 /**
  * Exploration mode state.
@@ -22,8 +25,12 @@ export const useExplorationStore = defineStore('exploration', () => {
   const session = ref<ExplorationSession | null>(null);
   const sessions = ref<ExplorationSessionSummary[]>([]);
   const creating = ref(false);
+  const streaming = ref(false);
   const loadingSessions = ref(false);
+  const phase = ref<string | null>(null);
+  const pendingDomains = ref<Domain[] | null>(null);
   const error = ref<string | null>(null);
+  const streamRequest = useRequestId();
 
   const selectedCount = computed(() => selectedPaths.value.length);
   const canStart = computed(() => selectedPaths.value.length > 0 && !creating.value);
@@ -31,6 +38,8 @@ export const useExplorationStore = defineStore('exploration', () => {
   const isInitializing = computed(
     () => session.value?.status === 'initializing' || session.value?.status === 'awaiting_domain_confirm'
   );
+
+  const hasGraph = computed(() => (session.value?.graph.concepts.length ?? 0) > 0);
 
   const coverage = computed(() => {
     const current = session.value;
@@ -83,10 +92,105 @@ export const useExplorationStore = defineStore('exploration', () => {
         ...(title ? { title } : {}),
       });
       selectedPaths.value = [];
+      creating.value = false;
+      await runInitialization(session.value.id);
     } catch (e) {
       error.value = String(e);
     } finally {
       creating.value = false;
+    }
+  }
+
+  /** Runs (or re-runs) the map-reduce initialization for a session. */
+  async function runInitialization(sessionId: string): Promise<void> {
+    const requestId = streamRequest.next();
+    streaming.value = true;
+    phase.value = 'reading';
+    error.value = null;
+    try {
+      await startExplorationStream(sessionId, {
+        onPhase: (next) => {
+          if (streamRequest.isLatest(requestId)) phase.value = next;
+        },
+        onDomainWarning: (domains) => {
+          if (!streamRequest.isLatest(requestId)) return;
+          pendingDomains.value = domains;
+          if (session.value) {
+            session.value = {
+              ...session.value,
+              status: 'awaiting_domain_confirm',
+              domain_warning: 'multiple_domains',
+              graph: { ...session.value.graph, domains },
+            };
+          }
+        },
+        onGraphReady: (graph) => {
+          if (!streamRequest.isLatest(requestId)) return;
+          pendingDomains.value = null;
+          if (session.value) {
+            session.value = {
+              ...session.value,
+              status: 'active',
+              graph,
+              domain_warning: null,
+            };
+          }
+        },
+        onError: (message) => {
+          if (streamRequest.isLatest(requestId)) error.value = message;
+        },
+      });
+      if (streamRequest.isLatest(requestId) && session.value) {
+        session.value = await getExplorationSession(sessionId);
+      }
+    } catch (e) {
+      if (streamRequest.isLatest(requestId)) error.value = String(e);
+    } finally {
+      if (streamRequest.isLatest(requestId)) {
+        streaming.value = false;
+        phase.value = null;
+      }
+    }
+  }
+
+  async function retryInitialization(): Promise<void> {
+    if (!session.value || streaming.value) return;
+    await runInitialization(session.value.id);
+  }
+
+  async function confirmDomains(domains: Domain[]): Promise<void> {
+    const current = session.value;
+    if (!current || streaming.value) return;
+    const requestId = streamRequest.next();
+    streaming.value = true;
+    error.value = null;
+    try {
+      await confirmExplorationDomains(
+        current.id,
+        { domains },
+        {
+          onGraphReady: (graph) => {
+            if (!streamRequest.isLatest(requestId) || !session.value) return;
+            pendingDomains.value = null;
+            session.value = {
+              ...session.value,
+              status: 'active',
+              graph,
+              domain_warning: null,
+            };
+          },
+          onError: (message) => {
+            if (streamRequest.isLatest(requestId)) error.value = message;
+          },
+        }
+      );
+      if (streamRequest.isLatest(requestId)) {
+        session.value = await getExplorationSession(current.id);
+      }
+    } catch (e) {
+      if (streamRequest.isLatest(requestId)) error.value = String(e);
+    } finally {
+      if (streamRequest.isLatest(requestId)) streaming.value = false;
     }
   }
 
@@ -106,6 +210,7 @@ export const useExplorationStore = defineStore('exploration', () => {
     error.value = null;
     try {
       session.value = await getExplorationSession(sessionId);
+      pendingDomains.value = session.value.status === 'awaiting_domain_confirm' ? session.value.graph.domains : null;
     } catch (e) {
       error.value = String(e);
     }
@@ -123,12 +228,18 @@ export const useExplorationStore = defineStore('exploration', () => {
   }
 
   function closeSession() {
+    // Invalidate in-flight stream events so a slow initialization cannot
+    // repopulate a session the user just left.
+    streamRequest.next();
+    streaming.value = false;
+    phase.value = null;
+    pendingDomains.value = null;
     session.value = null;
   }
 
   function reset() {
+    closeSession();
     selectedPaths.value = [];
-    session.value = null;
     sessions.value = [];
     error.value = null;
   }
@@ -138,11 +249,15 @@ export const useExplorationStore = defineStore('exploration', () => {
     session,
     sessions,
     creating,
+    streaming,
     loadingSessions,
+    phase,
+    pendingDomains,
     error,
     selectedCount,
     canStart,
     isInitializing,
+    hasGraph,
     coverage,
     currentWhiteboard,
     isSelected,
@@ -150,6 +265,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     selectAll,
     clearSelection,
     startSession,
+    retryInitialization,
+    confirmDomains,
     loadSessions,
     openSession,
     removeSession,

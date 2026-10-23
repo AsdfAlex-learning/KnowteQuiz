@@ -13,6 +13,11 @@ pub enum LlmRunKind {
     DiagnosisReport,
     ConnectionTest,
     Probe,
+    ExplorationSummary,
+    ExplorationGraph,
+    ExplorationTurn,
+    ExplorationRepair,
+    ExplorationAside,
 }
 
 impl LlmRunKind {
@@ -25,6 +30,11 @@ impl LlmRunKind {
             LlmRunKind::DiagnosisReport => "diagnosis_report",
             LlmRunKind::ConnectionTest => "connection_test",
             LlmRunKind::Probe => "probe",
+            LlmRunKind::ExplorationSummary => "exploration_summary",
+            LlmRunKind::ExplorationGraph => "exploration_graph",
+            LlmRunKind::ExplorationTurn => "exploration_turn",
+            LlmRunKind::ExplorationRepair => "exploration_repair",
+            LlmRunKind::ExplorationAside => "exploration_aside",
         }
     }
 }

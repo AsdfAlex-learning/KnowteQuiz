@@ -281,6 +281,20 @@
     "coverage": "{covered}/{total} covered",
     "status_active": "Active",
     "status_awaiting_domains": "Confirm domains",
-    "status_completed": "Completed"
+    "status_completed": "Completed",
+    "phase_reading": "Reading the selected notes…",
+    "phase_summarizing": "Summarizing note {current} of {total}…",
+    "phase_merging": "Merging notes into a knowledge map…",
+    "domains_title": "These notes span several subject areas",
+    "domains_hint": "Confirm the detected areas, rename them if needed, or merge everything into one domain. The learning path follows these groupings.",
+    "domain_name": "Domain name",
+    "domain_concept_count": "{count} concept(s)",
+    "domain_confirm": "Confirm and continue",
+    "domain_merge_all": "Merge into one domain",
+    "all_domains": "All topics",
+    "graph_ready": "Knowledge map ready",
+    "graph_summary": "{concepts} concepts · {domains} domain(s)",
+    "graph_next": "The first question will appear here.",
+    "retry_initialization": "Retry initialization"
   }
 }

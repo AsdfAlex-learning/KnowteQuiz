@@ -2,14 +2,44 @@ import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExplorationStore } from './exploration';
 import * as explorationService from '../services/exploration';
-import type { ExplorationSession } from '../types/exploration';
+import type { Domain, ExplorationSession, KnowledgeGraph } from '../types/exploration';
 
 vi.mock('../services/exploration', () => ({
   createExplorationSession: vi.fn(),
   listExplorationSessions: vi.fn(),
   getExplorationSession: vi.fn(),
   deleteExplorationSession: vi.fn(),
+  startExplorationStream: vi.fn(),
+  confirmExplorationDomains: vi.fn(),
 }));
+
+function graph(): KnowledgeGraph {
+  return {
+    concepts: [
+      {
+        id: 'c1',
+        title: 'One',
+        summary: '',
+        depth: 0,
+        prereqs: [],
+        source_refs: [],
+        covered: true,
+      },
+      {
+        id: 'c2',
+        title: 'Two',
+        summary: '',
+        depth: 1,
+        prereqs: ['c1'],
+        source_refs: [],
+        covered: false,
+      },
+    ],
+    domains: [{ id: 'd1', title: 'Compilers', concept_ids: ['c1', 'c2'] }],
+    root_order: ['c1', 'c2'],
+    domains_confirmed: true,
+  };
+}
 
 function session(overrides: Partial<ExplorationSession> = {}): ExplorationSession {
   return {
@@ -77,8 +107,16 @@ describe('exploration store', () => {
     expect(store.session).toBeNull();
   });
 
-  it('creates a session from the selection and clears it', async () => {
+  it('creates a session, runs initialization and clears the selection', async () => {
     vi.mocked(explorationService.createExplorationSession).mockResolvedValue(session());
+    vi.mocked(explorationService.startExplorationStream).mockImplementation(async (_id, handlers) => {
+      handlers.onPhase?.('merging');
+      handlers.onGraphReady?.(graph());
+    });
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(
+      session({ status: 'active', graph: graph() })
+    );
+
     const store = useExplorationStore();
     store.selectAll(['a.md', 'b.md']);
 
@@ -87,9 +125,11 @@ describe('exploration store', () => {
     expect(explorationService.createExplorationSession).toHaveBeenCalledWith({
       source_paths: ['a.md', 'b.md'],
     });
-    expect(store.session?.id).toBe('s1');
+    expect(explorationService.startExplorationStream).toHaveBeenCalledWith('s1', expect.any(Object));
+    expect(store.session?.status).toBe('active');
+    expect(store.hasGraph).toBe(true);
     expect(store.selectedPaths).toEqual([]);
-    expect(store.isInitializing).toBe(true);
+    expect(store.streaming).toBe(false);
   });
 
   it('keeps the selection when session creation fails', async () => {
@@ -102,6 +142,7 @@ describe('exploration store', () => {
     expect(store.session).toBeNull();
     expect(store.selectedPaths).toEqual(['a.md']);
     expect(store.error).toContain('backend down');
+    expect(explorationService.startExplorationStream).not.toHaveBeenCalled();
   });
 
   it('does not create a session without a selection', async () => {
@@ -112,35 +153,71 @@ describe('exploration store', () => {
     expect(explorationService.createExplorationSession).not.toHaveBeenCalled();
   });
 
+  it('blocks on domain confirmation when initialization detects several areas', async () => {
+    const domains: Domain[] = [
+      { id: 'd1', title: 'Compilers', concept_ids: ['c1'] },
+      { id: 'd2', title: 'Cooking', concept_ids: ['c2'] },
+    ];
+    vi.mocked(explorationService.createExplorationSession).mockResolvedValue(session());
+    vi.mocked(explorationService.startExplorationStream).mockImplementation(async (_id, handlers) => {
+      handlers.onDomainWarning?.(domains, 'multiple_domains');
+    });
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(
+      session({ status: 'awaiting_domain_confirm', graph: graph(), domain_warning: 'multiple_domains' })
+    );
+
+    const store = useExplorationStore();
+    store.selectAll(['a.md', 'b.md']);
+    await store.startSession();
+
+    expect(store.pendingDomains).toEqual(domains);
+    expect(store.session?.status).toBe('awaiting_domain_confirm');
+    expect(store.isInitializing).toBe(true);
+  });
+
+  it('confirms domains and activates the session', async () => {
+    vi.mocked(explorationService.confirmExplorationDomains).mockImplementation(async (_id, _request, handlers) => {
+      handlers.onGraphReady?.(graph());
+    });
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(
+      session({ status: 'active', graph: graph() })
+    );
+
+    const store = useExplorationStore();
+    store.session = session({ status: 'awaiting_domain_confirm', graph: graph() });
+    store.pendingDomains = graph().domains;
+
+    await store.confirmDomains(graph().domains);
+
+    expect(explorationService.confirmExplorationDomains).toHaveBeenCalledWith(
+      's1',
+      { domains: graph().domains },
+      expect.any(Object)
+    );
+    expect(store.pendingDomains).toBeNull();
+    expect(store.session?.status).toBe('active');
+  });
+
+  it('surfaces initialization errors and allows a retry', async () => {
+    vi.mocked(explorationService.createExplorationSession).mockResolvedValue(session());
+    vi.mocked(explorationService.startExplorationStream).mockImplementation(async (_id, handlers) => {
+      handlers.onError?.('model unreachable');
+    });
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(session());
+
+    const store = useExplorationStore();
+    store.selectAll(['a.md']);
+    await store.startSession();
+
+    expect(store.error).toContain('model unreachable');
+    expect(store.streaming).toBe(false);
+  });
+
   it('derives coverage and the visible whiteboard from the active timeline', () => {
     const store = useExplorationStore();
     store.session = session({
       status: 'active',
-      graph: {
-        concepts: [
-          {
-            id: 'c1',
-            title: 'One',
-            summary: '',
-            depth: 0,
-            prereqs: [],
-            source_refs: [],
-            covered: true,
-          },
-          {
-            id: 'c2',
-            title: 'Two',
-            summary: '',
-            depth: 1,
-            prereqs: ['c1'],
-            source_refs: [],
-            covered: false,
-          },
-        ],
-        domains: [],
-        root_order: ['c1'],
-        domains_confirmed: true,
-      },
+      graph: graph(),
       groups: [
         {
           concept_id: 'c1',

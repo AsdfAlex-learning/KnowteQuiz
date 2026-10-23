@@ -12,6 +12,16 @@ export interface SourceRef {
   snippet: string;
 }
 
+/** Per-note extraction from the map stage of initialization. */
+export interface NoteDigest {
+  path: string;
+  title: string;
+  headings: string[];
+  summary: string;
+  key_terms: string[];
+  domain_guess: string;
+}
+
 export interface Concept {
   id: string;
   title: string;
@@ -73,6 +83,7 @@ export interface ExplorationSession {
   status: SessionStatus;
   origin: SessionOrigin;
   source_paths: string[];
+  source_digests?: NoteDigest[];
   graph: KnowledgeGraph;
   groups: TurnGroup[];
   active_group: number;
@@ -97,3 +108,14 @@ export interface CreateExplorationSessionRequest {
   source_paths: string[];
   title?: string;
 }
+
+export interface ConfirmExplorationDomainsRequest {
+  domains: Domain[];
+}
+
+export type ExplorationStreamEvent =
+  | { event: 'phase'; data: { phase: string } }
+  | { event: 'domain_warning'; data: { domains: Domain[]; warning: string } }
+  | { event: 'graph_ready'; data: { graph: KnowledgeGraph } }
+  | { event: 'error'; data: { message: string } }
+  | { event: 'done'; data: { session_id: string } };

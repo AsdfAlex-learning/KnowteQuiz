@@ -281,6 +281,20 @@
     "coverage": "{covered}/{total} 학습",
     "status_active": "진행 중",
     "status_awaiting_domains": "영역 확인",
-    "status_completed": "완료"
+    "status_completed": "완료",
+    "phase_reading": "선택한 노트를 읽는 중…",
+    "phase_summarizing": "노트 {current}/{total} 요약 중…",
+    "phase_merging": "지식 지도로 통합하는 중…",
+    "domains_title": "선택한 노트가 여러 영역에 걸쳐 있습니다",
+    "domains_hint": "감지된 영역을 확인하세요. 이름을 바꾸거나 모두 하나의 영역으로 합칠 수 있습니다. 학습 경로는 이 분류를 따릅니다.",
+    "domain_name": "영역 이름",
+    "domain_concept_count": "개념 {count}개",
+    "domain_confirm": "확인하고 계속",
+    "domain_merge_all": "하나의 영역으로 합치기",
+    "all_domains": "모든 주제",
+    "graph_ready": "지식 지도가 준비되었습니다",
+    "graph_summary": "개념 {concepts}개 · 영역 {domains}개",
+    "graph_next": "첫 질문이 여기에 표시됩니다.",
+    "retry_initialization": "초기화 다시 시도"
   }
 }

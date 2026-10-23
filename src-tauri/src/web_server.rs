@@ -24,12 +24,14 @@ use tower_http::services::{ServeDir, ServeFile};
 use crate::errors::AppError;
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::exploration::{
-    CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
+    ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest, ExplorationSession,
+    ExplorationSessionSummary,
 };
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
+use crate::services::exploration::engine::{self as exploration_engine, ExplorationStreamEvent};
 use crate::services::exploration::session_store as exploration_store;
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
@@ -223,6 +225,14 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route(
             "/api/exploration/sessions/:id",
             get(exploration_get_handler).delete(exploration_delete_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/start",
+            post(exploration_start_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/domains",
+            post(exploration_confirm_domains_handler),
         )
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
@@ -472,6 +482,61 @@ async fn exploration_delete_handler(
         .await
         .map_err(|e| AppError::Internal(format!("Exploration delete task failed: {e}")))??;
     Ok(Json(true))
+}
+
+async fn exploration_start_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<ExplorationStreamEvent>();
+    let app_state = state.clone();
+    tokio::spawn(async move {
+        if let Err(err) =
+            exploration_engine::initialize_session(&app_state.data_dir, &session_id, tx.clone())
+                .await
+        {
+            let _ = tx.send(ExplorationStreamEvent::Error {
+                message: err.to_string(),
+            });
+        }
+    });
+
+    let stream = UnboundedReceiverStream::new(rx).map(|event| {
+        let data = serde_json::to_string(&event).unwrap_or_default();
+        Ok::<_, Infallible>(Event::default().data(data))
+    });
+
+    Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default())
+}
+
+async fn exploration_confirm_domains_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+    Json(request): Json<ConfirmExplorationDomainsRequest>,
+) -> Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>> {
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<ExplorationStreamEvent>();
+    let app_state = state.clone();
+    tokio::spawn(async move {
+        if let Err(err) = exploration_engine::confirm_domains(
+            &app_state.data_dir,
+            &session_id,
+            request.domains,
+            tx.clone(),
+        )
+        .await
+        {
+            let _ = tx.send(ExplorationStreamEvent::Error {
+                message: err.to_string(),
+            });
+        }
+    });
+
+    let stream = UnboundedReceiverStream::new(rx).map(|event| {
+        let data = serde_json::to_string(&event).unwrap_or_default();
+        Ok::<_, Infallible>(Event::default().data(data))
+    });
+
+    Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default())
 }
 
 async fn llm_list_runs_handler(

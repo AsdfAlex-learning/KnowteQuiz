@@ -1,9 +1,12 @@
 use crate::errors::AppError;
 use crate::models::exploration::{
-    CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
+    ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest, ExplorationSession,
+    ExplorationSessionSummary,
 };
+use crate::services::exploration::engine::{self, ExplorationStreamEvent};
 use crate::services::exploration::session_store;
 use crate::services::storage;
+use tauri::ipc::Channel;
 use tauri::AppHandle;
 
 #[tauri::command]
@@ -45,4 +48,42 @@ pub async fn exploration_delete(app: AppHandle, session_id: String) -> Result<bo
         .await
         .map_err(|e| AppError::Internal(format!("Exploration delete task failed: {e}")))??;
     Ok(true)
+}
+
+#[tauri::command]
+pub async fn exploration_start_stream(
+    app: AppHandle,
+    session_id: String,
+    on_event: Channel<ExplorationStreamEvent>,
+) -> Result<(), AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            if on_event.send(event).is_err() {
+                // Tauri channel closed: stop forwarding.
+                break;
+            }
+        }
+    });
+    engine::initialize_session(&data_dir, &session_id, tx).await
+}
+
+#[tauri::command]
+pub async fn exploration_confirm_domains(
+    app: AppHandle,
+    session_id: String,
+    request: ConfirmExplorationDomainsRequest,
+    on_event: Channel<ExplorationStreamEvent>,
+) -> Result<(), AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            if on_event.send(event).is_err() {
+                break;
+            }
+        }
+    });
+    engine::confirm_domains(&data_dir, &session_id, request.domains, tx).await
 }
