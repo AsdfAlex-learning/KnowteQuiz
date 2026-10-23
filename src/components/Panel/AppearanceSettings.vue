@@ -295,18 +295,47 @@
       </template>
     </div>
 
-    <!-- Preset Library -->
+    <!-- Theme Presets -->
     <div class="space-y-2">
       <label class="text-sm font-medium text-[var(--text-primary)]">
         {{ t('appearance.presets') }}
       </label>
-      <div
-        class="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center"
-      >
-        <p class="text-xs text-[var(--text-muted)]">
-          {{ t('appearance.presets_coming_soon') }}
-        </p>
+      <div class="grid grid-cols-2 gap-2">
+        <button
+          v-for="preset in THEME_PRESETS"
+          :key="preset.id"
+          class="rounded-lg border p-2 text-left transition-colors"
+          :class="
+            modelValue.preset === preset.id
+              ? 'border-[var(--accent-purple)] ring-1 ring-[var(--accent-purple)]'
+              : 'border-[var(--border-default)] hover:bg-[var(--bg-active)]'
+          "
+          @click="applyPreset(preset)"
+        >
+          <span class="flex items-center gap-1.5">
+            <span
+              class="w-3 h-3 rounded-full shrink-0"
+              :style="{
+                backgroundColor: preset.palette.bgBase,
+                border: `1px solid ${preset.palette.borderDefault}`,
+              }"
+            />
+            <span class="w-3 h-3 rounded-full shrink-0" :style="{ backgroundColor: preset.palette.accent }" />
+            <span class="text-xs text-[var(--text-primary)] truncate">{{ preset.label }}</span>
+          </span>
+          <span class="mt-1.5 flex gap-1">
+            <span
+              v-for="color in swatch(preset)"
+              :key="color"
+              class="h-1.5 flex-1 rounded-full"
+              :style="{ backgroundColor: color }"
+            />
+          </span>
+        </button>
       </div>
+      <p v-if="isCustomTheme" class="text-xs text-[var(--text-muted)]">
+        {{ t('appearance.theme_custom') }}
+      </p>
     </div>
 
     <!-- Reset to Defaults -->
@@ -326,6 +355,7 @@ import { ref, computed } from 'vue';
 import { useI18n } from '@/composables/useI18n';
 import { requestStop, requestResume, resetVideoState } from '@/composables/useVideoBackground';
 import { clampBlur } from '@/utils/glass';
+import { THEME_PRESETS, findThemePreset, type ThemePreset } from '@/utils/themes';
 import { saveMediaFile } from '@/services/settings';
 import type { ThemeConfig } from '@/types/settings';
 
@@ -345,6 +375,21 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const videoInput = ref<HTMLInputElement | null>(null);
 const imageError = ref<string | null>(null);
 const videoError = ref<string | null>(null);
+
+const isCustomTheme = computed(() => !findThemePreset(props.modelValue.preset));
+
+function applyPreset(preset: ThemePreset) {
+  emit('update:modelValue', {
+    ...props.modelValue,
+    preset: preset.id,
+    background_color: preset.palette.bgBase,
+    accent_color: preset.palette.accent,
+  });
+}
+
+function swatch(preset: ThemePreset): string[] {
+  return [preset.palette.bgSidebar, preset.palette.bgElevated, preset.palette.accent, preset.palette.textMuted];
+}
 
 const videoStatusText = computed(() => {
   if (!props.modelValue.background_video) return '';
@@ -369,6 +414,7 @@ function updateBackgroundColor(e: Event) {
   const target = e.target as HTMLInputElement;
   emit('update:modelValue', {
     ...props.modelValue,
+    preset: 'custom',
     background_color: target.value,
   });
 }
@@ -377,6 +423,7 @@ function updateAccentColor(e: Event) {
   const target = e.target as HTMLInputElement;
   emit('update:modelValue', {
     ...props.modelValue,
+    preset: 'custom',
     accent_color: target.value,
   });
 }
@@ -559,8 +606,9 @@ function resetToDefaults() {
   videoError.value = null;
   resetVideoState();
   emit('update:modelValue', {
-    background_color: '#1e1e2e',
-    accent_color: '#cba6f7',
+    preset: 'vscode-dark-plus',
+    background_color: '#1e1e1e',
+    accent_color: '#007acc',
     background_image: null,
     glassmorphism: {
       enabled: false,

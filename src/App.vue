@@ -86,7 +86,7 @@ useTheme();
 const appBgClass = computed(() => {
   const theme = settingsStore.settings.theme_config;
   if (!theme) return 'bg-[var(--bg-base)]';
-  const hasCustomBg = theme.background_image || (theme.background_color && theme.background_color !== '#1e1e2e');
+  const hasCustomBg = theme.background_image || (theme.background_color && theme.background_color !== '#1e1e1e');
   const hasGlass = theme.glassmorphism?.enabled;
   return hasCustomBg || hasGlass ? 'bg-transparent' : 'bg-[var(--bg-base)]';
 });

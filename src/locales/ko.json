@@ -190,6 +190,7 @@
     "video_too_large": "동영상은 50MB보다 작아야 합니다",
     "presets": "프리셋 테마",
     "presets_coming_soon": "프리셋 테마 준비 중",
+    "theme_custom": "사용자 지정 색상",
     "reset_defaults": "기본값으로 재설정"
   },
   "error_book": {

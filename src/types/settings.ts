@@ -99,6 +99,8 @@ export interface GlassmorphismConfig {
 }
 
 export interface ThemeConfig {
+  /** VS Code-style preset id; empty or `custom` keeps the manual colours. */
+  preset?: string;
   background_color: string;
   accent_color: string;
   background_image: string | null;

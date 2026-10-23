@@ -46,8 +46,9 @@ export function defaultSettings(): Settings {
       last_active_date: null,
     },
     theme_config: {
-      background_color: '#1e1e2e',
-      accent_color: '#cba6f7',
+      preset: 'vscode-dark-plus',
+      background_color: '#1e1e1e',
+      accent_color: '#007acc',
       background_image: null,
       glassmorphism: {
         enabled: false,

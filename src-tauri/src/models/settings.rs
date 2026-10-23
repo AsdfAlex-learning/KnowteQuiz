@@ -153,6 +153,10 @@ fn default_overlay_opacity() -> u32 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThemeConfig {
+    /// VS Code-style preset id. Missing on settings written before presets
+    /// existed, in which case the frontend keeps the manual colours (`custom`).
+    #[serde(default)]
+    pub preset: String,
     #[serde(default = "default_bg_color")]
     pub background_color: String,
     #[serde(default = "default_accent_color")]
@@ -174,6 +178,7 @@ pub struct ThemeConfig {
 impl Default for ThemeConfig {
     fn default() -> Self {
         Self {
+            preset: default_theme_preset(),
             background_color: default_bg_color(),
             accent_color: default_accent_color(),
             background_image: None,
@@ -186,6 +191,10 @@ impl Default for ThemeConfig {
     }
 }
 
+fn default_theme_preset() -> String {
+    "vscode-dark-plus".to_string()
+}
+
 fn default_video_playing() -> bool {
     true
 }
@@ -195,11 +204,11 @@ fn default_video_time() -> f64 {
 }
 
 fn default_bg_color() -> String {
-    "#1e1e2e".to_string()
+    "#1e1e1e".to_string()
 }
 
 fn default_accent_color() -> String {
-    "#cba6f7".to_string()
+    "#007acc".to_string()
 }
 
 pub fn default_theme_name() -> String {

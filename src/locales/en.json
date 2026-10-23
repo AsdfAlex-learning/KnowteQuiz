@@ -190,6 +190,7 @@
     "video_too_large": "Video must be smaller than 50 MB",
     "presets": "Preset Themes",
     "presets_coming_soon": "Preset themes coming soon",
+    "theme_custom": "Custom colours",
     "reset_defaults": "Reset to Defaults"
   },
   "error_book": {

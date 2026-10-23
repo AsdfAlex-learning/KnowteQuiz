@@ -190,6 +190,7 @@
     "video_too_large": "视频大小不能超过 50 MB",
     "presets": "预设主题",
     "presets_coming_soon": "预设主题即将推出",
+    "theme_custom": "自定义配色",
     "reset_defaults": "恢复默认"
   },
   "error_book": {
