@@ -295,6 +295,20 @@
     "graph_ready": "知識マップができました",
     "graph_summary": "{concepts} 個の概念 · {domains} 個の領域",
     "graph_next": "最初の質問がここに表示されます。",
-    "retry_initialization": "初期化を再試行"
+    "retry_initialization": "初期化を再試行",
+    "answer_placeholder": "考えを書いてください…",
+    "answer_hint": "Enter で送信 · Shift+Enter で改行",
+    "send": "送信",
+    "thinking": "考え中…",
+    "hint_label": "ヒント",
+    "verdict_correct": "正解",
+    "verdict_partial": "部分的に正解",
+    "verdict_wrong": "不正解",
+    "verdict_unknown": "未回答",
+    "current_concept": "現在の概念",
+    "continue": "続ける",
+    "completed_title": "知識マップを最後まで学びました",
+    "completed_summary": "{covered}/{total} 個の概念を学習",
+    "uncovered_label": "未学習"
   }
 }

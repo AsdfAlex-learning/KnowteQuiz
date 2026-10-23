@@ -1,7 +1,7 @@
 use crate::errors::AppError;
 use crate::models::exploration::{
-    ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest, ExplorationSession,
-    ExplorationSessionSummary,
+    AskExplorationRequest, ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest,
+    ExplorationSession, ExplorationSessionSummary,
 };
 use crate::services::exploration::engine::{self, ExplorationStreamEvent};
 use crate::services::exploration::session_store;
@@ -86,4 +86,23 @@ pub async fn exploration_confirm_domains(
         }
     });
     engine::confirm_domains(&data_dir, &session_id, request.domains, tx).await
+}
+
+#[tauri::command]
+pub async fn exploration_next_question(
+    app: AppHandle,
+    session_id: String,
+) -> Result<ExplorationSession, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    engine::next_question(&data_dir, &session_id).await
+}
+
+#[tauri::command]
+pub async fn exploration_ask(
+    app: AppHandle,
+    session_id: String,
+    request: AskExplorationRequest,
+) -> Result<ExplorationSession, AppError> {
+    let data_dir = storage::get_data_dir(&app)?;
+    engine::ask_turn(&data_dir, &session_id, &request.answer).await
 }

@@ -295,6 +295,20 @@
     "graph_ready": "知识脉络已生成",
     "graph_summary": "{concepts} 个概念 · {domains} 个领域",
     "graph_next": "第一个问题会出现在这里。",
-    "retry_initialization": "重试初始化"
+    "retry_initialization": "重试初始化",
+    "answer_placeholder": "写下你的推理…",
+    "answer_hint": "Enter 发送 · Shift+Enter 换行",
+    "send": "发送",
+    "thinking": "思考中…",
+    "hint_label": "提示",
+    "verdict_correct": "正确",
+    "verdict_partial": "部分正确",
+    "verdict_wrong": "还不对",
+    "verdict_unknown": "未作答",
+    "current_concept": "当前概念",
+    "continue": "继续",
+    "completed_title": "你已学完整个脉络",
+    "completed_summary": "已覆盖 {covered}/{total} 个概念",
+    "uncovered_label": "尚未覆盖"
   }
 }

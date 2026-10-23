@@ -11,6 +11,8 @@ vi.mock('../services/exploration', () => ({
   deleteExplorationSession: vi.fn(),
   startExplorationStream: vi.fn(),
   confirmExplorationDomains: vi.fn(),
+  askExploration: vi.fn(),
+  nextExplorationQuestion: vi.fn(),
 }));
 
 function graph(): KnowledgeGraph {
@@ -273,5 +275,44 @@ describe('exploration store', () => {
 
     expect(store.sessions).toEqual([]);
     expect(store.session).toBeNull();
+  });
+
+  it('submits an answer and replaces the session', async () => {
+    const updated = session({ status: 'active', graph: graph(), active_group: 1 });
+    vi.mocked(explorationService.askExploration).mockResolvedValue(updated);
+    const store = useExplorationStore();
+    store.session = session({ status: 'active', graph: graph() });
+
+    const ok = await store.answer('  Because.  ');
+
+    expect(ok).toBe(true);
+    expect(explorationService.askExploration).toHaveBeenCalledWith('s1', 'Because.');
+    expect(store.session).toEqual(updated);
+    expect(store.thinking).toBe(false);
+  });
+
+  it('keeps the session and reports errors when an answer fails', async () => {
+    vi.mocked(explorationService.askExploration).mockRejectedValue(new Error('model down'));
+    const store = useExplorationStore();
+    const original = session({ status: 'active', graph: graph() });
+    store.session = original;
+
+    const ok = await store.answer('Because.');
+
+    expect(ok).toBe(false);
+    expect(store.session).toEqual(original);
+    expect(store.error).toContain('model down');
+  });
+
+  it('requests the next question', async () => {
+    const updated = session({ status: 'active', graph: graph(), active_group: 1 });
+    vi.mocked(explorationService.nextExplorationQuestion).mockResolvedValue(updated);
+    const store = useExplorationStore();
+    store.session = session({ status: 'active', graph: graph() });
+
+    const ok = await store.requestNextQuestion();
+
+    expect(ok).toBe(true);
+    expect(explorationService.nextExplorationQuestion).toHaveBeenCalledWith('s1');
   });
 });

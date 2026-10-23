@@ -34,3 +34,46 @@ HARD CONSTRAINTS:\n\
 INPUT DIGESTS (JSON):\n{digests_json}"
     )
 }
+
+/// Opening question for one concept, grounded in its source excerpts.
+pub fn question_prompt(context_json: &str) -> String {
+    format!(
+        "Write the opening question for a guided-learning session.\n\n\
+Rules:\n\
+- Ground it in the note excerpts in the context below; do not invent facts.\n\
+- Ask one concrete question that makes the learner reason, not recall a definition.\n\
+- It must be answerable from the excerpts.\n\
+- Keep the source language. At most 80 words.\n\
+- Return plain text only (Markdown allowed); no JSON, no markdown fences.\n\n\
+CONTEXT (JSON):\n{context_json}"
+    )
+}
+
+/// One combined turn: judge the answer, give feedback, and choose the next step.
+pub fn turn_prompt(context_json: &str) -> String {
+    format!(
+        "Continue a guided-learning session. Judge the learner's answer, give feedback, and choose the next step.\n\n\
+Return exactly one JSON object shaped like this:\n\
+{{\n  \"verdict\": \"correct | partial | wrong | unknown\",\n  \"feedback\": \"2-4 sentences of specific feedback\",\n  \"next_action\": \"question | hint | advance | complete\",\n  \"hint\": \"directional hint, only when next_action is hint\",\n  \"next_concept_id\": \"id from the concept list\",\n  \"next_question\": \"the next question text\",\n  \"whiteboard_md\": \"Markdown explanation of the concept just discussed\",\n  \"covered_concepts\": [\"concept id\"]\n}}\n\n\
+HARD CONSTRAINTS:\n\
+- If the learner says they do not know (any phrasing), verdict is unknown and next_action is hint: give ONE directional hint that does not reveal the answer, then ask a smaller sub-question about the same concept.\n\
+- If the answer is wrong, next_action is question: keep the same concept and ask from a different angle.\n\
+- If the answer shows enough understanding, next_action is advance and covered_concepts must include the current concept.\n\
+- Advance at most one concept per turn. next_concept_id must come from the concept list and must not already be covered.\n\
+- Every question must be grounded in the source excerpts in the context; do not invent content.\n\
+- whiteboard_md: explain the concept just discussed as a short Markdown block (table, list, formula, or diagram-in-text). Keep the source language.\n\
+- When every concept is covered, next_action is complete.\n\
+- Return the JSON object only.\n\n\
+CONTEXT (JSON):\n{context_json}"
+    )
+}
+
+/// Repair pass used when the turn response is not valid JSON.
+pub fn repair_prompt(raw_response: &str, error: &str) -> String {
+    format!(
+        "The previous response was not valid JSON ({error}).\n\
+Rewrite it as exactly one JSON object with these keys: verdict, feedback, next_action, hint, next_concept_id, next_question, whiteboard_md, covered_concepts.\n\
+Keep the same meaning; change only the formatting. Return the JSON object only.\n\n\
+PREVIOUS RESPONSE:\n{raw_response}"
+    )
+}

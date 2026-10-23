@@ -1,14 +1,22 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import {
+  askExploration,
   confirmExplorationDomains,
   createExplorationSession,
   deleteExplorationSession,
   getExplorationSession,
   listExplorationSessions,
+  nextExplorationQuestion,
   startExplorationStream,
 } from '../services/exploration';
-import type { Domain, ExplorationSession, ExplorationSessionSummary, WhiteboardStep } from '../types/exploration';
+import type {
+  Domain,
+  ExplorationSession,
+  ExplorationSessionSummary,
+  TurnGroup,
+  WhiteboardStep,
+} from '../types/exploration';
 import { useRequestId } from '../composables/useRequestId';
 
 /**
@@ -26,6 +34,7 @@ export const useExplorationStore = defineStore('exploration', () => {
   const sessions = ref<ExplorationSessionSummary[]>([]);
   const creating = ref(false);
   const streaming = ref(false);
+  const thinking = ref(false);
   const loadingSessions = ref(false);
   const phase = ref<string | null>(null);
   const pendingDomains = ref<Domain[] | null>(null);
@@ -62,6 +71,13 @@ export const useExplorationStore = defineStore('exploration', () => {
       if (active[i].whiteboard) return active[i].whiteboard ?? null;
     }
     return null;
+  });
+
+  /** The group waiting for an answer, if any. */
+  const currentGroup = computed<TurnGroup | null>(() => {
+    const current = session.value;
+    if (!current) return null;
+    return current.groups[current.active_group] ?? null;
   });
 
   function isSelected(path: string): boolean {
@@ -158,6 +174,41 @@ export const useExplorationStore = defineStore('exploration', () => {
     await runInitialization(session.value.id);
   }
 
+  /** Submits one learner answer and replaces the session with the result. */
+  async function answer(text: string): Promise<boolean> {
+    const current = session.value;
+    const trimmed = text.trim();
+    if (!current || thinking.value || !trimmed) return false;
+    thinking.value = true;
+    error.value = null;
+    try {
+      session.value = await askExploration(current.id, trimmed);
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    } finally {
+      thinking.value = false;
+    }
+  }
+
+  /** Generates the pending question when the session is active but has none. */
+  async function requestNextQuestion(): Promise<boolean> {
+    const current = session.value;
+    if (!current || thinking.value) return false;
+    thinking.value = true;
+    error.value = null;
+    try {
+      session.value = await nextExplorationQuestion(current.id);
+      return true;
+    } catch (e) {
+      error.value = String(e);
+      return false;
+    } finally {
+      thinking.value = false;
+    }
+  }
+
   async function confirmDomains(domains: Domain[]): Promise<void> {
     const current = session.value;
     if (!current || streaming.value) return;
@@ -250,6 +301,7 @@ export const useExplorationStore = defineStore('exploration', () => {
     sessions,
     creating,
     streaming,
+    thinking,
     loadingSessions,
     phase,
     pendingDomains,
@@ -260,12 +312,15 @@ export const useExplorationStore = defineStore('exploration', () => {
     hasGraph,
     coverage,
     currentWhiteboard,
+    currentGroup,
     isSelected,
     toggleSelection,
     selectAll,
     clearSelection,
     startSession,
     retryInitialization,
+    answer,
+    requestNextQuestion,
     confirmDomains,
     loadSessions,
     openSession,

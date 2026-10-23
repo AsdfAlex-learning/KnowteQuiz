@@ -184,6 +184,12 @@ pub struct ConfirmExplorationDomainsRequest {
     pub domains: Vec<Domain>,
 }
 
+/// Payload for submitting one learner answer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AskExplorationRequest {
+    pub answer: String,
+}
+
 /// Lightweight row used by the session list endpoint.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExplorationSessionSummary {

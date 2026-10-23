@@ -295,6 +295,20 @@
     "graph_ready": "Knowledge map ready",
     "graph_summary": "{concepts} concepts · {domains} domain(s)",
     "graph_next": "The first question will appear here.",
-    "retry_initialization": "Retry initialization"
+    "retry_initialization": "Retry initialization",
+    "answer_placeholder": "Explain your reasoning…",
+    "answer_hint": "Enter to send · Shift+Enter for a new line",
+    "send": "Send",
+    "thinking": "Thinking…",
+    "hint_label": "Hint",
+    "verdict_correct": "Correct",
+    "verdict_partial": "Partly right",
+    "verdict_wrong": "Not quite",
+    "verdict_unknown": "No answer",
+    "current_concept": "Current concept",
+    "continue": "Continue",
+    "completed_title": "You covered the whole map",
+    "completed_summary": "{covered}/{total} concepts covered",
+    "uncovered_label": "Not covered yet"
   }
 }

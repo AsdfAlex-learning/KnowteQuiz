@@ -24,8 +24,8 @@ use tower_http::services::{ServeDir, ServeFile};
 use crate::errors::AppError;
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
 use crate::models::exploration::{
-    ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest, ExplorationSession,
-    ExplorationSessionSummary,
+    AskExplorationRequest, ConfirmExplorationDomainsRequest, CreateExplorationSessionRequest,
+    ExplorationSession, ExplorationSessionSummary,
 };
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
@@ -233,6 +233,14 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route(
             "/api/exploration/sessions/:id/domains",
             post(exploration_confirm_domains_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/question",
+            post(exploration_next_question_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id/ask",
+            post(exploration_ask_handler),
         )
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
@@ -482,6 +490,24 @@ async fn exploration_delete_handler(
         .await
         .map_err(|e| AppError::Internal(format!("Exploration delete task failed: {e}")))??;
     Ok(Json(true))
+}
+
+async fn exploration_next_question_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session = exploration_engine::next_question(&state.data_dir, &session_id).await?;
+    Ok(Json(session))
+}
+
+async fn exploration_ask_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+    Json(request): Json<AskExplorationRequest>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let session =
+        exploration_engine::ask_turn(&state.data_dir, &session_id, &request.answer).await?;
+    Ok(Json(session))
 }
 
 async fn exploration_start_handler(

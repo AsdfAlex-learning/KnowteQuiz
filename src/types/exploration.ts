@@ -113,6 +113,10 @@ export interface ConfirmExplorationDomainsRequest {
   domains: Domain[];
 }
 
+export interface AskExplorationRequest {
+  answer: string;
+}
+
 export type ExplorationStreamEvent =
   | { event: 'phase'; data: { phase: string } }
   | { event: 'domain_warning'; data: { domains: Domain[]; warning: string } }

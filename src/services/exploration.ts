@@ -125,3 +125,28 @@ export async function confirmExplorationDomains(
     options.signal
   );
 }
+
+export async function nextExplorationQuestion(sessionId: string): Promise<ExplorationSession> {
+  if (isTauri()) {
+    return invoke<ExplorationSession>('exploration_next_question', { sessionId });
+  }
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/question`, { method: 'POST' });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationSession>(res);
+}
+
+export async function askExploration(sessionId: string, answer: string): Promise<ExplorationSession> {
+  if (isTauri()) {
+    return invoke<ExplorationSession>('exploration_ask', {
+      sessionId,
+      request: { answer },
+    });
+  }
+  const res = await fetch(`/api/exploration/sessions/${encodeURIComponent(sessionId)}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answer }),
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<ExplorationSession>(res);
+}

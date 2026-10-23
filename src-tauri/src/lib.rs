@@ -33,6 +33,8 @@ pub fn run_desktop() {
             exploration::exploration_delete,
             exploration::exploration_start_stream,
             exploration::exploration_confirm_domains,
+            exploration::exploration_next_question,
+            exploration::exploration_ask,
             llm_run::llm_list_runs,
             llm_run::llm_get_run,
             llm_run::llm_get_run_content,
