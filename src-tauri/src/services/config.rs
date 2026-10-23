@@ -30,6 +30,7 @@ fn default_settings() -> Settings {
                 left_width: 280,
                 right_width: 360,
             },
+            last_mode: default_ui_mode(),
         },
         quiz: QuizDefaults {
             default_types: vec![QuestionType::Single, QuestionType::Short],
@@ -141,6 +142,7 @@ mod tests {
         assert!(settings.workspace.expanded_dirs.is_empty());
         assert_eq!(settings.workspace.selected_path, None);
         assert!(settings.workspace.scroll_positions.is_empty());
+        assert_eq!(settings.ui.last_mode, "reader");
     }
 
     #[test]
@@ -183,6 +185,19 @@ mod tests {
         assert_eq!(loaded.ui_language, settings.ui_language);
         assert_eq!(loaded.llm.model, settings.llm.model);
         assert_eq!(loaded.quiz.default_count, settings.quiz.default_count);
+        assert_eq!(loaded.ui.last_mode, "reader");
+    }
+
+    #[test]
+    fn save_settings_path_roundtrips_exploration_mode() {
+        let dir = temp_data_dir("save_settings_path_roundtrips_exploration_mode");
+        let mut settings = default_settings();
+        settings.ui.last_mode = "exploration".to_string();
+
+        save_settings_path(&dir, &settings).expect("save should succeed");
+        let loaded = get_settings_path(&dir).expect("load after save should succeed");
+
+        assert_eq!(loaded.ui.last_mode, "exploration");
     }
 
     #[test]

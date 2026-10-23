@@ -25,6 +25,15 @@ export interface UiLayout {
   right_width: number;
 }
 
+/** Top-level workspace mode. Unknown persisted values fall back to `reader`. */
+export type ViewMode = 'reader' | 'exploration';
+
+export interface UiLayoutContainer {
+  layout: UiLayout;
+  /** Mode the user was last in. */
+  last_mode?: ViewMode;
+}
+
 export interface AdvancedConfig {
   max_diagnosis_rounds: number;
   require_reasoning: boolean;
@@ -113,7 +122,7 @@ export interface Settings {
   version: string;
   ui_language: string;
   llm: LlmConfig;
-  ui: { layout: UiLayout };
+  ui: UiLayoutContainer;
   quiz: QuizDefaults;
   workspace: WorkspaceState;
   theme_config: ThemeConfig;

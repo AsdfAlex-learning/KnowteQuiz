@@ -250,5 +250,27 @@
     "toggle_panel": "切换面板 (Ctrl+Shift+B)",
     "minimize": "最小化",
     "maximize": "最大化"
+  },
+  "exploration": {
+    "mode_reader": "阅读",
+    "mode_exploration": "探索",
+    "switch_to_exploration": "切换到探索性学习",
+    "switch_to_reader": "返回阅读",
+    "title": "探索性学习",
+    "intro": "在左侧勾选一篇或多篇笔记。助手会先跨文档梳理出知识脉络（由浅入深，而非文档原有顺序），再沿着脉络一步步提问带你学完。",
+    "step_select": "在资源管理器中勾选 Markdown 笔记。",
+    "step_graph": "基于真实内容生成知识脉络。",
+    "step_learn": "逐题作答，右侧白板展示对应讲解。",
+    "selected_count": "已选 {count} 篇",
+    "none_selected": "尚未选择笔记",
+    "open_folder": "打开文件夹开始",
+    "status_title": "状态",
+    "status_initialise": "Initialise",
+    "status_idle": "未开始",
+    "status_hint": "选择笔记后开始。",
+    "whiteboard": "白板",
+    "whiteboard_empty": "回答第一个问题后，这里会展示对应的讲解。",
+    "select_all": "全选笔记",
+    "clear_selection": "清除选择"
   }
 }

@@ -38,11 +38,35 @@
     <div
       v-else
       class="tree-item"
-      :class="{ 'tree-item--active': isSelected, 'tree-item--document': isDocument }"
+      :class="{
+        'tree-item--active': isActive,
+        'tree-item--document': isDocument,
+        'tree-item--disabled': isDisabled,
+      }"
       :style="{ paddingLeft: depth * 12 + 20 + 'px' }"
-      :title="isDocument ? t('sidebar.document_hint', { name: node.name }) : node.name"
+      :title="isDisabled || isDocument ? t('sidebar.document_hint', { name: node.name }) : node.name"
       @click="handleClick"
     >
+      <!-- Exploration checkbox -->
+      <span
+        v-if="isExploration && !isDocument"
+        class="explore-check"
+        :class="{ 'explore-check--on': isChecked }"
+        aria-hidden="true"
+      >
+        <svg
+          v-if="isChecked"
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+        >
+          <path d="M1.5 5.5l2.2 2.2L8.5 2.5" />
+        </svg>
+      </span>
+
       <!-- File icon -->
       <svg
         class="w-4 h-4 flex-shrink-0"
@@ -69,7 +93,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useExplorationStore } from '@/stores/exploration';
 import { useExplorerStore } from '@/stores/explorer';
+import { useLayoutStore } from '@/stores/layout';
 import { useNavigationStore } from '@/stores/navigation';
 import { useI18n } from '@/composables/useI18n';
 import type { NoteTreeNode } from '@/types/note';
@@ -79,13 +105,19 @@ const props = defineProps<{
   depth: number;
 }>();
 
+const explorationStore = useExplorationStore();
 const explorerStore = useExplorerStore();
+const layoutStore = useLayoutStore();
 const navigationStore = useNavigationStore();
 const { t } = useI18n();
 
 const isExpanded = computed(() => explorerStore.expandedDirs.has(props.node.path));
 const isSelected = computed(() => explorerStore.selectedPath === props.node.path);
 const isDocument = computed(() => props.node.kind === 'document');
+const isExploration = computed(() => layoutStore.viewMode === 'exploration');
+const isChecked = computed(() => explorationStore.isSelected(props.node.path));
+const isActive = computed(() => isSelected.value && !isExploration.value);
+const isDisabled = computed(() => isExploration.value && isDocument.value);
 
 const documentExt = computed(() => {
   const match = props.node.name.match(/\.([^.]+)$/);
@@ -98,10 +130,15 @@ const displayName = computed(() => {
 
 function handleClick() {
   if (isDocument.value) {
-    void navigationStore.openDocument(props.node.path);
-  } else {
-    void navigationStore.openNote(props.node.path);
+    // Documents must be converted before they can take part in exploration.
+    if (!isExploration.value) void navigationStore.openDocument(props.node.path);
+    return;
   }
+  if (isExploration.value) {
+    explorationStore.toggleSelection(props.node.path);
+    return;
+  }
+  void navigationStore.openNote(props.node.path);
 }
 </script>
 
@@ -144,5 +181,36 @@ function handleClick() {
 
 .tree-item--document:hover {
   color: var(--text-muted);
+}
+
+/* Conversion candidates cannot be selected for exploration until converted. */
+.tree-item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tree-item--disabled:hover {
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.explore-check {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  color: var(--bg-base);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.explore-check--on {
+  background: var(--accent-purple);
+  border-color: var(--accent-purple);
 }
 </style>

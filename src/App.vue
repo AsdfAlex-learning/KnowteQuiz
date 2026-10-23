@@ -29,7 +29,8 @@
         data-glass-panel="content"
         @scroll="onReaderScroll"
       >
-        <MarkdownRenderer v-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
+        <ExplorationShell v-if="layoutStore.viewMode === 'exploration'" />
+        <MarkdownRenderer v-else-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
         <DocumentEmptyState v-else-if="readerStore.pendingDocument" />
         <EmptyState v-else />
       </main>
@@ -46,7 +47,8 @@
         :style="{ width: layoutStore.readerWidth + 'px' }"
         data-glass-panel="sidebar"
       >
-        <PanelContainer />
+        <ExplorationPanel v-if="layoutStore.viewMode === 'exploration'" />
+        <PanelContainer v-else />
       </aside>
     </div>
     <StatusBar />
@@ -69,6 +71,8 @@ import MarkdownRenderer from './components/Reader/MarkdownRenderer.vue';
 import DocumentEmptyState from './components/Reader/DocumentEmptyState.vue';
 import EmptyState from './components/Reader/EmptyState.vue';
 import PanelContainer from './components/Panel/PanelContainer.vue';
+import ExplorationShell from './components/Exploration/ExplorationShell.vue';
+import ExplorationPanel from './components/Exploration/ExplorationPanel.vue';
 
 const layoutStore = useLayoutStore();
 const readerStore = useReaderStore();

@@ -22,6 +22,7 @@ export function defaultSettings(): Settings {
         left_width: 280,
         right_width: 360,
       },
+      last_mode: 'reader',
     },
     quiz: {
       default_types: ['single', 'short'],

@@ -241,4 +241,13 @@ pub struct CorsSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutContainer {
     pub layout: UiLayout,
+    /// Which top-level workspace mode the user was last in. Unknown values are
+    /// treated as `reader` by the frontend, so adding modes stays backward
+    /// compatible.
+    #[serde(default = "default_ui_mode")]
+    pub last_mode: String,
+}
+
+pub fn default_ui_mode() -> String {
+    "reader".to_string()
 }

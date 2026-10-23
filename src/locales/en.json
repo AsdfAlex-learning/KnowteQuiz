@@ -250,5 +250,27 @@
     "toggle_panel": "Toggle Panel (Ctrl+Shift+B)",
     "minimize": "Minimize",
     "maximize": "Maximize"
+  },
+  "exploration": {
+    "mode_reader": "Reader",
+    "mode_exploration": "Explore",
+    "switch_to_exploration": "Switch to exploratory learning",
+    "switch_to_reader": "Back to reading",
+    "title": "Exploratory learning",
+    "intro": "Pick one or more notes on the left. The assistant first builds a knowledge map across all of them — shallow to deep, not the document order — then leads you through it one question at a time.",
+    "step_select": "Select Markdown notes in the explorer.",
+    "step_graph": "A knowledge map is generated from their real content.",
+    "step_learn": "Answer each question; the whiteboard shows the matching explanation.",
+    "selected_count": "{count} note(s) selected",
+    "none_selected": "No notes selected",
+    "open_folder": "Open a folder to get started",
+    "status_title": "Status",
+    "status_initialise": "Initialise",
+    "status_idle": "Not started",
+    "status_hint": "Pick notes to begin.",
+    "whiteboard": "Whiteboard",
+    "whiteboard_empty": "Explanations appear here after you answer a question.",
+    "select_all": "Select all notes",
+    "clear_selection": "Clear selection"
   }
 }
