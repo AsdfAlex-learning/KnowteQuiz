@@ -5,7 +5,7 @@ mod services;
 mod utils;
 mod web_server;
 
-use commands::{doc_convert, llm_run, note, quiz, settings};
+use commands::{doc_convert, exploration, llm_run, note, quiz, settings};
 use quiz::DiagnosisSessions;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -27,6 +27,10 @@ pub fn run_desktop() {
             quiz::cleanup_sessions,
             doc_convert::convert_document,
             doc_convert::get_document_status,
+            exploration::exploration_create,
+            exploration::exploration_list,
+            exploration::exploration_get,
+            exploration::exploration_delete,
             llm_run::llm_list_runs,
             llm_run::llm_get_run,
             llm_run::llm_get_run_content,
@@ -49,6 +53,9 @@ pub fn run_desktop() {
             if let Ok(data_dir) = crate::services::storage::get_data_dir(app.handle()) {
                 std::thread::spawn(move || {
                     let _ = crate::services::diagnosis_session_service::cleanup_expired_sessions(
+                        &data_dir, 7,
+                    );
+                    let _ = crate::services::exploration::session_store::cleanup_expired_sessions(
                         &data_dir, 7,
                     );
                 });

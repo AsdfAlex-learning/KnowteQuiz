@@ -271,6 +271,16 @@
     "whiteboard": "Whiteboard",
     "whiteboard_empty": "Explanations appear here after you answer a question.",
     "select_all": "Select all notes",
-    "clear_selection": "Clear selection"
+    "clear_selection": "Clear selection",
+    "start": "Start exploring",
+    "starting": "Creating…",
+    "initializing": "Building the knowledge map…",
+    "initializing_hint": "The assistant is reading the selected notes. The first question appears here.",
+    "exit_session": "Exit session",
+    "session_sources": "{count} source note(s)",
+    "coverage": "{covered}/{total} covered",
+    "status_active": "Active",
+    "status_awaiting_domains": "Confirm domains",
+    "status_completed": "Completed"
   }
 }

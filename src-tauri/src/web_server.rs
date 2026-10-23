@@ -23,10 +23,14 @@ use tower_http::services::{ServeDir, ServeFile};
 
 use crate::errors::AppError;
 use crate::models::diagnosis::{DiagnosisReport, DiagnosisSession};
+use crate::models::exploration::{
+    CreateExplorationSessionRequest, ExplorationSession, ExplorationSessionSummary,
+};
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
 use crate::models::note::{NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
+use crate::services::exploration::session_store as exploration_store;
 use crate::services::llm_service::ConnectionTestResult;
 use crate::services::{
     config, diagnosis_session_service, doc_parser, fs_service, llm_run_store, llm_service,
@@ -164,6 +168,7 @@ pub async fn start(port: u16, data_dir_override: Option<PathBuf>) -> Result<(), 
     let cleanup_dir = data_dir.clone();
     tokio::task::spawn_blocking(move || {
         let _ = diagnosis_session_service::cleanup_expired_sessions(&cleanup_dir, 7);
+        let _ = exploration_store::cleanup_expired_sessions(&cleanup_dir, 7);
     });
 
     let app_state = Arc::new(AppState {
@@ -211,6 +216,14 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         .route("/api/llm/runs", get(llm_list_runs_handler))
         .route("/api/documents/convert", post(convert_document_handler))
         .route("/api/documents/status", get(document_status_handler))
+        .route(
+            "/api/exploration/sessions",
+            get(exploration_list_handler).post(exploration_create_handler),
+        )
+        .route(
+            "/api/exploration/sessions/:id",
+            get(exploration_get_handler).delete(exploration_delete_handler),
+        )
         .route("/api/llm/runs/:id", get(llm_get_run_handler))
         .route("/api/llm/runs/:id/prompt", get(llm_run_prompt_handler))
         .route("/api/llm/runs/:id/response", get(llm_run_response_handler))
@@ -410,6 +423,55 @@ async fn document_status_handler(
     let resolved =
         crate::services::fs_service::resolve_note_path(&state.data_dir, &query.path).await?;
     Ok(Json(doc_parser::document_status(&resolved)))
+}
+
+// ── Exploration sessions ────────────────────────────────────────────────────
+
+async fn exploration_create_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<CreateExplorationSessionRequest>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let data_dir = state.data_dir.clone();
+    let session = tokio::task::spawn_blocking(move || {
+        exploration_store::create_session(&data_dir, request.source_paths, request.title)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Exploration create task failed: {e}")))??;
+    Ok(Json(session))
+}
+
+async fn exploration_list_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ExplorationSessionSummary>>, AppError> {
+    let data_dir = state.data_dir.clone();
+    let rows = tokio::task::spawn_blocking(move || exploration_store::list_sessions(&data_dir))
+        .await
+        .map_err(|e| AppError::Internal(format!("Exploration list task failed: {e}")))??;
+    Ok(Json(rows))
+}
+
+async fn exploration_get_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<ExplorationSession>, AppError> {
+    let data_dir = state.data_dir.clone();
+    let session = tokio::task::spawn_blocking(move || {
+        exploration_store::load_session(&data_dir, &session_id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(format!("Exploration load task failed: {e}")))??;
+    Ok(Json(session))
+}
+
+async fn exploration_delete_handler(
+    State(state): State<Arc<AppState>>,
+    AxumPath(session_id): AxumPath<String>,
+) -> Result<Json<bool>, AppError> {
+    let data_dir = state.data_dir.clone();
+    tokio::task::spawn_blocking(move || exploration_store::delete_session(&data_dir, &session_id))
+        .await
+        .map_err(|e| AppError::Internal(format!("Exploration delete task failed: {e}")))??;
+    Ok(Json(true))
 }
 
 async fn llm_list_runs_handler(

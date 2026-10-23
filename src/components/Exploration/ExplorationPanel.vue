@@ -7,14 +7,26 @@
           {{ t('exploration.status_title') }}
         </h2>
         <span
-          class="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+          class="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+          :class="statusBadgeClass"
         >
-          {{ t('exploration.status_initialise') }}
+          {{ statusLabel }}
         </span>
       </div>
-      <p class="text-[var(--text-xs)] text-[var(--text-faint)]">
-        {{ t('exploration.status_idle') }} · {{ t('exploration.status_hint') }}
-      </p>
+      <div class="flex items-center justify-between gap-2 text-[var(--text-xs)] text-[var(--text-faint)]">
+        <span>
+          {{
+            t('exploration.coverage', {
+              covered: explorationStore.coverage.covered,
+              total: explorationStore.coverage.total,
+            })
+          }}
+        </span>
+        <span v-if="session">
+          {{ t('exploration.session_sources', { count: session.source_paths.length }) }}
+        </span>
+        <span v-else>{{ t('exploration.status_hint') }}</span>
+      </div>
     </div>
 
     <!-- Whiteboard -->
@@ -23,7 +35,17 @@
         {{ t('exploration.whiteboard') }}
       </h2>
       <div class="flex-1 min-h-0 overflow-auto px-3 pb-4">
+        <div v-if="whiteboard" class="space-y-2">
+          <p v-if="whiteboard.title" class="text-[var(--text-xs)] font-medium text-[var(--text-secondary)]">
+            {{ whiteboard.title }}
+          </p>
+          <div
+            class="quiz-md text-[var(--text-sm)] text-[var(--text-primary)] leading-relaxed"
+            v-html="renderedWhiteboard"
+          ></div>
+        </div>
         <div
+          v-else
           class="h-full min-h-[140px] flex flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border border-dashed border-[var(--border-default)] text-center px-4 py-6"
         >
           <svg
@@ -46,7 +68,44 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useExplorationStore } from '@/stores/exploration';
 import { useI18n } from '@/composables/useI18n';
+import { renderQuizMarkdown } from '@/utils/markdown';
 
+const explorationStore = useExplorationStore();
 const { t } = useI18n();
+
+const session = computed(() => explorationStore.session);
+const whiteboard = computed(() => explorationStore.currentWhiteboard);
+const renderedWhiteboard = computed(() => (whiteboard.value ? renderQuizMarkdown(whiteboard.value.content_md) : ''));
+
+const statusLabel = computed(() => {
+  switch (session.value?.status) {
+    case 'initializing':
+      return t('exploration.status_initialise');
+    case 'awaiting_domain_confirm':
+      return t('exploration.status_awaiting_domains');
+    case 'active':
+      return t('exploration.status_active');
+    case 'completed':
+      return t('exploration.status_completed');
+    default:
+      return t('exploration.status_idle');
+  }
+});
+
+const statusBadgeClass = computed(() => {
+  switch (session.value?.status) {
+    case 'active':
+      return 'bg-[var(--color-success)]/15 text-[var(--color-success)]';
+    case 'completed':
+    case 'initializing':
+      return 'bg-[var(--accent-purple)]/15 text-[var(--accent-purple)]';
+    case 'awaiting_domain_confirm':
+      return 'bg-[var(--color-warning)]/15 text-[var(--color-warning)]';
+    default:
+      return 'bg-[var(--bg-elevated)] text-[var(--text-muted)]';
+  }
+});
 </script>

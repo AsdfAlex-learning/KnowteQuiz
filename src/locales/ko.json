@@ -271,6 +271,16 @@
     "whiteboard": "화이트보드",
     "whiteboard_empty": "질문에 답하면 여기에 해당 설명이 표시됩니다.",
     "select_all": "모두 선택",
-    "clear_selection": "선택 해제"
+    "clear_selection": "선택 해제",
+    "start": "탐색 시작",
+    "starting": "생성 중…",
+    "initializing": "지식 지도를 구성하는 중…",
+    "initializing_hint": "선택한 노트를 읽고 있습니다. 첫 질문이 여기에 표시됩니다.",
+    "exit_session": "세션 종료",
+    "session_sources": "노트 {count}개",
+    "coverage": "{covered}/{total} 학습",
+    "status_active": "진행 중",
+    "status_awaiting_domains": "영역 확인",
+    "status_completed": "완료"
   }
 }

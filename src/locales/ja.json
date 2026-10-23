@@ -271,6 +271,16 @@
     "whiteboard": "ホワイトボード",
     "whiteboard_empty": "質問に回答すると、ここに対応する解説が表示されます。",
     "select_all": "すべて選択",
-    "clear_selection": "選択を解除"
+    "clear_selection": "選択を解除",
+    "start": "探索を開始",
+    "starting": "作成中…",
+    "initializing": "知識マップを構築中…",
+    "initializing_hint": "選択したノートを読み込んでいます。最初の質問がここに表示されます。",
+    "exit_session": "セッションを終了",
+    "session_sources": "{count} 件のノート",
+    "coverage": "{covered}/{total} 学習済み",
+    "status_active": "進行中",
+    "status_awaiting_domains": "領域を確認",
+    "status_completed": "完了"
   }
 }

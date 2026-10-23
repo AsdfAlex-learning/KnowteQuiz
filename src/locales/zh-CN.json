@@ -271,6 +271,16 @@
     "whiteboard": "白板",
     "whiteboard_empty": "回答第一个问题后，这里会展示对应的讲解。",
     "select_all": "全选笔记",
-    "clear_selection": "清除选择"
+    "clear_selection": "清除选择",
+    "start": "开始探索",
+    "starting": "正在创建…",
+    "initializing": "正在梳理知识脉络…",
+    "initializing_hint": "助手正在通读所选笔记，第一个问题稍后会出现在这里。",
+    "exit_session": "退出会话",
+    "session_sources": "{count} 篇笔记",
+    "coverage": "覆盖 {covered}/{total}",
+    "status_active": "进行中",
+    "status_awaiting_domains": "确认领域",
+    "status_completed": "已完成"
   }
 }

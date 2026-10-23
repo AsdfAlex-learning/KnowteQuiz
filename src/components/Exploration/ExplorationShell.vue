@@ -1,5 +1,6 @@
 <template>
-  <div class="h-full flex flex-col">
+  <ExplorationChat v-if="explorationStore.session" />
+  <div v-else class="h-full flex flex-col">
     <!-- Header -->
     <header class="px-6 py-5 border-b border-[var(--border-subtle)] flex items-start justify-between gap-4">
       <div class="min-w-0">
@@ -47,13 +48,26 @@
           </li>
         </ol>
 
-        <div v-if="!explorerStore.rootPath" class="pt-2 flex items-center gap-3">
-          <button
-            class="px-4 py-2 rounded-[var(--radius-md)] bg-[var(--accent-purple)] text-[var(--bg-base)] font-medium text-[var(--text-sm)] hover:bg-[var(--accent-purple)]/85 transition-colors"
-            @click="explorerStore.chooseFolder()"
-          >
-            {{ t('exploration.open_folder') }}
-          </button>
+        <div class="pt-2 flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <button
+              class="px-4 py-2 rounded-[var(--radius-md)] bg-[var(--accent-purple)] text-[var(--bg-base)] font-medium text-[var(--text-sm)] hover:bg-[var(--accent-purple)]/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!explorationStore.canStart"
+              @click="explorationStore.startSession()"
+            >
+              {{ explorationStore.creating ? t('exploration.starting') : t('exploration.start') }}
+            </button>
+            <button
+              v-if="!explorerStore.rootPath"
+              class="px-4 py-2 rounded-[var(--radius-md)] border border-[var(--border-default)] text-[var(--text-sm)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              @click="explorerStore.chooseFolder()"
+            >
+              {{ t('exploration.open_folder') }}
+            </button>
+          </div>
+          <p v-if="explorationStore.error" class="text-[var(--text-xs)] text-[var(--color-error)]">
+            {{ explorationStore.error }}
+          </p>
         </div>
       </div>
     </div>
@@ -65,6 +79,7 @@ import { computed } from 'vue';
 import { useExplorationStore } from '@/stores/exploration';
 import { useExplorerStore } from '@/stores/explorer';
 import { useI18n } from '@/composables/useI18n';
+import ExplorationChat from './ExplorationChat.vue';
 
 const explorationStore = useExplorationStore();
 const explorerStore = useExplorerStore();
