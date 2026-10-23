@@ -51,6 +51,55 @@ pub struct LlmCapabilities {
     pub default_model: String,
 }
 
+/// Extracts model ids from an OpenAI-compatible `/models` response.
+pub fn parse_model_ids(json: &serde_json::Value) -> Vec<String> {
+    let mut models: Vec<String> = json["data"]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|model| model["id"].as_str())
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    models.sort();
+    models.dedup();
+    models
+}
+
+/// Fetches the provider's model list without probing streaming/JSON support.
+/// This is what the settings form calls when the user presses "Fetch models".
+pub async fn list_models(llm: &LlmConfig) -> Result<Vec<String>, AppError> {
+    let base = llm.base_url.trim_end_matches('/');
+    if base.is_empty() {
+        return Err(AppError::InvalidInput(
+            "No LLM endpoint configured".to_string(),
+        ));
+    }
+
+    let resp = http_client()
+        .get(format!("{}/models", base))
+        .header("Authorization", format!("Bearer {}", llm.api_key))
+        .send()
+        .await
+        .map_err(|e| AppError::Llm(format!("Failed to fetch models: {e}")))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(AppError::Llm(format!("LLM API error {status}: {body}")));
+    }
+
+    let body = resp
+        .text()
+        .await
+        .map_err(|e| AppError::Llm(format!("Failed to read models response: {e}")))?;
+    let json: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| AppError::Llm(format!("Failed to parse models response: {e}")))?;
+    Ok(parse_model_ids(&json))
+}
+
 pub async fn probe_capabilities(llm: &LlmConfig) -> Result<LlmCapabilities, AppError> {
     let base = llm.base_url.trim_end_matches('/');
     let client = http_client();
@@ -71,14 +120,8 @@ pub async fn probe_capabilities(llm: &LlmConfig) -> Result<LlmCapabilities, AppE
             .await
             .map_err(|e| AppError::Llm(format!("Failed to read models response: {}", e)))?;
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
-            if let Some(models) = json["data"].as_array() {
-                available_models = models
-                    .iter()
-                    .filter_map(|m| m["id"].as_str().map(|s| s.to_string()))
-                    .collect();
-                available_models.sort();
-                available_models.truncate(20); // cap at 20 models
-            }
+            available_models = parse_model_ids(&json);
+            available_models.truncate(20); // cap at 20 models
         }
     }
 
@@ -199,6 +242,30 @@ pub fn classify_connection_status(status: StatusCode, body: &str) -> ConnectionT
 mod tests {
     use super::*;
     use reqwest::StatusCode;
+
+    #[test]
+    fn parse_model_ids_sorts_dedupes_and_ignores_malformed_entries() {
+        let json = serde_json::json!({
+            "data": [
+                { "id": "gpt-4o-mini" },
+                { "id": "qwen2.5:7b" },
+                { "id": "gpt-4o-mini" },
+                { "object": "model" },
+                { "id": 42 }
+            ]
+        });
+
+        assert_eq!(
+            parse_model_ids(&json),
+            vec!["gpt-4o-mini".to_string(), "qwen2.5:7b".to_string()]
+        );
+    }
+
+    #[test]
+    fn parse_model_ids_returns_empty_for_unexpected_shapes() {
+        assert!(parse_model_ids(&serde_json::json!({})).is_empty());
+        assert!(parse_model_ids(&serde_json::json!({ "data": "nope" })).is_empty());
+    }
 
     #[test]
     fn classify_connection_status_identifies_auth_failures() {

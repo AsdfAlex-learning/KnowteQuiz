@@ -128,3 +128,16 @@ export async function probeLlm(): Promise<LlmCapabilities> {
   if (!res.ok) await throwHttpError(res);
   return parseJsonResponse<LlmCapabilities>(res);
 }
+
+export async function listLlmModels(llm?: LlmConfig): Promise<string[]> {
+  if (isTauri()) {
+    return invoke<string[]>('list_models', { llm: llm ?? null });
+  }
+  const res = await fetch('/api/llm/models', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ llm: llm ?? null }),
+  });
+  if (!res.ok) await throwHttpError(res);
+  return parseJsonResponse<string[]>(res);
+}

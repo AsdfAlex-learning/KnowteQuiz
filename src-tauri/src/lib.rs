@@ -52,6 +52,7 @@ pub fn run_desktop() {
             settings::list_prompt_templates,
             settings::test_connection,
             settings::probe_llm,
+            settings::list_models,
             settings::backup_data,
             settings::get_data_status,
             settings::restore_latest_backup,

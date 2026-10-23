@@ -5,7 +5,7 @@ export function defaultSettings(): Settings {
     version: '1.0.0',
     ui_language: 'en',
     llm: {
-      provider: 'openai-compatible',
+      provider: 'custom',
       // Blank on purpose: "ready" must come from a real connection test,
       // never from a pre-filled local address.
       base_url: '',

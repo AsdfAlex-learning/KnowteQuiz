@@ -41,6 +41,20 @@ pub async fn test_connection(
 }
 
 #[tauri::command]
+pub async fn list_models(app: AppHandle, llm: Option<LlmConfig>) -> Result<Vec<String>, AppError> {
+    // Probe the edited-but-unsaved config when provided; otherwise use the
+    // saved settings so existing callers keep working.
+    let effective = match llm {
+        Some(pending) => pending,
+        None => {
+            let data_dir = storage::get_data_dir(&app)?;
+            config::get_settings_path(&data_dir)?.llm
+        }
+    };
+    llm_service::list_models(&effective).await
+}
+
+#[tauri::command]
 pub async fn probe_llm(app: AppHandle) -> Result<LlmCapabilities, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     let settings = config::get_settings_path(&data_dir)?;

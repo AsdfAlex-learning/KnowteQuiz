@@ -11,7 +11,7 @@ fn default_settings() -> Settings {
         theme: default_theme_name(),
         ui_language: "zh-CN".to_string(),
         llm: LlmConfig {
-            provider: "openai-compatible".to_string(),
+            provider: "custom".to_string(),
             // Deliberately blank: readiness must come from a real connection
             // test (`verified_at`), never from a pre-filled address.
             base_url: String::new(),

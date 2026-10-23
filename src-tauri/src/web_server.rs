@@ -217,6 +217,7 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
         )
         .route("/api/test-connection", post(test_connection_handler))
         .route("/api/probe-llm", post(probe_llm_handler))
+        .route("/api/llm/models", post(list_models_handler))
         .route("/api/llm/runs", get(llm_list_runs_handler))
         .route("/api/documents/convert", post(convert_document_handler))
         .route("/api/documents/status", get(document_status_handler))
@@ -425,6 +426,23 @@ async fn test_connection_handler(
         _ => config::get_settings_path(&state.data_dir)?.llm,
     };
     Ok(Json(llm_service::test_connection(&llm).await?))
+}
+
+#[derive(Deserialize)]
+struct ListModelsRequest {
+    #[serde(default)]
+    llm: Option<LlmConfig>,
+}
+
+async fn list_models_handler(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ListModelsRequest>,
+) -> Result<Json<Vec<String>>, AppError> {
+    let effective = match request.llm {
+        Some(pending) => pending,
+        None => config::get_settings_path(&state.data_dir)?.llm,
+    };
+    Ok(Json(llm_service::list_models(&effective).await?))
 }
 
 async fn probe_llm_handler(
