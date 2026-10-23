@@ -542,3 +542,32 @@ Web 模式 + `--data-dir` 隔离：`start → domain confirm → 3 轮 → undo/
 | 导入污染笔记库 | 导入只建副本；写 vault 必须走显式「另存」路径 |
 | 白板 XSS | 白板走现有 Markdown 管线（raw HTML 已关闭），不新增 HTML 渲染入口 |
 | 跨域确认阻塞导致卡住 | 卡片提供「全部合并为一个领域」与「跳过确认，自行生成」，都可一键继续 |
+
+---
+
+## 14. 实施状态（2026-10-23）
+
+全部 8 个分支已完成并合并到 `main`：
+
+| 分支 | 状态 | 说明 |
+|---|---|---|
+| `feat/exploration-shell` | 完成 | 模式按钮、布局复用、源笔记多选、i18n |
+| `feat/exploration-session-store` | 完成 | 模型、持久化、CRUD 命令/路由、store/service |
+| `feat/exploration-graph-init` | 完成 | map-reduce 图谱、跨域阻塞确认、图谱展示 |
+| `feat/exploration-qa-loop` | 完成 | 单次轮次调用、白板快照、覆盖推进、完成判定 |
+| `feat/exploration-commands` | 完成 | `/undo` `/redo` `/btw` `/skip` `/end` |
+| `feat/exploration-export` | 完成 | 导出、另存笔记库、导入副本、只读浏览、「从此继续」 |
+| `feat/exploration-replay` | 完成 | 步进回放、跳过旁支 |
+| `docs/exploration-mode` | 完成 | TECH_SPEC、CONTEXT、AGENTS、本文件 |
+
+**与设计稿的偏差（以此为准）**：
+
+1. **导入依赖隐藏 JSON 附录**：可见正文仍是人读格式，但 `parse_import` 只认文末 `<!-- knowtequiz:session {...} -->`；正文不参与还原。这样导入是无损的，代价是手改正文不会影响导入结果。未知版本直接拒绝。
+2. **摘要存在会话内**：`NoteDigest[]` 随 `ExplorationSession` 落盘（`source_digests`），没有单独的 `summaries/` 缓存。少一层缓存失效逻辑，代价是重复初始化会重新调用摘要。
+3. **`/hint` 未单独提供**：学习者说「不知道」时由轮次引擎返回 `next_action=hint`，行为已覆盖；没有额外的 `/hint` 命令。
+4. **另存笔记库使用裸文件名**：写入笔记库根目录，拒绝路径分隔符与覆盖已有文件；没有接原生保存对话框（桌面/Web 行为一致）。
+5. **回放是前端游标**：`replayIndex` 只影响展示与白板快照，不写回会话；回放中的「跳过旁支」也是展示层开关。
+6. **完成时游标前移**：完成（`complete` 或全覆盖）时把 `active_group` 设为最后一组的下一格，确保最后一组覆盖计入统计；`/undo` 可重新打开该组。
+7. **命令解析在前端**：`/undo` 等命令在 `src/utils/explorationCommands.ts` 解析；未知 `/` 内容按普通回答处理。
+
+**测试规模**：Rust 189 个测试（含图谱归一化、轮次状态机、撤销/重做、导出→导入 round-trip、路径安全）；前端 269 个测试 / 42 个文件（含命令解析、store 状态机、回放游标、i18n 键对齐）。

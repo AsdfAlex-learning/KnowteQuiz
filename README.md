@@ -21,6 +21,7 @@
 - **Retry wrong answers** — After a quiz, re-practice only the questions you got wrong.
 - **Markdown quiz content** — Quiz questions and diagnosis reports render full Markdown + KaTeX.
 - **Document conversion** — Drop PDF / DOCX / PPTX / HTML files into your vault; they show up in the tree and convert to Markdown with one click. Text, headings, DOCX tables and embedded images are recovered, and the source file stays for lineage (a "stale" badge appears if you edit the original afterwards). Conversion is pure Rust — no Python, no external runtime.
+- **Exploratory learning** — Pick notes and let the AI reorganise them into a shallow-to-deep knowledge map, then learn it through Socratic questions with a per-turn whiteboard. Supports `/undo` `/redo` `/btw` `/skip` `/end`, Markdown learning-history export/import, and step-by-step replay.
 - **Cross-platform** — Built with Tauri v2 for Windows, macOS, and Linux.
 - **Dual runtime** — Same app runs as a Tauri desktop window **or** as a standalone web server (Axum).
 
@@ -177,7 +178,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **146 Rust unit tests** and **227 frontend tests** (36 files) covering:
+The project includes **189 Rust unit tests** and **269 frontend tests** (42 files) covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation
@@ -190,6 +191,7 @@ The project includes **146 Rust unit tests** and **227 frontend tests** (36 file
 - Settings persistence and write queue serialization
 - Theme color helpers, video-background controls, and glass blur clamping
 - SM-2 golden vectors (shared between Rust and TypeScript)
+- Exploration graph normalization, the turn state machine, undo/redo, and learning-history export → import round-trips
 
 ```bash
 cd src-tauri && cargo test     # Rust tests

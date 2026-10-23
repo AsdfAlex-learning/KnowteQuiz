@@ -124,6 +124,7 @@
 | `QuizResult` | 答题结果、错题标记、弱项提示 | 右栏 - 答题后 |
 | `ErrorBook` | 错题列表、查看原文 | 右栏 - 错题本 |
 | `Settings` | 全局配置（LLM、主题、快捷键） | 右栏 - 设置 |
+| `Exploration` | 探索性学习：源笔记多选、知识脉络、苏格拉底式问答、白板、回放 | 探索模式（三栏复用） |
 | `LayoutManager` | 三栏显隐控制、宽度调整、状态持久化 | 全局 |
 
 #### 后端模块 (Rust)
@@ -137,6 +138,7 @@
 | `config` | 配置管理、默认值、热重载 | `confy` |
 | `ocr_engine` (V1.1) | 图像预处理、ONNX 推理、后处理；供扫描件 PDF 升级路径复用 | `ort`, `image` |
 | `doc_parser` (V1.1) | 文档格式分派（OOXML/PDF/HTML）→ 结构化 Markdown；含进度事件与错误归一化 | `zip`, `quick-xml`, `pdf-extract`, `serde_json` |
+| `exploration` (V1.2) | 探索会话持久化、map-reduce 知识图谱、轮次引擎、旁支问答、学习史导出/导入 | `serde_json`, `uuid`, `chrono` |
 
 **格式解析子模块（V1.1，均在 `doc_parser` 内）**：
 
@@ -167,6 +169,9 @@
 | `mistakes.jsonl` | 错题记录（每行一条 JSON 对象） | NDJSON 行 |
 | `index.json` | 笔记元数据索引（增量更新） | 对象（`root_path` + `notes[]` 元数据） |
 | `sessions/` | 进行中的诊断会话 | JSON 文件 |
+| `exploration/sessions/` | 探索性学习会话（知识图谱、时间线、白板、旁支） | JSON 文件 |
+| `exploration/exports/` | 自动导出的学习史 Markdown | Markdown 文件 |
+| `llm_runs/` | LLM 调用记录（元数据 JSONL；`debug/` 存原始请求/响应） | NDJSON + 文本 |
 | `debug/` | LLM 原始响应日志 | JSON 文件 |
 | `backups/` | 手动备份 | 时间戳目录 |
 
@@ -637,6 +642,33 @@
 
 ---
 
+### 5.6 探索性学习模式（V1.2，已完成）
+
+**定位**：与「阅读 + 出题」并列的第二种学习方式。选中若干 Markdown 笔记后，由 LLM 跨文档重组出一条由浅入深的知识脉络，再以苏格拉底式提问逐点带学；白板按轮次版本化，学习史可导出、导入与回放。完整设计见 `docs/exploration-mode-plan.md`。
+
+**入口与布局**：`Explorer` 底部模式按钮；`settings.ui.last_mode` 持久化。探索模式下左栏复用 `Explorer`（多选复选框 + 全选/清除），中栏换成 `ExplorationShell` / `ExplorationChat`，右栏换成 `ExplorationPanel`（状态 + 白板）。列宽与折叠复用既有布局，`TitleBar` 不变。
+
+**状态机**：`Initializing → (AwaitingDomainConfirm) → Active ⇄ /undo ⇄ /redo → Completed`。导入的会话以只读 `Completed` 打开，可「从此继续」重新激活。
+
+**初始化（map-reduce）**：
+
+1. 逐篇读取源笔记（`fs_service::resolve_note_path` 绑定笔记根），截断后生成结构化摘要（`exploration_summary`）。
+2. 汇总所有摘要，一次生成跨文档图谱（`exploration_graph`）：浅 → 深、至少一条跨文档重组边、每个概念带 `source_refs`。
+3. 后端归一化：标题去重、按 `prereqs` 拓扑排序、按最长路径计算 `depth`、去环、id 重编号（`c1..cN` 即学习顺序）、过滤笔记根之外的引用，限制 60 概念 / 5 引用 / 200 字片段。
+4. 若识别出 ≥2 个领域且各占 ≥25%（概念总数 ≥4），进入 `AwaitingDomainConfirm`；前端展示领域卡片，可改名或合并后确认。
+
+**轮次（单次合并调用）**：每轮一次 `exploration_turn`，返回 `{verdict, feedback, next_action, hint, next_concept_id, next_question, whiteboard_md, covered_concepts}`。`next_action` 语义：`hint` 只给方向性提示并对同一概念重问（连续提示 3 次后强制推进）；`question` 换角度重问；`advance` 覆盖当前概念并推进；`complete` 结束。JSON 解析失败追加一次 `exploration_repair`，仍失败则不写盘、保留用户输入。
+
+**时间线与撤销**：`groups[]` 保存每轮的问题/回答/判定/白板，`active_group` 是游标；覆盖集合由 `groups[..active_group]` 的 `covered_after` **推导**，不另存权威状态。`/undo` 只移动游标（保留尾部供 `/redo`），重新作答时截断尾部；`/btw` 写入独立的 `asides[]`，不推进游标、不计覆盖；`/skip` 把概念记入 `skipped[]` 并丢弃待答问题；`/end` 标记 `completed_early`。
+
+**白板**：每轮回答后由 LLM 产出一段 Markdown（表格/公式/文本示意），存为 `WhiteboardStep`（含 `group_index`），右栏用现有 MarkdownIt + KaTeX 管线渲染；回放时按游标取对应快照。
+
+**学习史格式**：可见正文（front matter + 缩进知识树 + 逐轮问答 + 旁支 + 未覆盖 + Mermaid 附录）便于人读；文末隐藏 `<!-- knowtequiz:session {...} -->` JSON 附录供无损导入。导入一律创建副本（`origin: imported`），不改写原文件；未知 `format_version` 拒绝。自动导出写入 `<data>/exploration/exports/`；写入笔记库需显式提供裸文件名且拒绝覆盖。
+
+**命令/路由**：见 §6.1 / §6.2。桌面用 Tauri `Channel` 推送初始化事件，Web 用 SSE；前端 `src/services/exploration.ts` 统一 dispatch。
+
+---
+
 ## 6. 接口与通信设计
 
 ### 6.1 Tauri Command（前端 → 后端）
@@ -656,6 +688,18 @@
 | `save_settings` | `Settings` | `boolean` | 保存配置 |
 | `select_folder` | - | `string \| null` | 唤起系统文件夹选择对话框 |
 | `convert_document` | `source_path, target_path, format, options` | `ConvertResult` | 纯 Rust 将 PDF/DOCX/PPTX/HTML 转为 Markdown（V1.1） |
+| `exploration_create` | `source_paths, title?` | `ExplorationSession` | 创建 `Initializing` 会话 |
+| `exploration_start_stream` | `session_id, on_event` | `ExplorationStreamEvent` | 读取 + 摘要 + 图谱；可能先发 `domain_warning` |
+| `exploration_confirm_domains` | `session_id, domains, on_event` | `ExplorationStreamEvent` | 确认领域并激活 |
+| `exploration_next_question` | `session_id` | `ExplorationSession` | 生成待答问题 |
+| `exploration_ask` | `session_id, answer` | `ExplorationSession` | 单次轮次调用 |
+| `exploration_undo` / `exploration_redo` | `session_id` | `ExplorationSession` | 游标移动 |
+| `exploration_skip` / `exploration_finish` | `session_id` | `ExplorationSession` | 跳过概念 / 提前结束 |
+| `exploration_aside` | `session_id, question` | `ExplorationSession` | `/btw` 旁支问答 |
+| `exploration_export` / `exploration_save_to_vault` | `session_id[, file_name]` | `ExportResult` / `string` | 自动导出 / 写入笔记库 |
+| `exploration_import` | `markdown, source_name?` | `ExplorationSession` | 导入副本（只读） |
+| `exploration_continue` | `session_id` | `ExplorationSession` | 从导入/已结束会话继续 |
+| `exploration_list` / `get` / `delete` | `[session_id]` | 摘要 / 会话 / `boolean` | 会话管理 |
 
 ### 6.2 Tauri Event（后端 → 前端）
 
@@ -671,6 +715,10 @@
 | `parser::progress` | `ParserProgress` | 文档解析进度更新（V1.1） |
 | `parser::done` | `ParserResult` | 文档解析完成（V1.1） |
 | `parser::error` | `ErrorMessage` | 文档解析出错（V1.1） |
+| `exploration::phase` | `{ phase }` | 初始化阶段：`reading` / `summarizing:i/n` / `merging` |
+| `exploration::domain_warning` | `{ domains, warning }` | 检测到跨领域，阻塞等待确认 |
+| `exploration::graph_ready` | `{ graph }` | 图谱生成或领域确认完成 |
+| `exploration::done` / `error` | `{ session_id }` / `{ message }` | 初始化结束 |
 
 ### 6.3 LLM API 调用规范
 
@@ -798,7 +846,7 @@
 - [x] CI/CD（GitHub Actions：type-check + test + build + Rust test + clippy + 冒烟）
 - [x] 冒烟测试脚本（PowerShell，9 步覆盖核心路径）
 - [x] 发布检查清单与备份恢复文档
-- [x] 单元测试（66 Rust + 152 前端测试用例）
+- [x] 单元测试（当前 189 Rust + 269 前端测试用例，42 个前端测试文件）
 
 ### V1.1 — 文档智能增强
 
@@ -816,6 +864,7 @@
 
 ### V1.2 — 完整版（远期规划）
 
+- [x] **探索性学习模式（2026-10-23 完成）**：模式入口与三栏复用、map-reduce 知识图谱、跨领域阻塞确认、单次轮次问答、白板快照、`/undo` `/redo` `/btw` `/skip` `/end`、学习史导出/导入（隐藏 JSON 附录 + 可见正文）、步进回放、导入副本与「从此继续」
 - [ ] 批量出题（多文件/多目录批量生成题库）
 - [ ] 高级模板系统（教育理论插件、弱项分析深度报告）
 - [ ] 笔记标签系统
@@ -931,9 +980,10 @@ KnowteQuiz/
 15. **高级模式机制**：用户必须写出推理理由 → AI 多轮诊断对话 → 生成知识盲区报告。
 16. **诊断轮次**：默认 3 轮，可配置，防止 LLM 调用成本过高。
 17. **错题存储**：高级模式错题保存完整诊断对话和报告，支持回溯知识盲区。
+18. **探索性学习（2026-10-23，14 项决策）**：入口在 `Explorer` 底部；初始化一律 map-reduce；白板纯 Markdown + KaTeX（零依赖 `mermaidBridge` 仅做文本互转）；每轮 1 次合并调用 + 1 次修复；`/undo` 单轮回退 + `/redo`；`/btw` 入导出、回放可跳过；仅 `.md` 可作源；导出以缩进树为权威并附 Mermaid；全覆盖自动完成 + 允许提前结束；自动导出到 app-data，写笔记库需显式文件名；导入创建副本；单活动会话可恢复；跨领域阻塞确认。**实施偏差**：导入以文末隐藏 JSON 附录做无损还原（正文仍人类可读）；摘要直接存会话而非独立缓存；`/hint` 未单独提供（「不知道」路径已覆盖）；另存笔记库使用裸文件名（无原生对话框）。
 
 ---
 
-*文档版本：v1.1.0*
-*最后更新：2026-08-18*
-*决策状态：V1.0 + 增强全部完成，详见 `docs/optimization-plan.md` 进度追踪*
+*文档版本：v1.2.0*
+*最后更新：2026-10-23*
+*决策状态：V1.0 + V1.1 + 探索性学习全部完成，详见 `docs/optimization-plan.md` 与 `docs/exploration-mode-plan.md`*
