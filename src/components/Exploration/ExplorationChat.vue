@@ -44,6 +44,45 @@
       <!-- Learning loop -->
       <div v-else-if="explorationStore.hasGraph" class="max-w-2xl mx-auto space-y-6">
         <div
+          v-if="explorationStore.isReplaying"
+          class="flex flex-wrap items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2"
+        >
+          <button
+            class="px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] disabled:opacity-40"
+            :title="t('exploration.replay_prev')"
+            :disabled="explorationStore.displayedGroupCount === 0"
+            @click="explorationStore.replayPrev()"
+          >
+            ◀
+          </button>
+          <span class="text-[11px] tabular-nums text-[var(--text-muted)]">
+            {{ explorationStore.displayedGroupCount }} / {{ session.active_group }}
+          </span>
+          <button
+            class="px-2 py-1 rounded-[var(--radius-sm)] text-[var(--text-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] disabled:opacity-40"
+            :title="t('exploration.replay_next')"
+            :disabled="explorationStore.displayedGroupCount >= session.active_group"
+            @click="explorationStore.replayNext()"
+          >
+            ▶
+          </button>
+          <label class="ml-auto flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+            <input
+              type="checkbox"
+              :checked="explorationStore.skipAsides"
+              @change="explorationStore.toggleSkipAsides()"
+            />
+            {{ t('exploration.replay_skip_asides') }}
+          </label>
+          <button
+            class="px-2 py-1 rounded-[var(--radius-sm)] text-[11px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+            @click="explorationStore.stopReplay()"
+          >
+            {{ t('exploration.replay_exit') }}
+          </button>
+        </div>
+
+        <div
           v-if="isCompleted"
           class="rounded-[var(--radius-md)] border border-[var(--color-success)]/30 bg-[var(--color-success)]/10 px-4 py-3 space-y-1.5"
         >
@@ -83,6 +122,12 @@
               @click="showVault = !showVault"
             >
               {{ t('exploration.save_to_vault') }}
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border-default)] text-[var(--text-xs)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              @click="explorationStore.startReplay()"
+            >
+              {{ t('exploration.replay') }}
             </button>
           </div>
           <div v-if="showVault" class="flex items-center gap-2">
@@ -222,20 +267,21 @@ const vaultName = ref('');
 const savingVault = ref(false);
 
 const session = computed(() => explorationStore.session);
-const isCompleted = computed(() => session.value?.status === 'completed');
+const isCompleted = computed(() => session.value?.status === 'completed' && !explorationStore.isReplaying);
 
 const answeredGroups = computed(() => {
   const current = session.value;
   if (!current) return [];
-  return current.groups.slice(0, current.active_group);
+  return current.groups.slice(0, explorationStore.displayedGroupCount);
 });
 
-const currentGroup = computed(() => explorationStore.currentGroup);
+const currentGroup = computed(() => (explorationStore.isReplaying ? null : explorationStore.currentGroup));
 
 const activeIndex = computed(() => session.value?.active_group ?? 0);
 const asides = computed(() => session.value?.asides ?? []);
 
 function asidesAt(index: number) {
+  if (explorationStore.isReplaying && explorationStore.skipAsides) return [];
   return asides.value.filter((aside) => aside.group_index === index);
 }
 

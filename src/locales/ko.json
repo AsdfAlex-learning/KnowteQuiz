@@ -322,6 +322,11 @@
     "save": "저장",
     "vault_file_name": "파일 이름 (예: compiler-notes.md)",
     "export_saved": "내보냄",
-    "vault_saved": "저장됨"
+    "vault_saved": "저장됨",
+    "replay": "다시 보기",
+    "replay_prev": "이전 단계",
+    "replay_next": "다음 단계",
+    "replay_skip_asides": "곁가지 건너뛰기",
+    "replay_exit": "다시 보기 종료"
   }
 }

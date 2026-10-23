@@ -415,5 +415,68 @@ describe('exploration store', () => {
     expect(ok).toBe(true);
     expect(store.session?.status).toBe('active');
     expect(store.isReadOnly).toBe(false);
+    expect(store.isReplaying).toBe(false);
+  });
+
+  it('replays the timeline step by step with the matching whiteboard', () => {
+    const store = useExplorationStore();
+    store.session = session({
+      status: 'completed',
+      graph: graph(),
+      active_group: 2,
+      groups: [
+        {
+          concept_id: 'c1',
+          question: { prompt_md: 'Q1', hint_used: false },
+          answer: 'A1',
+          result: null,
+          whiteboard: {
+            id: 'w1',
+            concept_id: 'c1',
+            title: '',
+            content_md: 'one',
+            group_index: 0,
+          },
+          covered_after: ['c1'],
+        },
+        {
+          concept_id: 'c2',
+          question: { prompt_md: 'Q2', hint_used: false },
+          answer: 'A2',
+          result: null,
+          whiteboard: {
+            id: 'w2',
+            concept_id: 'c2',
+            title: '',
+            content_md: 'two',
+            group_index: 1,
+          },
+          covered_after: ['c2'],
+        },
+      ],
+    });
+
+    store.startReplay();
+    expect(store.isReplaying).toBe(true);
+    expect(store.displayedGroupCount).toBe(2);
+    expect(store.currentWhiteboard?.id).toBe('w2');
+
+    store.replayPrev();
+    expect(store.displayedGroupCount).toBe(1);
+    expect(store.currentWhiteboard?.id).toBe('w1');
+
+    store.replayPrev();
+    expect(store.displayedGroupCount).toBe(0);
+    expect(store.currentWhiteboard).toBeNull();
+
+    store.replayPrev();
+    expect(store.displayedGroupCount).toBe(0);
+
+    store.replayNext();
+    expect(store.displayedGroupCount).toBe(1);
+
+    store.stopReplay();
+    expect(store.isReplaying).toBe(false);
+    expect(store.displayedGroupCount).toBe(2);
   });
 });

@@ -322,6 +322,11 @@
     "save": "保存",
     "vault_file_name": "文件名（如 compiler-notes.md）",
     "export_saved": "已导出",
-    "vault_saved": "已保存"
+    "vault_saved": "已保存",
+    "replay": "回放",
+    "replay_prev": "上一步",
+    "replay_next": "下一步",
+    "replay_skip_asides": "跳过旁支",
+    "replay_exit": "退出回放"
   }
 }

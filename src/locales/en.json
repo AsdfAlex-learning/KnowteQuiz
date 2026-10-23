@@ -322,6 +322,11 @@
     "save": "Save",
     "vault_file_name": "File name (e.g. compiler-notes.md)",
     "export_saved": "Exported",
-    "vault_saved": "Saved"
+    "vault_saved": "Saved",
+    "replay": "Replay",
+    "replay_prev": "Previous step",
+    "replay_next": "Next step",
+    "replay_skip_asides": "Skip side notes",
+    "replay_exit": "Exit replay"
   }
 }

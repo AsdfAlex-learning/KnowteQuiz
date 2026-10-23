@@ -322,6 +322,11 @@
     "save": "保存",
     "vault_file_name": "ファイル名（例: compiler-notes.md）",
     "export_saved": "エクスポート済み",
-    "vault_saved": "保存済み"
+    "vault_saved": "保存済み",
+    "replay": "再生",
+    "replay_prev": "前のステップ",
+    "replay_next": "次のステップ",
+    "replay_skip_asides": "補足をスキップ",
+    "replay_exit": "再生を終了"
   }
 }

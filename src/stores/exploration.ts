@@ -51,6 +51,8 @@ export const useExplorationStore = defineStore('exploration', () => {
   const error = ref<string | null>(null);
   const lastExport = ref<ExplorationExportResult | null>(null);
   const lastVaultPath = ref<string | null>(null);
+  const replayIndex = ref<number | null>(null);
+  const skipAsides = ref(false);
   const streamRequest = useRequestId();
 
   const selectedCount = computed(() => selectedPaths.value.length);
@@ -61,6 +63,16 @@ export const useExplorationStore = defineStore('exploration', () => {
   );
 
   const hasGraph = computed(() => (session.value?.graph.concepts.length ?? 0) > 0);
+
+  const isReplaying = computed(() => replayIndex.value !== null);
+
+  /** Number of timeline groups the UI should show (replay cursor or live). */
+  const displayedGroupCount = computed(() => {
+    const current = session.value;
+    if (!current) return 0;
+    const cursor = replayIndex.value;
+    return cursor === null ? current.active_group : Math.min(cursor, current.active_group);
+  });
 
   /** Imported histories stay read-only until the learner continues them. */
   const isReadOnly = computed(() => session.value?.origin.kind === 'imported' && session.value.status === 'completed');
@@ -81,7 +93,7 @@ export const useExplorationStore = defineStore('exploration', () => {
   const currentWhiteboard = computed<WhiteboardStep | null>(() => {
     const current = session.value;
     if (!current) return null;
-    const active = current.groups.slice(0, current.active_group);
+    const active = current.groups.slice(0, displayedGroupCount.value);
     for (let i = active.length - 1; i >= 0; i -= 1) {
       if (active[i].whiteboard) return active[i].whiteboard ?? null;
     }
@@ -299,6 +311,7 @@ export const useExplorationStore = defineStore('exploration', () => {
         markdown: text,
         source_name: sourceName ?? null,
       });
+      replayIndex.value = session.value.active_group;
       return true;
     } catch (e) {
       error.value = String(e);
@@ -306,8 +319,35 @@ export const useExplorationStore = defineStore('exploration', () => {
     }
   }
 
-  function continueSession(): Promise<boolean> {
-    return runSessionAction(continueExploration);
+  async function continueSession(): Promise<boolean> {
+    const ok = await runSessionAction(continueExploration);
+    if (ok) stopReplay();
+    return ok;
+  }
+
+  function startReplay() {
+    const current = session.value;
+    if (!current) return;
+    replayIndex.value = current.active_group;
+  }
+
+  function replayPrev() {
+    if (replayIndex.value === null) return;
+    replayIndex.value = Math.max(0, replayIndex.value - 1);
+  }
+
+  function replayNext() {
+    const current = session.value;
+    if (replayIndex.value === null || !current) return;
+    replayIndex.value = Math.min(current.active_group, replayIndex.value + 1);
+  }
+
+  function stopReplay() {
+    replayIndex.value = null;
+  }
+
+  function toggleSkipAsides() {
+    skipAsides.value = !skipAsides.value;
   }
 
   async function confirmDomains(domains: Domain[]): Promise<void> {
@@ -386,6 +426,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     streaming.value = false;
     phase.value = null;
     pendingDomains.value = null;
+    replayIndex.value = null;
+    skipAsides.value = false;
     session.value = null;
   }
 
@@ -411,11 +453,15 @@ export const useExplorationStore = defineStore('exploration', () => {
     error,
     lastExport,
     lastVaultPath,
+    replayIndex,
+    skipAsides,
     selectedCount,
     canStart,
     isInitializing,
     hasGraph,
     isReadOnly,
+    isReplaying,
+    displayedGroupCount,
     coverage,
     currentWhiteboard,
     currentGroup,
@@ -436,6 +482,11 @@ export const useExplorationStore = defineStore('exploration', () => {
     saveToVault,
     importHistory,
     continueSession,
+    startReplay,
+    replayPrev,
+    replayNext,
+    stopReplay,
+    toggleSkipAsides,
     confirmDomains,
     loadSessions,
     openSession,
