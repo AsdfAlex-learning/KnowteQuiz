@@ -295,10 +295,12 @@ describe('exploration store', () => {
         completed_early: false,
       },
     ];
+    store.resumeCandidates = store.sessions.map((row) => ({ ...row }));
 
     await store.removeSession('s1');
 
     expect(store.sessions).toEqual([]);
+    expect(store.resumeCandidates).toEqual([]);
     expect(store.session).toBeNull();
   });
 

@@ -470,6 +470,7 @@ export const useExplorationStore = defineStore('exploration', () => {
     try {
       await deleteExplorationSession(sessionId);
       sessions.value = sessions.value.filter((row) => row.id !== sessionId);
+      resumeCandidates.value = resumeCandidates.value.filter((row) => row.id !== sessionId);
       if (session.value?.id === sessionId) session.value = null;
     } catch (e) {
       error.value = String(e);
