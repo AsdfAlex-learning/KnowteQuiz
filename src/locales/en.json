@@ -183,6 +183,7 @@
     "glassmorphism": "Glassmorphism",
     "opacity": "Opacity",
     "blur": "Blur Radius",
+    "glass_hint": "5–12% tint with 40–60 px blur reads as real glass; above 15% it becomes a tinted block.",
     "scope": "Scope",
     "scope_global": "Global",
     "scope_content": "Content Area",

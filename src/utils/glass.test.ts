@@ -6,6 +6,7 @@ describe('clampBlur', () => {
     expect(clampBlur(0)).toBe(0);
     expect(clampBlur(12)).toBe(12);
     expect(clampBlur(30)).toBe(30);
+    expect(clampBlur(60)).toBe(60);
   });
 
   it('clamps out-of-range values to the bounds', () => {
@@ -15,7 +16,8 @@ describe('clampBlur', () => {
 
   it('parses numeric strings', () => {
     expect(clampBlur('8')).toBe(8);
-    expect(clampBlur('45')).toBe(GLASS_BLUR_MAX);
+    expect(clampBlur('45')).toBe(45);
+    expect(clampBlur('99')).toBe(GLASS_BLUR_MAX);
     expect(clampBlur('')).toBe(0);
   });
 

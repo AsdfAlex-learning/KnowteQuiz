@@ -27,11 +27,21 @@ function applyThemeToRoot(theme: ThemeConfig) {
       '--glass-border',
       preset.kind === 'light' ? 'rgba(15, 23, 42, 0.10)' : 'rgba(255, 255, 255, 0.15)'
     );
+    root.style.setProperty(
+      '--glass-shadow',
+      preset.kind === 'light'
+        ? '0 12px 32px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(15, 23, 42, 0.08)'
+        : '0 16px 40px rgba(3, 7, 18, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(2, 6, 16, 0.35)'
+    );
   } else {
     // Custom: preserve the look of settings written before presets existed.
     root.style.colorScheme = 'dark';
     root.style.setProperty('--glass-rgb', '255, 255, 255');
     root.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.15)');
+    root.style.setProperty(
+      '--glass-shadow',
+      '0 16px 40px rgba(3, 7, 18, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.22), inset 0 -1px 0 rgba(2, 6, 16, 0.35)'
+    );
   }
 
   // The two user-picked colours win over the preset, so a manual tweak on top

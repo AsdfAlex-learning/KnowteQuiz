@@ -45,4 +45,21 @@ describe('useTheme', () => {
 
     expect(setProperty).not.toHaveBeenCalled();
   });
+
+  it('sets colourless glass tokens for dark and light presets', async () => {
+    const settingsStore = prepare();
+    await nextTick();
+    const style = document.documentElement.style;
+
+    expect(style.getPropertyValue('--glass-rgb')).toBe('255, 255, 255');
+    expect(style.getPropertyValue('--glass-border')).toBe('rgba(255, 255, 255, 0.15)');
+    expect(style.getPropertyValue('--glass-shadow')).toContain('rgba(3, 7, 18');
+
+    settingsStore.settings.theme_config.preset = 'vscode-light-plus';
+    await nextTick();
+
+    expect(style.getPropertyValue('--glass-rgb')).toBe('15, 23, 42');
+    expect(style.getPropertyValue('--glass-border')).toBe('rgba(15, 23, 42, 0.10)');
+    expect(style.getPropertyValue('--glass-shadow')).toContain('rgba(15, 23, 42');
+  });
 });

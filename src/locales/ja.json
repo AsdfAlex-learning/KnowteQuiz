@@ -183,6 +183,7 @@
     "glassmorphism": "グラスモーフィズム",
     "opacity": "不透明度",
     "blur": "ぼかし半径",
+    "glass_hint": "5〜12% の着色と 40〜60px のぼかしが本物のガラスに近づきます。15% を超えると色付きの板になります。",
     "scope": "適用範囲",
     "scope_global": "全体",
     "scope_content": "コンテンツ領域",

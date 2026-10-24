@@ -1,4 +1,4 @@
-use crate::models::quiz::QuestionType;
+﻿use crate::models::quiz::QuestionType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -136,11 +136,11 @@ impl Default for GlassmorphismConfig {
 }
 
 fn default_glass_opacity() -> u32 {
-    20
+    40
 }
 
 fn default_glass_blur() -> u32 {
-    12
+    40
 }
 
 fn default_glass_scope() -> String {

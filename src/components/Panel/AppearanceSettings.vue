@@ -226,6 +226,7 @@
             <span class="text-xs text-[var(--text-muted)] font-mono"> {{ modelValue.glassmorphism.opacity }}% </span>
           </div>
           <input type="range" min="0" max="100" :value="modelValue.glassmorphism.opacity" @input="updateOpacity" />
+          <p class="text-[11px] text-[var(--text-faint)]">{{ t('appearance.glass_hint') }}</p>
         </div>
 
         <!-- Blur Radius -->
@@ -238,7 +239,7 @@
               <input
                 type="number"
                 min="0"
-                max="30"
+                max="60"
                 step="1"
                 class="w-16 px-2 py-1 rounded-md text-xs font-mono bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)]"
                 :value="modelValue.glassmorphism.blur"
@@ -252,13 +253,13 @@
             <input
               type="range"
               min="0"
-              max="30"
+              max="60"
               step="1"
               class="flex-1"
               :value="modelValue.glassmorphism.blur"
               @input="updateBlur"
             />
-            <span class="text-xs text-[var(--text-muted)] font-mono">30px</span>
+            <span class="text-xs text-[var(--text-muted)] font-mono">60px</span>
           </div>
         </div>
 
@@ -612,8 +613,8 @@ function resetToDefaults() {
     background_image: null,
     glassmorphism: {
       enabled: false,
-      opacity: 20,
-      blur: 12,
+      opacity: 40,
+      blur: 40,
       scope: 'global',
     },
     overlay_opacity: 0,

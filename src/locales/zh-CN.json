@@ -183,6 +183,7 @@
     "glassmorphism": "玻璃拟态",
     "opacity": "不透明度",
     "blur": "模糊半径",
+    "glass_hint": "5–12% 着色 + 40–60px 模糊最接近真实玻璃；超过 15% 会变成实心色块。",
     "scope": "作用范围",
     "scope_global": "全局",
     "scope_content": "内容区域",

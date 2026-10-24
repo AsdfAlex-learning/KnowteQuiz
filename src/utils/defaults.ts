@@ -52,8 +52,8 @@ export function defaultSettings(): Settings {
       background_image: null,
       glassmorphism: {
         enabled: false,
-        opacity: 20,
-        blur: 12,
+        opacity: 40,
+        blur: 40,
         scope: 'global',
       },
       overlay_opacity: 0,

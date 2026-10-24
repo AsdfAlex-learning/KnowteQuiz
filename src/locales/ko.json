@@ -183,6 +183,7 @@
     "glassmorphism": "글래스모피즘",
     "opacity": "불투명도",
     "blur": "흐림 반경",
+    "glass_hint": "5–12% 착색과 40–60px 블러가 실제 유리처럼 보입니다. 15%를 넘으면 색칠된 판이 됩니다.",
     "scope": "적용 범위",
     "scope_global": "전역",
     "scope_content": "콘텐츠 영역",
