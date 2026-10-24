@@ -650,6 +650,10 @@
 
 **状态机**：`Initializing → (AwaitingDomainConfirm) → Active ⇄ /undo ⇄ /redo → Completed`。导入的会话以只读 `Completed` 打开，可「从此继续」重新激活。
 
+**学习基础（baseline）**：初始化前在 onboarding 用 0–100 滑块选择自身基础（0 = 零基础，50 = 有基础，100 = 熟练）。值存入会话 `baseline`，并注入三个提示词：图谱生成（低基础补前置概念、高基础压缩基础）、首问（难度校准）、轮次（反馈深度与提问难度）。滑块最后一次选择持久化到 `settings.exploration.default_baseline`。
+
+**自动保存与会话恢复**：每次初始化、每轮回答、撤销/跳过/结束都会原子落盘到 `<data>/exploration/sessions/`。进入探索模式时 `tryAutoResume` 会列出未完成会话：最近 **2 小时**内（`AUTO_RESUME_WINDOW_MS`）直接静默恢复；更早的作为候选弹出「是否还原」提示，并可在「历史会话」中手动恢复/删除。按当前打开的笔记路径优先匹配；用户显式「退出会话」的 id 在本次运行内不再自动恢复。若会话停在 `Initializing` 且尚未保存图谱，恢复时自动重跑初始化。
+
 **初始化（map-reduce）**：
 
 1. 逐篇读取源笔记（`fs_service::resolve_note_path` 绑定笔记根），截断后生成结构化摘要（`exploration_summary`）。
