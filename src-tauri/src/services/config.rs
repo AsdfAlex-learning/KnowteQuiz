@@ -154,6 +154,7 @@ mod tests {
             get_settings_path(&dir).expect("missing settings file should be initialized");
 
         assert_eq!(settings.version, "1.0.0");
+        assert_eq!(settings.exploration.default_baseline, 50);
         assert!(dir.join("settings.json").exists());
     }
 

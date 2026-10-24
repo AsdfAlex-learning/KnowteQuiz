@@ -424,6 +424,7 @@ mod tests {
         assert_eq!(restored.format_version, EXPLORATION_FORMAT_VERSION);
         assert!(restored.graph.concepts.is_empty());
         assert_eq!(restored.active_group, 0);
+        assert_eq!(restored.baseline, 50);
         assert_eq!(
             restored.origin,
             SessionOrigin::Imported {
