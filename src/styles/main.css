@@ -92,6 +92,12 @@
   --resize-handle-width: 4px;
 }
 
+/* ---- Canvas fallback behind the scene layer ---- */
+html,
+body {
+  background: var(--bg-base);
+}
+
 /* ---- Selection ---- */
 ::selection {
   background: rgba(203, 166, 247, 0.3);

@@ -1,62 +1,64 @@
 <template>
-  <div class="h-screen w-screen flex flex-col text-[var(--text-primary)] overflow-hidden" :class="appBgClass">
+  <div class="h-screen w-screen flex flex-col text-[var(--text-primary)] overflow-hidden bg-transparent">
     <BackgroundLayer />
-    <TitleBar>
-      <template #center>
-        {{ readerStore.currentNote?.title || '' }}
-      </template>
-    </TitleBar>
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Left panel -->
-      <aside
-        v-show="layoutStore.leftPanelOpen"
-        class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-r border-[var(--border-default)]"
-        :style="{ width: layoutStore.explorerWidth + 'px' }"
-        data-glass-panel="sidebar"
-      >
-        <FileTree />
-      </aside>
-      <div
-        v-show="layoutStore.leftPanelOpen"
-        class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
-        @mousedown="startDragLeft"
-      />
+    <div class="relative z-10 flex flex-1 flex-col min-h-0">
+      <TitleBar>
+        <template #center>
+          {{ readerStore.currentNote?.title || '' }}
+        </template>
+      </TitleBar>
+      <div class="flex flex-1 overflow-hidden">
+        <!-- Left panel -->
+        <aside
+          v-show="layoutStore.leftPanelOpen"
+          class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-r border-[var(--border-default)]"
+          :style="{ width: layoutStore.explorerWidth + 'px' }"
+          data-glass-panel="sidebar"
+        >
+          <FileTree />
+        </aside>
+        <div
+          v-show="layoutStore.leftPanelOpen"
+          class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
+          @mousedown="startDragLeft"
+        />
 
-      <!-- Center panel -->
-      <main
-        ref="readerMain"
-        class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]"
-        data-glass-panel="content"
-        @scroll="onReaderScroll"
-      >
-        <ExplorationShell v-if="layoutStore.viewMode === 'exploration'" />
-        <MarkdownRenderer v-else-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
-        <DocumentEmptyState v-else-if="readerStore.pendingDocument" />
-        <EmptyState v-else />
-      </main>
+        <!-- Center panel -->
+        <main
+          ref="readerMain"
+          class="flex-1 min-w-[300px] overflow-auto bg-[var(--bg-base)]"
+          data-glass-panel="content"
+          @scroll="onReaderScroll"
+        >
+          <ExplorationShell v-if="layoutStore.viewMode === 'exploration'" />
+          <MarkdownRenderer v-else-if="readerStore.currentNote" :content="readerStore.currentNote.content" />
+          <DocumentEmptyState v-else-if="readerStore.pendingDocument" />
+          <EmptyState v-else />
+        </main>
 
-      <!-- Right panel -->
-      <div
-        v-show="layoutStore.rightPanelOpen"
-        class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
-        @mousedown="startDragRight"
-      />
-      <aside
-        v-show="layoutStore.rightPanelOpen"
-        class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-l border-[var(--border-default)]"
-        :style="{ width: layoutStore.readerWidth + 'px' }"
-        data-glass-panel="sidebar"
-      >
-        <ExplorationPanel v-if="layoutStore.viewMode === 'exploration'" />
-        <PanelContainer v-else />
-      </aside>
+        <!-- Right panel -->
+        <div
+          v-show="layoutStore.rightPanelOpen"
+          class="w-1 cursor-col-resize bg-[var(--bg-active)] hover:bg-[var(--accent-purple)] flex-shrink-0"
+          @mousedown="startDragRight"
+        />
+        <aside
+          v-show="layoutStore.rightPanelOpen"
+          class="flex-shrink-0 overflow-auto bg-[var(--bg-sidebar)] border-l border-[var(--border-default)]"
+          :style="{ width: layoutStore.readerWidth + 'px' }"
+          data-glass-panel="sidebar"
+        >
+          <ExplorationPanel v-if="layoutStore.viewMode === 'exploration'" />
+          <PanelContainer v-else />
+        </aside>
+      </div>
+      <StatusBar />
     </div>
-    <StatusBar />
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useLayoutStore } from './stores/layout';
 import { useReaderStore } from './stores/reader';
 import { useExplorerStore } from './stores/explorer';
@@ -82,14 +84,6 @@ const navigationStore = useNavigationStore();
 const readerMain = ref<HTMLElement | null>(null);
 
 useTheme();
-
-const appBgClass = computed(() => {
-  const theme = settingsStore.settings.theme_config;
-  if (!theme) return 'bg-[var(--bg-base)]';
-  const hasCustomBg = theme.background_image || (theme.background_color && theme.background_color !== '#1e1e1e');
-  const hasGlass = theme.glassmorphism?.enabled;
-  return hasCustomBg || hasGlass ? 'bg-transparent' : 'bg-[var(--bg-base)]';
-});
 
 let pendingScrollSave: { path: string; top: number } | null = null;
 let scrollSaveTimer: ReturnType<typeof setTimeout> | null = null;

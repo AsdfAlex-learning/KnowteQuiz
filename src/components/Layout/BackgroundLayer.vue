@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 -z-[1] pointer-events-none">
+  <div class="fixed inset-0 z-0 pointer-events-none">
     <!-- Video background (when active) -->
     <VideoBackground
       v-if="theme.background_video && !isStopped"
@@ -31,6 +31,8 @@ import { computed, ref, watch, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
 import { useVideoBackground } from '@/composables/useVideoBackground';
 import { getAssetUrl } from '@/composables/useTheme';
+import { withAlpha } from '@/utils/color';
+import { findThemePreset } from '@/utils/themes';
 import VideoBackground from './VideoBackground.vue';
 
 const settingsStore = useSettingsStore();
@@ -60,7 +62,21 @@ const layerStyle = computed(() => {
     styles.backgroundSize = 'cover';
     styles.backgroundPosition = 'center';
     styles.backgroundRepeat = 'no-repeat';
+    return styles;
   }
+
+  // No wallpaper: build a night scene out of soft light wells so the glass has
+  // something to refract. The glass itself stays colourless.
+  const kind = findThemePreset(t.preset)?.kind ?? 'dark';
+  const accent = t.accent_color || '#007acc';
+  const primaryGlow = kind === 'light' ? 0.1 : 0.22;
+  const secondaryGlow = kind === 'light' ? 0.07 : 0.16;
+  const neutralGlow = kind === 'light' ? 'rgba(15, 23, 42, 0.05)' : 'rgba(255, 255, 255, 0.05)';
+  styles.backgroundImage = [
+    `radial-gradient(ellipse 60% 55% at 82% 6%, ${withAlpha(accent, primaryGlow)} 0%, transparent 62%)`,
+    `radial-gradient(ellipse 55% 50% at 8% 94%, ${withAlpha(accent, secondaryGlow)} 0%, transparent 64%)`,
+    `radial-gradient(ellipse 45% 40% at 50% 55%, ${neutralGlow} 0%, transparent 60%)`,
+  ].join(', ');
 
   return styles;
 });
