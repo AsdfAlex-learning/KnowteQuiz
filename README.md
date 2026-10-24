@@ -14,7 +14,7 @@
   - **Advanced Mode**: Submit your reasoning → AI asks follow-up questions → Receive a detailed blind-spot report.
 - **Purely local** — All data (notes, mistakes, settings) stays on your machine. Connect to any OpenAI-compatible endpoint (Ollama by default).
 - **Three-pane workspace** — Explorer | Reader | Quiz & Diagnosis panel, with resizable columns and toggle shortcuts (`Ctrl+B` / `Ctrl+Shift+B`).
-- **Custom appearance** — Pick your own background color, accent color, and background image, with an adjustable glassmorphism effect (global or content-area scope).
+- **Custom appearance** — Six VS Code theme presets (Dark+ by default, Dark Modern, Light+, Monokai, Solarized Dark/Light) plus custom background/accent colours. The optional glassmorphism layer uses colourless frosted panels (5–12% tint, 40–60 px blur, saturate boost, directional edge light and film grain) over a night-scene background generated from the theme accent.
 - **Dynamic backgrounds** — Use an MP4 as a looping background, with play / pause / stop controls. Stopping captures the current frame as a static wallpaper and releases the video from memory; resuming restarts from the saved position.
 - **SM-2 spaced repetition** — Mistake book uses the SM-2 algorithm (Again / Hard / Good / Easy ratings) to schedule reviews at optimal intervals. Due items are surfaced with a "Due" filter and badge.
 - **Daily streak tracking** — Consecutive study days are tracked and shown in the status bar.
@@ -178,7 +178,7 @@ Use **Test Connection** in Settings to verify your endpoint is reachable, and **
 
 ## Testing
 
-The project includes **189 Rust unit tests** and **269 frontend tests** (42 files) covering:
+The project includes **191 Rust unit tests** and **284 frontend tests** (42 files) covering:
 
 - Atomic JSON writes and backup recovery
 - Quiz JSON parsing and validation

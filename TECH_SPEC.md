@@ -806,6 +806,24 @@
 
 ---
 
+### 7.3 主题与毛玻璃
+
+**主题预设**：6 套 VS Code 调色板（Dark+ 默认、Dark Modern、Light+、Monokai、Solarized Dark/Light），由 `theme_config.preset` 选择。每套预设写入完整 CSS 变量（背景/侧栏/文字/边框/语义色），不是只换背景色。`preset` 缺失或为 `custom` 时，仅应用用户手动选择的 `background_color` / `accent_color`，以兼容旧设置。
+
+**玻璃材质**（Nocturne 风格）：
+
+- 无色：`rgba(var(--glass-rgb), alpha)`，不随主题给玻璃上色；`--glass-rgb` 深色主题为 `255,255,255`、浅色为 `15,23,42`。
+- 着色范围：滑块 0–100 映射到 **0–15%**，默认 40 → 6%；推荐 5–12%。
+- 模糊：**默认 40px，范围 0–60**，配合 `saturate(180%)`。
+- 方向性边缘光：`inset 0 0 0 1px` 边框 + 顶部高光 + 底部暗缘 + 外层深阴影；`--glass-border` / `--glass-shadow` 按主题 kind 注入。
+- 颗粒：玻璃开启时全屏叠加 2.5% SVG `feTurbulence` 噪点（`body[data-glassmorphism]::after`）。
+
+**层级（关键）**：背景场景必须是 `fixed inset-0 z-0`，应用内容包在 `relative z-10` 中。场景 = 壁纸/视频；没有壁纸时由主题 accent 生成 2–3 个大半径柔光斑。不要把场景放在负 z-index 且让根节点保留不透明背景，否则面板永远透不出场景。
+
+**可读性**：保留 `theme_config.overlay_opacity`（0–50%）作为壁纸压暗层；花哨壁纸建议 10–20%。**性能**：面板使用 `contain: content`，不要对 `backdrop-filter` 做动画。
+
+---
+
 ## 8. 开发路线图
 
 ### V1.0 — 严格 MVP（当前目标 — 已基本完成）
