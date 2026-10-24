@@ -105,7 +105,7 @@ pub async fn initialize_session(
     let raw = quiz_engine::call_llm_with_system(
         &settings.llm,
         prompt::EXPLORATION_SYSTEM_PROMPT,
-        &prompt::graph_prompt(&digests_json),
+        &prompt::graph_prompt(&digests_json, session.baseline),
         0.2,
         LlmRunKind::ExplorationGraph,
         data_dir,
@@ -770,6 +770,7 @@ pub(crate) async fn ensure_current_question(
     }
     let context = serde_json::json!({
         "concept": concept,
+        "baseline": session.baseline,
         "graph": session
             .graph
             .concepts
@@ -856,6 +857,7 @@ fn turn_context(session: &ExplorationSession, concept: &Concept, answer: &str) -
 
     serde_json::json!({
         "current_concept": concept,
+        "baseline": session.baseline,
         "concepts": session
             .graph
             .concepts
@@ -967,6 +969,7 @@ mod tests {
             updated_at: "2026-10-23T10:00:00+08:00".to_string(),
             status: SessionStatus::Active,
             origin: crate::models::exploration::SessionOrigin::New,
+            baseline: 50,
             source_paths: vec!["a.md".to_string()],
             source_digests: vec![],
             graph: graph(),

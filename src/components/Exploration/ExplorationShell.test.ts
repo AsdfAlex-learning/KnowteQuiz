@@ -55,6 +55,7 @@ describe('ExplorationShell', () => {
       updated_at: '2026-10-23T10:00:00+08:00',
       status: 'initializing',
       origin: { kind: 'new' },
+      baseline: 50,
       source_paths: ['a.md', 'b.md'],
       graph: { concepts: [], domains: [], root_order: [], domains_confirmed: false },
       groups: [],

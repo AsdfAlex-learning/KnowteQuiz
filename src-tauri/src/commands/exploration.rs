@@ -18,7 +18,12 @@ pub async fn exploration_create(
 ) -> Result<ExplorationSession, AppError> {
     let data_dir = storage::get_data_dir(&app)?;
     tokio::task::spawn_blocking(move || {
-        session_store::create_session(&data_dir, request.source_paths, request.title)
+        session_store::create_session(
+            &data_dir,
+            request.source_paths,
+            request.title,
+            request.baseline,
+        )
     })
     .await
     .map_err(|e| AppError::Internal(format!("Exploration create task failed: {e}")))?

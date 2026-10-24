@@ -336,6 +336,12 @@
     "replay_prev": "前のステップ",
     "replay_next": "次のステップ",
     "replay_skip_asides": "補足をスキップ",
-    "replay_exit": "再生を終了"
+    "replay_exit": "再生を終了",
+    "baseline": "現在の基礎力",
+    "baseline_hint": "知識マップと質問の難易度を調整します。次回も引き継がれます。",
+    "baseline_zero": "ゼロから",
+    "baseline_basic": "入門",
+    "baseline_solid": "基礎あり",
+    "baseline_advanced": "上級"
   }
 }

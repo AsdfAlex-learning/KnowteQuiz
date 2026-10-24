@@ -504,7 +504,12 @@ async fn exploration_create_handler(
 ) -> Result<Json<ExplorationSession>, AppError> {
     let data_dir = state.data_dir.clone();
     let session = tokio::task::spawn_blocking(move || {
-        exploration_store::create_session(&data_dir, request.source_paths, request.title)
+        exploration_store::create_session(
+            &data_dir,
+            request.source_paths,
+            request.title,
+            request.baseline,
+        )
     })
     .await
     .map_err(|e| AppError::Internal(format!("Exploration create task failed: {e}")))??;

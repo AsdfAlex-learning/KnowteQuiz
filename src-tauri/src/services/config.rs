@@ -47,6 +47,7 @@ fn default_settings() -> Settings {
         },
         workspace: WorkspaceState::default(),
         theme_config: ThemeConfig::default(),
+        exploration: ExplorationSettings::default(),
         cors: crate::models::settings::CorsSettings::default(),
     }
 }

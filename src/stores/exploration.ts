@@ -125,7 +125,7 @@ export const useExplorationStore = defineStore('exploration', () => {
     selectedPaths.value = [];
   }
 
-  async function startSession(title?: string): Promise<void> {
+  async function startSession(title?: string, baseline?: number): Promise<void> {
     if (!selectedPaths.value.length || creating.value) return;
     creating.value = true;
     error.value = null;
@@ -133,6 +133,7 @@ export const useExplorationStore = defineStore('exploration', () => {
       session.value = await createExplorationSession({
         source_paths: [...selectedPaths.value],
         ...(title ? { title } : {}),
+        ...(baseline !== undefined ? { baseline } : {}),
       });
       selectedPaths.value = [];
       creating.value = false;

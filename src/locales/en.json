@@ -336,6 +336,12 @@
     "replay_prev": "Previous step",
     "replay_next": "Next step",
     "replay_skip_asides": "Skip side notes",
-    "replay_exit": "Exit replay"
+    "replay_exit": "Exit replay",
+    "baseline": "My starting point",
+    "baseline_hint": "Calibrates the knowledge map and question difficulty. The choice is remembered next time.",
+    "baseline_zero": "From zero",
+    "baseline_basic": "Beginner",
+    "baseline_solid": "Some background",
+    "baseline_advanced": "Advanced"
   }
 }

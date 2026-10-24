@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// Version stamped on every persisted exploration session and learning-history
 /// export. Bump only when the on-disk shape changes incompatibly.
@@ -161,6 +161,10 @@ pub struct ExplorationSession {
     pub updated_at: String,
     pub status: SessionStatus,
     pub origin: SessionOrigin,
+    /// Learner baseline chosen before initialization (0 = from zero, 100 =
+    /// already advanced). Older sessions default to the neutral midpoint.
+    #[serde(default = "crate::models::settings::default_baseline_level")]
+    pub baseline: u32,
     #[serde(default)]
     pub source_paths: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -191,6 +195,9 @@ pub struct CreateExplorationSessionRequest {
     pub source_paths: Vec<String>,
     #[serde(default)]
     pub title: Option<String>,
+    /// 0-100. Omitted uses the neutral midpoint.
+    #[serde(default)]
+    pub baseline: Option<u32>,
 }
 
 /// Payload for confirming (possibly edited) domains after initialization
@@ -326,6 +333,7 @@ mod tests {
             updated_at: now,
             status: SessionStatus::Active,
             origin: SessionOrigin::New,
+            baseline: 50,
             source_paths: vec!["a.md".to_string()],
             source_digests: vec![],
             graph: KnowledgeGraph {

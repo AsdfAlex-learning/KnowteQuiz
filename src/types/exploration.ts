@@ -91,6 +91,8 @@ export interface ExplorationSession {
   updated_at: string;
   status: SessionStatus;
   origin: SessionOrigin;
+  /** 0-100 baseline chosen before initialization (0 = from zero). */
+  baseline: number;
   source_paths: string[];
   source_digests?: NoteDigest[];
   graph: KnowledgeGraph;
@@ -118,6 +120,8 @@ export interface ExplorationSessionSummary {
 export interface CreateExplorationSessionRequest {
   source_paths: string[];
   title?: string;
+  /** 0-100; omitted uses the neutral midpoint. */
+  baseline?: number;
 }
 
 export interface ConfirmExplorationDomainsRequest {

@@ -231,7 +231,30 @@ pub struct Settings {
     #[serde(default)]
     pub theme_config: ThemeConfig,
     #[serde(default)]
+    pub exploration: ExplorationSettings,
+    #[serde(default)]
     pub cors: CorsSettings,
+}
+
+/// Exploration-mode defaults that survive between sessions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExplorationSettings {
+    /// Last baseline chosen on the onboarding slider (0 = from zero,
+    /// 100 = already advanced).
+    #[serde(default = "default_baseline_level")]
+    pub default_baseline: u32,
+}
+
+impl Default for ExplorationSettings {
+    fn default() -> Self {
+        Self {
+            default_baseline: default_baseline_level(),
+        }
+    }
+}
+
+pub fn default_baseline_level() -> u32 {
+    50
 }
 
 fn default_ui_language() -> String {

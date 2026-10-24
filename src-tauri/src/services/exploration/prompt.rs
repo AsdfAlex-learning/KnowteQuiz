@@ -19,7 +19,7 @@ NOTE:\n{content}"
 }
 
 /// Reduce stage: digests -> one cross-document, shallow-to-deep graph.
-pub fn graph_prompt(digests_json: &str) -> String {
+pub fn graph_prompt(digests_json: &str, baseline: u32) -> String {
     format!(
         "Design how a learner should study these notes: shallow foundations first, advanced ideas last, reorganised across documents.\n\n\
 Return exactly one JSON object shaped like this:\n\
@@ -31,6 +31,9 @@ HARD CONSTRAINTS:\n\
 - prereqs must reference titles that also appear in concepts; the first concepts have no prereqs.\n\
 - Create 8-60 concepts. Keep the source language.\n\
 - Return the JSON object only.\n\n\
+LEARNER BASELINE: {baseline}/100 (0 = complete beginner, 50 = some familiarity, 100 = advanced).\n\
+- Below 35: include the enabling prerequisites and assume no prior vocabulary.\n\
+- Above 70: compress the basics, emphasise deeper links and edge cases.\n\n\
 INPUT DIGESTS (JSON):\n{digests_json}"
     )
 }
@@ -43,6 +46,7 @@ Rules:\n\
 - Ground it in the note excerpts in the context below; do not invent facts.\n\
 - Ask one concrete question that makes the learner reason, not recall a definition.\n\
 - It must be answerable from the excerpts.\n\
+- Calibrate difficulty to CONTEXT.baseline (0 = beginner, 100 = advanced).\n\
 - Keep the source language. At most 80 words.\n\
 - Return plain text only (Markdown allowed); no JSON, no markdown fences.\n\n\
 CONTEXT (JSON):\n{context_json}"
@@ -62,6 +66,7 @@ HARD CONSTRAINTS:\n\
 - Advance at most one concept per turn. next_concept_id must come from the concept list and must not already be covered.\n\
 - Every question must be grounded in the source excerpts in the context; do not invent content.\n\
 - whiteboard_md: explain the concept just discussed as a short Markdown block (table, list, formula, or diagram-in-text). Keep the source language.\n\
+- Calibrate feedback depth and question difficulty to CONTEXT.baseline (0 = beginner, 100 = advanced).\n\
 - When every concept is covered, next_action is complete.\n\
 - Return the JSON object only.\n\n\
 CONTEXT (JSON):\n{context_json}"
@@ -89,4 +94,22 @@ Rules:\n\
 - Return Markdown only; no JSON, no markdown fences.\n\n\
 CONTEXT (JSON):\n{context_json}"
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn graph_prompt_carries_the_learner_baseline() {
+        let prompt = graph_prompt("[]", 15);
+        assert!(prompt.contains("LEARNER BASELINE: 15/100"));
+        assert!(prompt.contains("Below 35"));
+    }
+
+    #[test]
+    fn question_and_turn_prompts_calibrate_to_the_baseline() {
+        assert!(question_prompt("{}").contains("CONTEXT.baseline"));
+        assert!(turn_prompt("{}").contains("CONTEXT.baseline"));
+    }
 }

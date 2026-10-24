@@ -383,6 +383,7 @@ mod tests {
             updated_at: "2026-10-23T10:30:00+08:00".to_string(),
             status: SessionStatus::Completed,
             origin: SessionOrigin::New,
+            baseline: 50,
             source_paths: vec!["notes/compiler.md".to_string()],
             source_digests: vec![],
             graph: KnowledgeGraph {

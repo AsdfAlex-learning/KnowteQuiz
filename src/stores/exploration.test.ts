@@ -61,6 +61,7 @@ function session(overrides: Partial<ExplorationSession> = {}): ExplorationSessio
     updated_at: '2026-10-23T10:00:00+08:00',
     status: 'initializing',
     origin: { kind: 'new' },
+    baseline: 50,
     source_paths: ['a.md', 'b.md'],
     graph: { concepts: [], domains: [], root_order: [], domains_confirmed: false },
     groups: [],
@@ -141,6 +142,21 @@ describe('exploration store', () => {
     expect(store.hasGraph).toBe(true);
     expect(store.selectedPaths).toEqual([]);
     expect(store.streaming).toBe(false);
+  });
+
+  it('passes the chosen baseline when creating a session', async () => {
+    vi.mocked(explorationService.createExplorationSession).mockResolvedValue(session());
+    vi.mocked(explorationService.startExplorationStream).mockResolvedValue(undefined);
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(session());
+    const store = useExplorationStore();
+    store.selectAll(['a.md']);
+
+    await store.startSession(undefined, 25);
+
+    expect(explorationService.createExplorationSession).toHaveBeenCalledWith({
+      source_paths: ['a.md'],
+      baseline: 25,
+    });
   });
 
   it('keeps the selection when session creation fails', async () => {

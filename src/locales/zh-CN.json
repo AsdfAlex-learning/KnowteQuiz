@@ -336,6 +336,12 @@
     "replay_prev": "上一步",
     "replay_next": "下一步",
     "replay_skip_asides": "跳过旁支",
-    "replay_exit": "退出回放"
+    "replay_exit": "退出回放",
+    "baseline": "我的基础",
+    "baseline_hint": "用于校准知识脉络和提问难度，下次会自动沿用。",
+    "baseline_zero": "零基础",
+    "baseline_basic": "入门",
+    "baseline_solid": "有基础",
+    "baseline_advanced": "熟练"
   }
 }

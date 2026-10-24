@@ -120,6 +120,12 @@ export interface CorsSettings {
   allow_origins: string[];
 }
 
+/** Exploration-mode defaults that survive between sessions. */
+export interface ExplorationSettings {
+  /** Last baseline chosen on the onboarding slider (0 = from zero). */
+  default_baseline: number;
+}
+
 export interface Settings {
   version: string;
   ui_language: string;
@@ -128,5 +134,6 @@ export interface Settings {
   quiz: QuizDefaults;
   workspace: WorkspaceState;
   theme_config: ThemeConfig;
+  exploration: ExplorationSettings;
   cors: CorsSettings;
 }

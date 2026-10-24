@@ -45,6 +45,9 @@ export function defaultSettings(): Settings {
       streak_days: 0,
       last_active_date: null,
     },
+    exploration: {
+      default_baseline: 50,
+    },
     theme_config: {
       preset: 'vscode-dark-plus',
       background_color: '#1e1e1e',

@@ -1,4 +1,4 @@
-﻿use crate::errors::AppError;
+use crate::errors::AppError;
 use crate::models::exploration::{
     ExplorationSession, ExplorationSessionSummary, KnowledgeGraph, SessionOrigin, SessionStatus,
     EXPLORATION_FORMAT_VERSION,
@@ -16,6 +16,7 @@ pub fn create_session(
     data_dir: &Path,
     source_paths: Vec<String>,
     title: Option<String>,
+    baseline: Option<u32>,
 ) -> Result<ExplorationSession, AppError> {
     let source_paths: Vec<String> = source_paths
         .into_iter()
@@ -40,6 +41,7 @@ pub fn create_session(
         updated_at: now,
         status: SessionStatus::Initializing,
         origin: SessionOrigin::New,
+        baseline: baseline.unwrap_or(50).min(100),
         source_paths,
         source_digests: Vec::new(),
         graph: KnowledgeGraph::default(),
@@ -245,6 +247,7 @@ mod tests {
             updated_at: now,
             status,
             origin: SessionOrigin::New,
+            baseline: 50,
             source_paths: vec!["notes/compiler.md".to_string()],
             source_digests: vec![],
             graph: KnowledgeGraph::default(),
@@ -263,14 +266,20 @@ mod tests {
     fn create_session_persists_an_initializing_session() {
         let dir = temp_data_dir("create_session_persists_an_initializing_session");
 
-        let session = create_session(&dir, vec![" notes/a.md ".to_string(), String::new()], None)
-            .expect("session should be created");
+        let session = create_session(
+            &dir,
+            vec![" notes/a.md ".to_string(), String::new()],
+            None,
+            None,
+        )
+        .expect("session should be created");
 
         assert_eq!(session.status, SessionStatus::Initializing);
         assert_eq!(session.source_paths, vec!["notes/a.md"]);
         assert_eq!(session.title, "a");
         assert_eq!(session.format_version, EXPLORATION_FORMAT_VERSION);
         assert_eq!(session.active_group, 0);
+        assert_eq!(session.baseline, 50);
 
         let loaded = load_session(&dir, &session.id).expect("session should load");
         assert_eq!(loaded, session);
@@ -278,10 +287,23 @@ mod tests {
     }
 
     #[test]
+    fn create_session_clamps_the_baseline() {
+        let dir = temp_data_dir("create_session_clamps_the_baseline");
+
+        let high = create_session(&dir, vec!["notes/high.md".to_string()], None, Some(120))
+            .expect("session should be created");
+        assert_eq!(high.baseline, 100);
+
+        let low = create_session(&dir, vec!["notes/low.md".to_string()], None, Some(15))
+            .expect("session should be created");
+        assert_eq!(low.baseline, 15);
+    }
+
+    #[test]
     fn create_session_rejects_empty_source_list() {
         let dir = temp_data_dir("create_session_rejects_empty_source_list");
 
-        let error = create_session(&dir, vec![], None).expect_err("empty sources must fail");
+        let error = create_session(&dir, vec![], None, None).expect_err("empty sources must fail");
 
         assert!(error.to_string().contains("At least one source note"));
     }

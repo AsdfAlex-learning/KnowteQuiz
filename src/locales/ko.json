@@ -336,6 +336,12 @@
     "replay_prev": "이전 단계",
     "replay_next": "다음 단계",
     "replay_skip_asides": "곁가지 건너뛰기",
-    "replay_exit": "다시 보기 종료"
+    "replay_exit": "다시 보기 종료",
+    "baseline": "나의 기초 수준",
+    "baseline_hint": "지식 지도와 질문 난이도를 조정합니다. 다음에도 유지됩니다.",
+    "baseline_zero": "완전 초보",
+    "baseline_basic": "입문",
+    "baseline_solid": "기초 있음",
+    "baseline_advanced": "숙련"
   }
 }
