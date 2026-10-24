@@ -495,4 +495,106 @@ describe('exploration store', () => {
     expect(store.isReplaying).toBe(false);
     expect(store.displayedGroupCount).toBe(2);
   });
+
+  it('auto-restores a recent session matching the current note', async () => {
+    const recent = session({
+      status: 'active',
+      graph: graph(),
+      source_paths: ['/notes/a.md'],
+      updated_at: new Date().toISOString(),
+    });
+    vi.mocked(explorationService.listExplorationSessions).mockResolvedValue([
+      {
+        id: 's1',
+        title: 'Compiler',
+        status: 'active',
+        created_at: recent.created_at,
+        updated_at: recent.updated_at,
+        source_paths: ['/notes/a.md'],
+        concepts_total: 2,
+        concepts_covered: 0,
+        group_count: 1,
+        completed_early: false,
+      },
+    ]);
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(recent);
+    const store = useExplorationStore();
+
+    await store.tryAutoResume(['/notes/a.md']);
+
+    expect(explorationService.getExplorationSession).toHaveBeenCalledWith('s1');
+    expect(store.session?.id).toBe('s1');
+    expect(store.autoResumed).toBe(true);
+  });
+
+  it('offers older resumable sessions instead of opening them silently', async () => {
+    const old = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    vi.mocked(explorationService.listExplorationSessions).mockResolvedValue([
+      {
+        id: 's1',
+        title: 'Compiler',
+        status: 'active',
+        created_at: old,
+        updated_at: old,
+        source_paths: ['/notes/a.md'],
+        concepts_total: 2,
+        concepts_covered: 0,
+        group_count: 1,
+        completed_early: false,
+      },
+    ]);
+    const store = useExplorationStore();
+
+    await store.tryAutoResume(['/notes/a.md']);
+
+    expect(store.session).toBeNull();
+    expect(store.autoResumed).toBe(false);
+    expect(store.resumeCandidates.map((row) => row.id)).toEqual(['s1']);
+  });
+
+  it('does not re-offer a session the user explicitly closed', async () => {
+    const recent = session({
+      status: 'active',
+      graph: graph(),
+      source_paths: ['/notes/a.md'],
+      updated_at: new Date().toISOString(),
+    });
+    vi.mocked(explorationService.listExplorationSessions).mockResolvedValue([
+      {
+        id: 's1',
+        title: 'Compiler',
+        status: 'active',
+        created_at: recent.created_at,
+        updated_at: recent.updated_at,
+        source_paths: ['/notes/a.md'],
+        concepts_total: 2,
+        concepts_covered: 0,
+        group_count: 1,
+        completed_early: false,
+      },
+    ]);
+    vi.mocked(explorationService.getExplorationSession).mockResolvedValue(recent);
+    const store = useExplorationStore();
+    await store.tryAutoResume(['/notes/a.md']);
+    store.closeSession();
+
+    await store.tryAutoResume(['/notes/a.md']);
+
+    expect(store.session).toBeNull();
+    expect(store.resumeCandidates).toEqual([]);
+  });
+
+  it('re-runs initialization for a session left before the graph was saved', async () => {
+    const initializing = session({ status: 'initializing' });
+    const active = session({ status: 'active', graph: graph() });
+    vi.mocked(explorationService.getExplorationSession)
+      .mockResolvedValueOnce(initializing)
+      .mockResolvedValueOnce(active);
+    vi.mocked(explorationService.startExplorationStream).mockResolvedValue(undefined);
+    const store = useExplorationStore();
+
+    await store.openSession('s1');
+
+    expect(explorationService.startExplorationStream).toHaveBeenCalledWith('s1', expect.any(Object));
+  });
 });

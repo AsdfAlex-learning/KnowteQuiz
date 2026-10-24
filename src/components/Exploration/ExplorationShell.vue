@@ -30,6 +30,53 @@
     <!-- Onboarding -->
     <div class="flex-1 flex items-center justify-center px-6 py-8">
       <div class="w-full max-w-md space-y-6">
+        <div
+          v-if="explorationStore.resumeCandidates.length"
+          class="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-3 space-y-2"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="text-[var(--text-sm)] font-medium text-[var(--text-primary)]">
+                {{
+                  t('exploration.resume_title', {
+                    count: explorationStore.resumeCandidates.length,
+                  })
+                }}
+              </p>
+              <p class="text-[11px] text-[var(--text-muted)]">
+                {{ t('exploration.resume_hint') }}
+              </p>
+            </div>
+            <button
+              class="shrink-0 text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              @click="explorationStore.dismissResume()"
+            >
+              {{ t('exploration.resume_dismiss') }}
+            </button>
+          </div>
+          <div
+            v-for="row in explorationStore.resumeCandidates.slice(0, 3)"
+            :key="row.id"
+            class="flex items-center justify-between gap-2"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-[var(--text-xs)] text-[var(--text-primary)]">
+                {{ row.title }}
+              </p>
+              <p class="text-[10px] text-[var(--text-faint)]">
+                {{ formatUpdated(row.updated_at) }} ·
+                {{ t('exploration.session_sources', { count: row.source_paths.length }) }}
+              </p>
+            </div>
+            <button
+              class="shrink-0 px-2 py-1 rounded-[var(--radius-sm)] text-[11px] bg-[var(--accent-purple)] text-[var(--bg-base)]"
+              @click="explorationStore.openSession(row.id)"
+            >
+              {{ t('exploration.resume_open') }}
+            </button>
+          </div>
+        </div>
+
         <ol class="space-y-4">
           <li v-for="(step, index) in steps" :key="index" class="flex items-start gap-3">
             <span
@@ -110,26 +157,84 @@
             {{ explorationStore.error }}
           </p>
         </div>
+
+        <details v-if="explorationStore.sessions.length" class="pt-1">
+          <summary
+            class="cursor-pointer text-[var(--text-xs)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          >
+            {{ t('exploration.history_title') }} ({{ explorationStore.sessions.length }})
+          </summary>
+          <div class="mt-2 space-y-1.5">
+            <div
+              v-for="row in explorationStore.sessions.slice(0, 10)"
+              :key="row.id"
+              class="flex items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--border-subtle)] px-2 py-1.5"
+            >
+              <button class="min-w-0 text-left" @click="explorationStore.openSession(row.id)">
+                <p class="truncate text-[var(--text-xs)] text-[var(--text-primary)]">
+                  {{ row.title }}
+                </p>
+                <p class="text-[10px] text-[var(--text-faint)]">
+                  {{ statusLabel(row.status) }} · {{ formatUpdated(row.updated_at) }}
+                </p>
+              </button>
+              <button
+                class="shrink-0 text-[11px] text-[var(--color-error)] hover:opacity-80"
+                @click="explorationStore.removeSession(row.id)"
+              >
+                {{ t('exploration.history_delete') }}
+              </button>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useExplorationStore } from '@/stores/exploration';
 import { useExplorerStore } from '@/stores/explorer';
+import { useReaderStore } from '@/stores/reader';
 import { useSettingsStore } from '@/stores/settings';
 import { useI18n } from '@/composables/useI18n';
+import type { SessionStatus } from '@/types/exploration';
 import ExplorationChat from './ExplorationChat.vue';
 
 const explorationStore = useExplorationStore();
 const explorerStore = useExplorerStore();
+const readerStore = useReaderStore();
 const settingsStore = useSettingsStore();
 const { t } = useI18n();
 const fileInput = ref<HTMLInputElement | null>(null);
 const baseline = ref(50);
 let baselineDirty = false;
+
+onMounted(() => {
+  const paths = [readerStore.currentNote?.path, explorerStore.selectedPath, ...explorationStore.selectedPaths].filter(
+    (path): path is string => Boolean(path)
+  );
+  void explorationStore.tryAutoResume(paths);
+});
+
+function formatUpdated(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function statusLabel(status: SessionStatus): string {
+  switch (status) {
+    case 'initializing':
+      return t('exploration.status_initialise');
+    case 'awaiting_domain_confirm':
+      return t('exploration.status_awaiting_domains');
+    case 'active':
+      return t('exploration.status_active');
+    default:
+      return t('exploration.status_completed');
+  }
+}
 
 const steps = computed(() => [t('exploration.step_select'), t('exploration.step_graph'), t('exploration.step_learn')]);
 

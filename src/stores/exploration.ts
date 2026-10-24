@@ -29,6 +29,9 @@ import type {
 } from '../types/exploration';
 import { useRequestId } from '../composables/useRequestId';
 
+/** A session touched within this window is restored without asking. */
+export const AUTO_RESUME_WINDOW_MS = 2 * 60 * 60 * 1000;
+
 /**
  * Exploration mode state.
  *
@@ -53,6 +56,9 @@ export const useExplorationStore = defineStore('exploration', () => {
   const lastVaultPath = ref<string | null>(null);
   const replayIndex = ref<number | null>(null);
   const skipAsides = ref(false);
+  const resumeCandidates = ref<ExplorationSessionSummary[]>([]);
+  const autoResumed = ref(false);
+  const dismissedSessionIds = ref<string[]>([]);
   const streamRequest = useRequestId();
 
   const selectedCount = computed(() => selectedPaths.value.length);
@@ -127,6 +133,8 @@ export const useExplorationStore = defineStore('exploration', () => {
 
   async function startSession(title?: string, baseline?: number): Promise<void> {
     if (!selectedPaths.value.length || creating.value) return;
+    resumeCandidates.value = [];
+    autoResumed.value = false;
     creating.value = true;
     error.value = null;
     try {
@@ -402,11 +410,59 @@ export const useExplorationStore = defineStore('exploration', () => {
   async function openSession(sessionId: string): Promise<void> {
     error.value = null;
     try {
-      session.value = await getExplorationSession(sessionId);
-      pendingDomains.value = session.value.status === 'awaiting_domain_confirm' ? session.value.graph.domains : null;
+      const loaded = await getExplorationSession(sessionId);
+      session.value = loaded;
+      pendingDomains.value = loaded.status === 'awaiting_domain_confirm' ? loaded.graph.domains : null;
+      // A session can be left mid-initialization (app closed before the graph
+      // was saved); resume that pipeline instead of showing a dead spinner.
+      if (loaded.status === 'initializing' && loaded.graph.concepts.length === 0) {
+        await runInitialization(loaded.id);
+      }
     } catch (e) {
       error.value = String(e);
     }
+  }
+
+  /**
+   * Restores the previous exploration session on entering the mode.
+   *
+   * - A session touched within AUTO_RESUME_WINDOW_MS opens silently.
+   * - Older resumable sessions become candidates for a "restore?" prompt.
+   * - Sessions the user explicitly closed are skipped for this app run.
+   */
+  async function tryAutoResume(paths: string[] = []): Promise<void> {
+    if (session.value) return;
+    await loadSessions();
+    const candidates = sessions.value.filter(
+      (row) => row.status !== 'completed' && !dismissedSessionIds.value.includes(row.id)
+    );
+    if (candidates.length === 0) {
+      resumeCandidates.value = [];
+      return;
+    }
+
+    const matching = paths.length
+      ? candidates.filter((row) => row.source_paths.some((path) => paths.includes(path)))
+      : [];
+    const pool = matching.length > 0 ? matching : candidates;
+    const newest = [...pool].sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))[0];
+    const age = Date.now() - Date.parse(newest.updated_at);
+
+    if (Number.isFinite(age) && age <= AUTO_RESUME_WINDOW_MS) {
+      await openSession(newest.id);
+      autoResumed.value = true;
+    } else {
+      resumeCandidates.value = pool;
+    }
+  }
+
+  function dismissResume() {
+    for (const row of resumeCandidates.value) {
+      if (!dismissedSessionIds.value.includes(row.id)) {
+        dismissedSessionIds.value.push(row.id);
+      }
+    }
+    resumeCandidates.value = [];
   }
 
   async function removeSession(sessionId: string): Promise<void> {
@@ -421,6 +477,10 @@ export const useExplorationStore = defineStore('exploration', () => {
   }
 
   function closeSession() {
+    const id = session.value?.id;
+    if (id && !dismissedSessionIds.value.includes(id)) {
+      dismissedSessionIds.value.push(id);
+    }
     // Invalidate in-flight stream events so a slow initialization cannot
     // repopulate a session the user just left.
     streamRequest.next();
@@ -429,6 +489,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     pendingDomains.value = null;
     replayIndex.value = null;
     skipAsides.value = false;
+    autoResumed.value = false;
+    resumeCandidates.value = [];
     session.value = null;
   }
 
@@ -456,6 +518,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     lastVaultPath,
     replayIndex,
     skipAsides,
+    resumeCandidates,
+    autoResumed,
     selectedCount,
     canStart,
     isInitializing,
@@ -490,6 +554,8 @@ export const useExplorationStore = defineStore('exploration', () => {
     toggleSkipAsides,
     confirmDomains,
     loadSessions,
+    tryAutoResume,
+    dismissResume,
     openSession,
     removeSession,
     closeSession,

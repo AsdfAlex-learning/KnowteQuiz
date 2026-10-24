@@ -342,6 +342,13 @@
     "baseline_zero": "ゼロから",
     "baseline_basic": "入門",
     "baseline_solid": "基礎あり",
-    "baseline_advanced": "上級"
+    "baseline_advanced": "上級",
+    "resume_title": "{count} 件の未完了セッションがあります",
+    "resume_hint": "前回の進捗を復元するか、新しく探索を始められます。",
+    "resume_open": "復元",
+    "resume_dismiss": "無視",
+    "resume_banner": "前回の進捗を復元しました",
+    "history_title": "セッション履歴",
+    "history_delete": "削除"
   }
 }

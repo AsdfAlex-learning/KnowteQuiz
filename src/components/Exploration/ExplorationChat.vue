@@ -5,8 +5,14 @@
         <h1 class="truncate text-[var(--text-lg)] font-semibold text-[var(--text-primary)]">
           {{ session.title }}
         </h1>
-        <p class="mt-1 text-[var(--text-xs)] text-[var(--text-muted)]">
+        <p class="mt-1 text-[var(--text-xs)] text-[var(--text-muted)] flex items-center gap-2">
           {{ t('exploration.session_sources', { count: session.source_paths.length }) }}
+          <span
+            v-if="explorationStore.autoResumed"
+            class="px-1.5 py-0.5 rounded-full bg-[var(--color-success)]/15 text-[var(--color-success)] text-[10px]"
+          >
+            {{ t('exploration.resume_banner') }}
+          </span>
         </p>
       </div>
       <button

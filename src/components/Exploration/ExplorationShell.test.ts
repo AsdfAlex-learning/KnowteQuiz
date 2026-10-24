@@ -1,8 +1,16 @@
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExplorationShell from './ExplorationShell.vue';
 import { useExplorationStore } from '@/stores/exploration';
+
+vi.mock('@/services/exploration', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/exploration')>();
+  return {
+    ...actual,
+    listExplorationSessions: vi.fn().mockResolvedValue([]),
+  };
+});
 
 function startButton(wrapper: VueWrapper) {
   return wrapper.findAll('button').find((button) => button.text().includes('Start exploring'));

@@ -342,6 +342,13 @@
     "baseline_zero": "From zero",
     "baseline_basic": "Beginner",
     "baseline_solid": "Some background",
-    "baseline_advanced": "Advanced"
+    "baseline_advanced": "Advanced",
+    "resume_title": "{count} unfinished session(s) found",
+    "resume_hint": "Restore your previous progress, or start a new exploration.",
+    "resume_open": "Restore",
+    "resume_dismiss": "Ignore",
+    "resume_banner": "Restored",
+    "history_title": "Session history",
+    "history_delete": "Delete"
   }
 }

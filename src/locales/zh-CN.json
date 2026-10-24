@@ -342,6 +342,13 @@
     "baseline_zero": "零基础",
     "baseline_basic": "入门",
     "baseline_solid": "有基础",
-    "baseline_advanced": "熟练"
+    "baseline_advanced": "熟练",
+    "resume_title": "发现 {count} 个未完成的会话",
+    "resume_hint": "可以还原上次的进度，或开始新的探索。",
+    "resume_open": "还原",
+    "resume_dismiss": "忽略",
+    "resume_banner": "已恢复上次进度",
+    "history_title": "历史会话",
+    "history_delete": "删除"
   }
 }
