@@ -1,5 +1,5 @@
 use crate::errors::AppError;
-use crate::models::note::{NoteContent, NoteTreeNode};
+use crate::models::note::{DirectoryListing, NoteContent, NoteTreeNode};
 use crate::services::fs_service;
 use crate::services::note_service;
 use crate::services::storage;
@@ -14,6 +14,13 @@ pub async fn select_folder(app: AppHandle) -> Result<Option<String>, AppError> {
         .await
         .map_err(|e| AppError::Internal(format!("Folder picker task failed: {e}")))?;
     Ok(folder.map(|p| p.to_string()))
+}
+
+#[tauri::command]
+pub async fn list_directories(path: Option<String>) -> Result<DirectoryListing, AppError> {
+    tokio::task::spawn_blocking(move || fs_service::list_directories(path.as_deref()))
+        .await
+        .map_err(|e| AppError::Internal(format!("Directory listing task failed: {e}")))?
 }
 
 #[tauri::command]

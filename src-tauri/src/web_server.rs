@@ -29,7 +29,7 @@ use crate::models::exploration::{
     ImportExplorationRequest, SaveExplorationToVaultRequest,
 };
 use crate::models::mistake::{MistakeEntry, MistakeFilter};
-use crate::models::note::{NoteContent, NoteTreeNode};
+use crate::models::note::{DirectoryListing, NoteContent, NoteTreeNode};
 use crate::models::quiz::QuizStreamParams;
 use crate::models::settings::{LlmConfig, Settings};
 use crate::services::exploration::engine::{self as exploration_engine, ExplorationStreamEvent};
@@ -209,6 +209,7 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
 
     Router::new()
         .route("/api/notes/scan", get(scan_notes_handler))
+        .route("/api/fs/dirs", get(list_directories_handler))
         .route("/api/notes/read", get(read_note_handler))
         .route("/api/notes/asset", get(read_note_asset_handler))
         .route(
@@ -317,6 +318,22 @@ fn build_router(state: Arc<AppState>, dist_dir: &Path) -> Router {
 #[derive(Deserialize)]
 struct ScanNotesQuery {
     root_path: String,
+}
+
+#[derive(Deserialize)]
+struct ListDirectoriesQuery {
+    #[serde(default)]
+    path: Option<String>,
+}
+
+async fn list_directories_handler(
+    Query(query): Query<ListDirectoriesQuery>,
+) -> Result<Json<DirectoryListing>, AppError> {
+    let listing =
+        tokio::task::spawn_blocking(move || fs_service::list_directories(query.path.as_deref()))
+            .await
+            .map_err(|e| AppError::Internal(format!("Directory listing task failed: {e}")))??;
+    Ok(Json(listing))
 }
 
 async fn scan_notes_handler(

@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { readNote, scanNotes, selectFolder } from './note';
+import { listDirectories, readNote, scanNotes, selectFolder } from './note';
+import { openFolderPicker } from '../composables/useFolderPicker';
 import { useSettingsStore } from '../stores/settings';
+
+vi.mock('../composables/useFolderPicker', () => ({
+  openFolderPicker: vi.fn(),
+}));
 
 describe('note service', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     useSettingsStore().settings.ui_language = 'en';
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -46,27 +52,42 @@ describe('note service', () => {
     expect(result).toEqual(mockNote);
   });
 
-  it('prompts for folder path in web mode when selectFolder is called', async () => {
-    vi.stubGlobal(
-      'prompt',
-      vi.fn(() => '/Users/test/notes')
-    );
+  it('opens the in-app folder picker in web mode', async () => {
+    vi.mocked(openFolderPicker).mockResolvedValue('/Users/test/notes');
 
     const result = await selectFolder();
 
     expect(result).toBe('/Users/test/notes');
-    expect(prompt).toHaveBeenCalledWith('Enter the full path to your notes folder:');
+    expect(openFolderPicker).toHaveBeenCalled();
   });
 
-  it('returns null when user cancels folder selection in web mode', async () => {
-    vi.stubGlobal(
-      'prompt',
-      vi.fn(() => null)
-    );
+  it('returns null when the folder picker is cancelled', async () => {
+    vi.mocked(openFolderPicker).mockResolvedValue(null);
 
     const result = await selectFolder();
 
     expect(result).toBeNull();
+  });
+
+  it('lists directories through the web API', async () => {
+    const listing = {
+      path: '/notes',
+      parent: '/',
+      directories: [{ name: 'sub', path: '/notes/sub' }],
+      roots: [{ name: '/', path: '/' }],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        text: async () => JSON.stringify(listing),
+      }))
+    );
+
+    const result = await listDirectories('/notes');
+
+    expect(result).toEqual(listing);
+    expect(fetch).toHaveBeenCalledWith('/api/fs/dirs?path=%2Fnotes');
   });
 
   it('includes the response body when web note scanning fails', async () => {

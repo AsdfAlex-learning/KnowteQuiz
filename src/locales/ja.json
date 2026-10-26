@@ -6,12 +6,10 @@
   "sidebar": {
     "explorer": "エクスプローラー",
     "open_folder": "フォルダを開く",
-    "enter_path": "ノートフォルダのパスを入力...",
     "no_files": "Markdown ファイルが見つかりません",
     "document_hint": "{name} は未変換のドキュメントです",
     "document_description": "PDF / DOCX / PPTX / HTML は、読み取ったりクイズにする前に Markdown へ変換する必要があります。",
-    "refresh": "更新",
-    "enter_path_prompt": "ノートフォルダのフルパスを入力してください:"
+    "refresh": "更新"
   },
   "document": {
     "convert": "Markdown に変換",
@@ -350,5 +348,13 @@
     "resume_banner": "前回の進捗を復元しました",
     "history_title": "セッション履歴",
     "history_delete": "削除"
+  },
+  "folder_picker": {
+    "title": "ノートフォルダーを選択",
+    "up": "上へ",
+    "select": "このフォルダーを選択",
+    "cancel": "キャンセル",
+    "empty": "サブフォルダーはありません",
+    "loading": "読み込み中…"
   }
 }

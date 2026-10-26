@@ -6,12 +6,10 @@
   "sidebar": {
     "explorer": "Explorer",
     "open_folder": "Open Folder",
-    "enter_path": "Enter notes folder path...",
     "no_files": "No markdown files found",
     "document_hint": "{name} is a document, not yet converted",
     "document_description": "PDF / DOCX / PPTX / HTML files must be converted to Markdown before you can read them or quiz from them.",
-    "refresh": "Refresh",
-    "enter_path_prompt": "Enter the full path to your notes folder:"
+    "refresh": "Refresh"
   },
   "document": {
     "convert": "Convert to Markdown",
@@ -350,5 +348,13 @@
     "resume_banner": "Restored",
     "history_title": "Session history",
     "history_delete": "Delete"
+  },
+  "folder_picker": {
+    "title": "Select notes folder",
+    "up": "Up",
+    "select": "Select this folder",
+    "cancel": "Cancel",
+    "empty": "No subfolders",
+    "loading": "Loading…"
   }
 }

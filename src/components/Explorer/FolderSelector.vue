@@ -1,15 +1,5 @@
 <template>
   <div class="px-3 py-2">
-    <div v-if="!isTauri() && !explorerStore.rootPath" class="mb-2">
-      <input
-        v-model="manualPath"
-        type="text"
-        :placeholder="t('sidebar.enter_path')"
-        class="w-full px-2 py-1.5 text-xs bg-[var(--bg-base)] text-[var(--text-primary)] border border-[var(--border-default)] rounded focus:border-[var(--border-focus)] focus:outline-none"
-        @keydown.enter="setManualPath"
-      />
-    </div>
-
     <button
       v-if="explorerStore.rootPath"
       class="folder-btn"
@@ -43,16 +33,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useExplorerStore } from '@/stores/explorer';
 import { useNavigationStore } from '@/stores/navigation';
 import { useI18n } from '@/composables/useI18n';
-import { isTauri } from '@/services/tauri';
 
 const explorerStore = useExplorerStore();
 const navigationStore = useNavigationStore();
 const { t } = useI18n();
-const manualPath = ref('');
 
 const shortPath = computed(() => {
   const path = explorerStore.rootPath;
@@ -60,14 +48,6 @@ const shortPath = computed(() => {
   const parts = path.replace(/\\/g, '/').split('/');
   return parts[parts.length - 1] || path;
 });
-
-async function setManualPath() {
-  const path = manualPath.value.trim();
-  if (path) {
-    await navigationStore.openRootPath(path);
-    manualPath.value = '';
-  }
-}
 </script>
 
 <style scoped>

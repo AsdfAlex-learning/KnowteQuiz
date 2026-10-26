@@ -1,5 +1,7 @@
 use crate::errors::AppError;
-use crate::models::note::{NoteIndex, NoteIndexEntry, NoteNodeKind, NoteTreeNode};
+use crate::models::note::{
+    DirectoryEntry, DirectoryListing, NoteIndex, NoteIndexEntry, NoteNodeKind, NoteTreeNode,
+};
 use crate::services::{config, note_service, storage};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -266,6 +268,124 @@ pub async fn read_file_content(path: &str) -> Result<String, AppError> {
         .map_err(|e| AppError::Internal(format!("Failed to read file {}: {}", path, e)))
 }
 
+const MAX_DIRECTORY_ENTRIES: usize = 500;
+
+/// Lists subdirectories for the in-app folder picker. Hidden folders and a
+/// couple of Windows system folders are skipped; files are never returned.
+pub fn list_directories(path: Option<&str>) -> Result<DirectoryListing, AppError> {
+    let roots = directory_roots();
+    let current = match path.map(str::trim).filter(|value| !value.is_empty()) {
+        Some(value) => PathBuf::from(value),
+        None => default_start_dir(&roots),
+    };
+
+    let metadata = std::fs::metadata(&current).map_err(|_| {
+        AppError::NotFound(format!("Directory does not exist: {}", current.display()))
+    })?;
+    if !metadata.is_dir() {
+        return Err(AppError::InvalidInput(format!(
+            "Path is not a directory: {}",
+            current.display()
+        )));
+    }
+
+    let mut directories: Vec<DirectoryEntry> = Vec::new();
+    let entries = std::fs::read_dir(&current).map_err(|error| {
+        AppError::Internal(format!(
+            "Failed to read directory {}: {}",
+            current.display(),
+            error
+        ))
+    })?;
+    for entry in entries.flatten() {
+        if directories.len() >= MAX_DIRECTORY_ENTRIES {
+            break;
+        }
+        let name = entry.file_name().to_string_lossy().to_string();
+        if name.starts_with('.') || is_ignored_directory_name(&name) {
+            continue;
+        }
+        let entry_path = entry.path();
+        if !entry_path.is_dir() {
+            continue;
+        }
+        directories.push(DirectoryEntry {
+            name,
+            path: entry_path.to_string_lossy().to_string(),
+        });
+    }
+    directories.sort_by_key(|entry| entry.name.to_lowercase());
+
+    Ok(DirectoryListing {
+        path: current.to_string_lossy().to_string(),
+        parent: current
+            .parent()
+            .map(|parent| parent.to_string_lossy().to_string()),
+        directories,
+        roots,
+    })
+}
+
+fn default_start_dir(roots: &[DirectoryEntry]) -> PathBuf {
+    dirs::home_dir()
+        .filter(|home| home.is_dir())
+        .or_else(|| roots.first().map(|root| PathBuf::from(&root.path)))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn directory_roots() -> Vec<DirectoryEntry> {
+    let mut roots = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        for letter in b'A'..=b'Z' {
+            let share = format!("{}:", letter as char);
+            let path = format!("{}:\\", letter as char);
+            if Path::new(&path).exists() {
+                roots.push(DirectoryEntry { name: share, path });
+            }
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Some(home) = dirs::home_dir().filter(|home| home.is_dir()) {
+            let name = home
+                .file_name()
+                .map(|value| value.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Home".to_string());
+            roots.push(DirectoryEntry {
+                name,
+                path: home.to_string_lossy().to_string(),
+            });
+        }
+        roots.push(DirectoryEntry {
+            name: "/".to_string(),
+            path: "/".to_string(),
+        });
+
+        #[cfg(target_os = "macos")]
+        {
+            if let Ok(entries) = std::fs::read_dir("/Volumes") {
+                for entry in entries.flatten() {
+                    if entry.path().is_dir() {
+                        roots.push(DirectoryEntry {
+                            name: entry.file_name().to_string_lossy().to_string(),
+                            path: entry.path().to_string_lossy().to_string(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    roots
+}
+
+fn is_ignored_directory_name(name: &str) -> bool {
+    matches!(name, "$Recycle.Bin" | "System Volume Information")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -524,5 +644,46 @@ mod tests {
                 "{other} should be rejected"
             );
         }
+    }
+
+    #[test]
+    fn list_directories_returns_sorted_subdirectories_and_roots() {
+        let root = temp_notes_dir("list_directories_returns_sorted_subdirectories_and_roots");
+        std_fs::create_dir_all(root.join("beta")).expect("beta should be created");
+        std_fs::create_dir_all(root.join("Alpha")).expect("Alpha should be created");
+        std_fs::create_dir_all(root.join(".hidden")).expect("hidden should be created");
+        std_fs::write(root.join("note.md"), "# Note").expect("file should be written");
+
+        let listing =
+            list_directories(Some(root.to_string_lossy().as_ref())).expect("listing should work");
+
+        let names: Vec<&str> = listing
+            .directories
+            .iter()
+            .map(|entry| entry.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["Alpha", "beta"]);
+        assert!(!listing.roots.is_empty());
+        assert_eq!(listing.path, root.to_string_lossy());
+        assert!(listing.parent.is_some());
+    }
+
+    #[test]
+    fn list_directories_rejects_missing_or_file_paths() {
+        assert!(list_directories(Some("definitely/not/a/real/dir")).is_err());
+
+        let root = temp_notes_dir("list_directories_rejects_missing_or_file_paths");
+        let file = root.join("note.md");
+        std_fs::write(&file, "x").expect("file should be written");
+
+        assert!(list_directories(Some(file.to_string_lossy().as_ref())).is_err());
+    }
+
+    #[test]
+    fn list_directories_without_a_path_starts_at_a_root() {
+        let listing = list_directories(None).expect("default listing should work");
+
+        assert!(!listing.roots.is_empty());
+        assert!(Path::new(&listing.path).is_dir());
     }
 }

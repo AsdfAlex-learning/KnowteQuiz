@@ -20,6 +20,7 @@ pub fn run_desktop() {
             note::select_folder,
             note::scan_notes,
             note::read_note,
+            note::list_directories,
             quiz::generate_quiz,
             quiz::submit_answer_advanced,
             quiz::diagnose_follow_up,

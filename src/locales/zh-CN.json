@@ -6,12 +6,10 @@
   "sidebar": {
     "explorer": "资源管理器",
     "open_folder": "打开文件夹",
-    "enter_path": "输入笔记文件夹路径...",
     "no_files": "未找到 Markdown 文件",
     "document_hint": "{name} 是文档文件，尚未转换",
     "document_description": "PDF / DOCX / PPTX / HTML 需先转换为 Markdown，才能阅读和出题。",
-    "refresh": "刷新",
-    "enter_path_prompt": "请输入笔记文件夹的完整路径："
+    "refresh": "刷新"
   },
   "document": {
     "convert": "转换为 Markdown",
@@ -350,5 +348,13 @@
     "resume_banner": "已恢复上次进度",
     "history_title": "历史会话",
     "history_delete": "删除"
+  },
+  "folder_picker": {
+    "title": "选择笔记文件夹",
+    "up": "上一级",
+    "select": "选择此文件夹",
+    "cancel": "取消",
+    "empty": "没有子文件夹",
+    "loading": "加载中…"
   }
 }

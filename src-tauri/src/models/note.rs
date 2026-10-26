@@ -43,3 +43,21 @@ pub struct NoteContent {
     pub content: String,
     pub metadata: std::collections::HashMap<String, String>,
 }
+
+/// One selectable directory in the in-app folder picker.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DirectoryEntry {
+    pub name: String,
+    pub path: String,
+}
+
+/// A directory listing plus the platform roots (drives / home / volumes) the
+/// picker can jump to.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DirectoryListing {
+    pub path: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent: Option<String>,
+    pub directories: Vec<DirectoryEntry>,
+    pub roots: Vec<DirectoryEntry>,
+}

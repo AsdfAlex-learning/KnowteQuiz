@@ -15,3 +15,15 @@ export interface NoteContent {
   content: string;
   metadata: Record<string, string>;
 }
+
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+}
+
+export interface DirectoryListing {
+  path: string;
+  parent?: string | null;
+  directories: DirectoryEntry[];
+  roots: DirectoryEntry[];
+}

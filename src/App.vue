@@ -54,6 +54,7 @@
       </div>
       <StatusBar />
     </div>
+    <FolderPickerHost />
   </div>
 </template>
 
@@ -69,6 +70,7 @@ import TitleBar from './components/Layout/TitleBar.vue';
 import StatusBar from './components/Layout/StatusBar.vue';
 import BackgroundLayer from './components/Layout/BackgroundLayer.vue';
 import FileTree from './components/Explorer/FileTree.vue';
+import FolderPickerHost from './components/Explorer/FolderPickerHost.vue';
 import MarkdownRenderer from './components/Reader/MarkdownRenderer.vue';
 import DocumentEmptyState from './components/Reader/DocumentEmptyState.vue';
 import EmptyState from './components/Reader/EmptyState.vue';
